@@ -24,6 +24,16 @@ export function canonicalize(doc: CamlDocument): string {
   return stringifyCanonical(semantic);
 }
 
+/**
+ * Canonical form of any JSON value (same rules as document canonicalization,
+ * minus the annotation exclusion). Two values are semantically equal iff their
+ * canonical strings are equal — the differ uses this, which guarantees
+ * `diffModels(a, b)` is empty exactly when `hashModel(a) === hashModel(b)`.
+ */
+export function canonicalizeValue(value: unknown): string {
+  return stringifyCanonical(value);
+}
+
 function stringifyCanonical(value: unknown): string {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
     return JSON.stringify(value);

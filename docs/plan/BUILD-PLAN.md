@@ -58,13 +58,13 @@ hiring happens.
 
 **Done when:** property tests pass over 1k generated permutations ✅; two semantically identical docs with wildly different formatting hash identically ✅ (scrambled e-commerce fixture test + golden hash pinned as regression guard).
 
-### Day 4 — Typed diff
+### Day 4 — Typed diff ✅ (2026-06-13)
 **Goal:** `diffModels(a, b) → ModelDiff` (doc 02 value object).
-- [ ] Id-anchored matching → ComponentAdded/Removed/Modified (deep property path diffs), same for connections/groups/policies/requirements
-- [ ] Human-readable diff summary renderer ("~ orders-db: properties.multiAz false → true")
-- [ ] Fixture suite: 12 curated before/after pairs covering every change class
+- [x] Id-anchored matching → added/removed/modified with deep dotted-path property changes, for all six element collections + document-level fields; equality is canonical, so `diffIsEmpty(diff(a,b)) ⟺ hashModel(a)===hashModel(b)` (proven by property test, 500 runs)
+- [x] Human-readable `formatDiff` ("~ db: properties.multiAz: false → true", "+ cache \"Cache\" (database.cache)", value truncation)
+- [x] Fixture suite: 12 curated before/after cases (identical-formatting, add, remove, rename, property modify/add/remove, connection, group move, policy, requirement, deployment, mixed) with expected change sets + required summary mentions
 
-**Done when:** every fixture produces the expected typed change set; summary output reads like a sane PR description.
+**Done when:** every fixture produces the expected typed change set ✅; summary output reads like a sane PR description ✅ (mention assertions per case). Shared fast-check generators extracted to `src/testing/` (build-excluded).
 
 ### Day 5 — Patch apply/invert + round-trip guarantee
 **Goal:** The mutation primitive the canvas, AI, and merge all use.

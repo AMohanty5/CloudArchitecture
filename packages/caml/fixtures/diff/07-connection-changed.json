@@ -1,0 +1,48 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      { "id": "lb", "type": "network.loadbalancer.l7", "name": "LB" },
+      { "id": "app", "type": "compute.container", "name": "App" },
+      { "id": "db", "type": "database.relational", "name": "DB" }
+    ],
+    "connections": [
+      { "id": "lb-app", "from": "lb", "to": "app", "kind": "traffic" },
+      { "id": "app-db", "from": "app", "to": "db", "kind": "data" }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      { "id": "lb", "type": "network.loadbalancer.l7", "name": "LB" },
+      { "id": "app", "type": "compute.container", "name": "App" },
+      { "id": "db", "type": "database.relational", "name": "DB" }
+    ],
+    "connections": [
+      { "id": "lb-app", "from": "lb", "to": "app", "kind": "traffic", "properties": { "protocol": "https", "port": 443 } },
+      { "id": "app-db", "from": "app", "to": "db", "kind": "data", "properties": { "encrypted": true } }
+    ]
+  },
+  "expected": {
+    "connections": {
+      "modified": [
+        {
+          "id": "lb-app",
+          "changes": [
+            { "path": "properties.port", "after": 443 },
+            { "path": "properties.protocol", "after": "https" }
+          ]
+        },
+        {
+          "id": "app-db",
+          "changes": [{ "path": "properties.encrypted", "after": true }]
+        }
+      ]
+    },
+    "mentions": ["~ lb-app:", "properties.protocol: (none) → \"https\"", "properties.encrypted: (none) → true"]
+  }
+}

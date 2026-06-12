@@ -1,0 +1,42 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      {
+        "id": "db",
+        "type": "database.relational",
+        "name": "DB",
+        "properties": { "multiAz": false, "encryption": { "atRest": true } }
+      }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      {
+        "id": "db",
+        "type": "database.relational",
+        "name": "DB",
+        "properties": { "multiAz": true, "encryption": { "atRest": false } }
+      }
+    ]
+  },
+  "expected": {
+    "components": {
+      "modified": [
+        {
+          "id": "db",
+          "changes": [
+            { "path": "properties.encryption.atRest", "before": true, "after": false },
+            { "path": "properties.multiAz", "before": false, "after": true }
+          ]
+        }
+      ]
+    },
+    "mentions": ["properties.multiAz: false → true", "properties.encryption.atRest: true → false"]
+  }
+}

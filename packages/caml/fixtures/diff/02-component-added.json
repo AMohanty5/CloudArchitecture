@@ -1,0 +1,27 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "groups": [{ "id": "net", "kind": "network", "name": "VPC" }],
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "group": "net" },
+      { "id": "db", "type": "database.relational", "name": "DB", "group": "net" }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "groups": [{ "id": "net", "kind": "network", "name": "VPC" }],
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "group": "net" },
+      { "id": "db", "type": "database.relational", "name": "DB", "group": "net" },
+      { "id": "cache", "type": "database.cache", "name": "Cache", "group": "net" }
+    ]
+  },
+  "expected": {
+    "components": { "added": ["cache"] },
+    "mentions": ["1 change: 1 added, 0 removed, 0 modified", "+ cache \"Cache\" (database.cache)"]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "metadata": { "owner": "team-x", "tags": ["demo"] },
+    "requirements": [
+      { "id": "req-avail", "kind": "availability", "statement": "99.9%", "quantity": { "slo": 0.999 } }
+    ],
+    "groups": [{ "id": "net", "kind": "network", "name": "VPC" }],
+    "components": [
+      { "id": "lb", "type": "network.loadbalancer.l7", "name": "LB", "group": "net" },
+      { "id": "app", "type": "compute.container", "name": "App", "group": "net", "properties": { "replicas": 2 } },
+      { "id": "db", "type": "database.relational", "name": "DB", "group": "net", "properties": { "multiAz": false, "encryption": { "atRest": true } } }
+    ],
+    "connections": [
+      { "id": "lb-app", "from": "lb", "to": "app", "kind": "traffic" },
+      { "id": "app-db", "from": "app", "to": "db", "kind": "data" }
+    ],
+    "policies": [
+      { "id": "pol-enc", "kind": "security.encryption", "statement": "Encrypt stores", "enforce": "error" }
+    ],
+    "deployments": [
+      { "id": "prod", "environment": "production", "overrides": [{ "target": "app", "properties": { "replicas": 4 } }] }
+    ]
+  },
+  "after": {
+    "name": "Mini",
+    "components": [
+      { "properties": { "encryption": { "atRest": true }, "multiAz": false }, "name": "DB", "group": "net", "type": "database.relational", "id": "db" },
+      { "group": "net", "id": "lb", "name": "LB", "type": "network.loadbalancer.l7" },
+      { "id": "app", "properties": { "replicas": 2 }, "group": "net", "type": "compute.container", "name": "App" }
+    ],
+    "connections": [
+      { "kind": "data", "to": "db", "from": "app", "id": "app-db" },
+      { "id": "lb-app", "kind": "traffic", "from": "lb", "to": "app" }
+    ],
+    "annotations": [
+      { "target": "db", "kind": "note", "body": "annotations are non-semantic and never diff" }
+    ],
+    "deployments": [
+      { "overrides": [{ "properties": { "replicas": 4 }, "target": "app" }], "environment": "production", "id": "prod" }
+    ],
+    "policies": [
+      { "enforce": "error", "statement": "Encrypt stores", "kind": "security.encryption", "id": "pol-enc" }
+    ],
+    "groups": [{ "name": "VPC", "id": "net", "kind": "network" }],
+    "requirements": [
+      { "quantity": { "slo": 0.999 }, "statement": "99.9%", "kind": "availability", "id": "req-avail" }
+    ],
+    "metadata": { "tags": ["demo"], "owner": "team-x" },
+    "id": "arch_DIFFMINI",
+    "camlVersion": "1.0"
+  },
+  "expected": {
+    "mentions": ["No changes."]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [{ "id": "db", "type": "database.relational", "name": "DB" }]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [{ "id": "db", "type": "database.relational", "name": "Orders DB" }]
+  },
+  "expected": {
+    "components": {
+      "modified": [
+        { "id": "db", "changes": [{ "path": "name", "before": "DB", "after": "Orders DB" }] }
+      ]
+    },
+    "mentions": ["~ db:", "name: \"DB\" → \"Orders DB\""]
+  }
+}

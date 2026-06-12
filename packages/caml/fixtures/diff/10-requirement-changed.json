@@ -1,0 +1,34 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [],
+    "requirements": [
+      { "id": "req-avail", "kind": "availability", "statement": "99.9% availability", "quantity": { "slo": 0.999 } }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [],
+    "requirements": [
+      { "id": "req-avail", "kind": "availability", "statement": "99.99% availability", "quantity": { "slo": 0.9999 } }
+    ]
+  },
+  "expected": {
+    "requirements": {
+      "modified": [
+        {
+          "id": "req-avail",
+          "changes": [
+            { "path": "quantity.slo", "before": 0.999, "after": 0.9999 },
+            { "path": "statement", "before": "99.9% availability", "after": "99.99% availability" }
+          ]
+        }
+      ]
+    },
+    "mentions": ["~ req-avail:", "quantity.slo: 0.999 → 0.9999"]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "properties": { "replicas": 2 } }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "properties": { "cpu": "2" } }
+    ]
+  },
+  "expected": {
+    "components": {
+      "modified": [
+        {
+          "id": "app",
+          "changes": [
+            { "path": "properties.cpu", "after": "2" },
+            { "path": "properties.replicas", "before": 2 }
+          ]
+        }
+      ]
+    },
+    "mentions": ["properties.cpu: (none) → \"2\"", "properties.replicas: 2 → (none)"]
+  }
+}

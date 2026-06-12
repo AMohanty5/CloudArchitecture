@@ -1,0 +1,37 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [{ "id": "app", "type": "compute.container", "name": "App" }],
+    "deployments": [
+      { "id": "prod", "environment": "production", "overrides": [{ "target": "app", "properties": { "replicas": 4 } }] }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [{ "id": "app", "type": "compute.container", "name": "App" }],
+    "deployments": [
+      { "id": "prod", "environment": "production", "overrides": [{ "target": "app", "properties": { "replicas": 8 } }] }
+    ]
+  },
+  "expected": {
+    "deployments": {
+      "modified": [
+        {
+          "id": "prod",
+          "changes": [
+            {
+              "path": "overrides",
+              "before": [{ "target": "app", "properties": { "replicas": 4 } }],
+              "after": [{ "target": "app", "properties": { "replicas": 8 } }]
+            }
+          ]
+        }
+      ]
+    },
+    "mentions": ["~ prod:", "overrides:"]
+  }
+}

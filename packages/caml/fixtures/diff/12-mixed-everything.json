@@ -1,0 +1,51 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "groups": [{ "id": "net", "kind": "network", "name": "VPC" }],
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "group": "net" },
+      { "id": "db", "type": "database.relational", "name": "DB", "group": "net", "properties": { "multiAz": false } }
+    ],
+    "connections": [{ "id": "app-db", "from": "app", "to": "db", "kind": "data" }],
+    "policies": [
+      { "id": "pol-enc", "kind": "security.encryption", "statement": "Encrypt stores", "enforce": "error" }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini v2",
+    "groups": [{ "id": "net", "kind": "network", "name": "VPC" }],
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "group": "net" },
+      { "id": "db", "type": "database.relational", "name": "DB", "group": "net", "properties": { "multiAz": true } },
+      { "id": "cache", "type": "database.cache", "name": "Cache", "group": "net" }
+    ],
+    "connections": [
+      { "id": "app-db", "from": "app", "to": "db", "kind": "data" },
+      { "id": "app-cache", "from": "app", "to": "cache", "kind": "data" }
+    ],
+    "policies": [],
+    "annotations": [{ "target": "cache", "kind": "note", "body": "added for read latency" }]
+  },
+  "expected": {
+    "components": {
+      "added": ["cache"],
+      "modified": [
+        { "id": "db", "changes": [{ "path": "properties.multiAz", "before": false, "after": true }] }
+      ]
+    },
+    "connections": { "added": ["app-cache"] },
+    "policies": { "removed": ["pol-enc"] },
+    "document": [{ "path": "name", "before": "Mini", "after": "Mini v2" }],
+    "mentions": [
+      "+ cache \"Cache\" (database.cache)",
+      "+ app-cache app → cache (data)",
+      "- pol-enc",
+      "Document:",
+      "name: \"Mini\" → \"Mini v2\""
+    ]
+  }
+}

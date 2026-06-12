@@ -5,7 +5,7 @@
  *  - CAML document types (generated from schemas/caml-1.0.schema.json) — Day 2 ✅
  *  - structural validation (schema + integrity) — Day 2 ✅
  *  - canonicalization + content hashing — Day 3 ✅
- *  - typed diff — Day 4
+ *  - typed diff — Day 4 ✅
  *  - patch apply/invert — Day 5
  *
  * Invariant: this package is pure TypeScript with no dependency on app code.
@@ -19,6 +19,15 @@ export { indexModel } from './types.js';
 export type { ModelIndex } from './types.js';
 export { validateStructure } from './validate/structural.js';
 export type { CamlError, CamlErrorCode, ValidationResult } from './validate/errors.js';
-export { canonicalize } from './canonical/canonicalize.js';
+export { canonicalize, canonicalizeValue } from './canonical/canonicalize.js';
 export { hashModel } from './canonical/hash.js';
 export type { CommitHash } from './canonical/hash.js';
+export { diffModels, diffIsEmpty, diffStats } from './diff/diff.js';
+export type {
+  ModelDiff,
+  CollectionDiff,
+  ModifiedElement,
+  PropertyChange,
+  DiffStats,
+} from './diff/diff.js';
+export { formatDiff } from './diff/format.js';

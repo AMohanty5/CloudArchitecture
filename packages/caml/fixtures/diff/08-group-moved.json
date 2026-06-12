@@ -1,0 +1,32 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "groups": [{ "id": "net", "kind": "network", "name": "VPC" }],
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "group": "net" }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "groups": [
+      { "id": "net", "kind": "network", "name": "VPC" },
+      { "id": "subnet-a", "kind": "subnet", "name": "Subnet A", "parent": "net" }
+    ],
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App", "group": "subnet-a" }
+    ]
+  },
+  "expected": {
+    "groups": { "added": ["subnet-a"] },
+    "components": {
+      "modified": [
+        { "id": "app", "changes": [{ "path": "group", "before": "net", "after": "subnet-a" }] }
+      ]
+    },
+    "mentions": ["+ subnet-a \"Subnet A\" (subnet)", "group: \"net\" → \"subnet-a\""]
+  }
+}

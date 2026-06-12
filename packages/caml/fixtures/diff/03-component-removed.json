@@ -1,0 +1,24 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [
+      { "id": "app", "type": "compute.container", "name": "App" },
+      { "id": "db", "type": "database.relational", "name": "DB" }
+    ],
+    "connections": [{ "id": "app-db", "from": "app", "to": "db", "kind": "data" }]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [{ "id": "app", "type": "compute.container", "name": "App" }],
+    "connections": []
+  },
+  "expected": {
+    "components": { "removed": ["db"] },
+    "connections": { "removed": ["app-db"] },
+    "mentions": ["- db \"DB\" (database.relational)", "- app-db app → db (data)"]
+  }
+}

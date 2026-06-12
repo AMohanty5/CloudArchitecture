@@ -1,0 +1,34 @@
+{
+  "before": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [],
+    "policies": [
+      { "id": "pol-enc", "kind": "security.encryption", "statement": "Encrypt stores", "enforce": "error" }
+    ]
+  },
+  "after": {
+    "camlVersion": "1.0",
+    "id": "arch_DIFFMINI",
+    "name": "Mini",
+    "components": [],
+    "policies": [
+      { "id": "pol-enc", "kind": "security.encryption", "statement": "Encrypt stores", "enforce": "warn", "params": { "kms": "cmk" } }
+    ]
+  },
+  "expected": {
+    "policies": {
+      "modified": [
+        {
+          "id": "pol-enc",
+          "changes": [
+            { "path": "enforce", "before": "error", "after": "warn" },
+            { "path": "params.kms", "after": "cmk" }
+          ]
+        }
+      ]
+    },
+    "mentions": ["~ pol-enc:", "enforce: \"error\" → \"warn\"", "params.kms: (none) → \"cmk\""]
+  }
+}
