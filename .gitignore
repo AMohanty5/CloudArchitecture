@@ -13,6 +13,9 @@ out/
 .env
 .env.*
 !.env.example
+# SSH / deploy keys — never commit private keys
+*.pem
+*.key
 
 # Test & coverage
 coverage/

@@ -9,6 +9,13 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
     },
   },
+  preview: {
+    port: 4173,
+    host: true,
+    proxy: {
+      '/api': 'http://localhost:3001',
+    },
+  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],

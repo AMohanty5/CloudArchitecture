@@ -1,0 +1,19 @@
+[Unit]
+Description=CloudArchitect core (NestJS modular monolith)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/app/apps/core
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=DATABASE_URL=postgresql://cac:cac@localhost:5432/cac
+Environment=REDIS_URL=redis://localhost:6379
+ExecStart=/usr/bin/node /home/ec2-user/app/apps/core/dist/main.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

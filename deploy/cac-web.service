@@ -1,0 +1,15 @@
+[Unit]
+Description=CloudArchitect web (Vite preview, static built assets)
+After=network-online.target cac-core.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/app
+ExecStart=/usr/bin/pnpm --filter @cac/web preview --host 0.0.0.0 --port 4173
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
