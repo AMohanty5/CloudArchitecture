@@ -1,0 +1,11 @@
+{
+  "name": "@cac/config",
+  "version": "0.0.1",
+  "private": true,
+  "files": ["tsconfig.base.json", "tsconfig.lib.json", "vitest.base.mjs"],
+  "scripts": {
+    "build": "echo config: nothing to build",
+    "lint": "echo config: nothing to lint",
+    "test": "echo config: nothing to test"
+  }
+}

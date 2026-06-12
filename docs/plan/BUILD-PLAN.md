@@ -24,15 +24,18 @@ hiring happens.
 
 ## Stage A — Foundation: the CAML engine (Days 1–6)
 
-### Day 1 — Monorepo scaffold
+### Day 1 — Monorepo scaffold ✅ (2026-06-13)
 **Goal:** A building, testing, committable workspace.
-- [ ] `git init`; pnpm workspace + Turborepo; base `tsconfig`, eslint, prettier, vitest presets in `packages/config`
-- [ ] Package stubs: `packages/caml`, `apps/core` (NestJS via CLI), `apps/web` (Vite + React + TS)
-- [ ] `docker-compose.yml`: Postgres 16 + Redis (local dev data layer)
-- [ ] Root scripts: `pnpm build`, `pnpm test`, `pnpm dev` (turbo pipelines)
-- [ ] CI: GitHub Actions workflow — install, lint, build, test on push
+- [x] `git init`; pnpm workspace + Turborepo; base `tsconfig`, eslint, prettier, vitest presets in `packages/config`
+- [x] Package stubs: `packages/caml`, `apps/core` (NestJS, hand-scaffolded), `apps/web` (Vite + React 19 + TS)
+- [x] `docker-compose.yml`: Postgres 16 + Redis (local dev data layer)
+- [x] Root scripts: `pnpm build`, `pnpm test`, `pnpm dev` (turbo pipelines); lint runs at root (`eslint .`)
+- [x] CI: GitHub Actions workflow — install, lint, build, test on push
 
-**Done when:** fresh clone → `pnpm i && pnpm build && pnpm test` green; `docker compose up -d` gives a reachable Postgres.
+**Done when:** fresh clone → `pnpm i && pnpm build && pnpm test` green ✅; `docker compose up -d` gives a reachable Postgres — **deferred** (Docker Desktop not running locally; verify at Day 7 when Postgres becomes a real dependency).
+
+> Day 1 notes: pnpm installed via `npm i -g pnpm` (corepack EPERM under nvm-windows);
+> esbuild postinstall allowlisted via `pnpm.onlyBuiltDependencies`.
 
 ### Day 2 — CAML types + structural validator
 **Goal:** `packages/caml` validates real documents against `schemas/caml-1.0.schema.json`.
