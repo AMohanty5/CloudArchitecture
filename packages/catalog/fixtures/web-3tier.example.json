@@ -1,0 +1,57 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_WEB3TIER0",
+  "name": "Web 3-Tier (seed-catalog example)",
+  "metadata": { "owner": "platform", "catalogVersion": "dev" },
+  "requirements": [
+    {
+      "id": "req-ha",
+      "kind": "availability",
+      "statement": "Survive a single availability-zone failure",
+      "quantity": { "azFailures": 1 }
+    }
+  ],
+  "groups": [
+    { "id": "region-use1", "kind": "region", "name": "us-east-1", "provider": "aws" },
+    { "id": "vpc-main", "kind": "network", "name": "Main VPC", "parent": "region-use1", "properties": { "cidr": "10.0.0.0/16" } },
+    { "id": "subnet-public-a", "kind": "subnet", "name": "Public A", "parent": "vpc-main", "properties": { "cidr": "10.0.1.0/24", "zone": "us-east-1a", "public": true } },
+    { "id": "subnet-app-a", "kind": "subnet", "name": "App A", "parent": "vpc-main", "properties": { "cidr": "10.0.10.0/24", "zone": "us-east-1a", "public": false } }
+  ],
+  "components": [
+    {
+      "id": "web-lb",
+      "type": "network.loadbalancer.l7",
+      "binding": { "provider": "aws", "service": "aws.alb" },
+      "name": "Web LB",
+      "group": "subnet-public-a",
+      "properties": { "scheme": "internet-facing", "idleTimeoutSeconds": 60 }
+    },
+    {
+      "id": "app-asg",
+      "type": "compute.vm.autoscaling_group",
+      "binding": { "provider": "aws", "service": "aws.ec2_asg" },
+      "name": "App tier",
+      "group": "subnet-app-a",
+      "properties": { "instanceType": "m5.large", "minSize": 2, "maxSize": 10, "desiredCapacity": 2 }
+    },
+    {
+      "id": "orders-db",
+      "type": "database.relational",
+      "binding": { "provider": "aws", "service": "aws.rds" },
+      "name": "Orders DB",
+      "group": "subnet-app-a",
+      "properties": {
+        "engine": "postgres",
+        "engineVersion": "16",
+        "instanceClass": "db.r6g.large",
+        "multiAz": true,
+        "allocatedStorageGb": 100,
+        "storageEncrypted": true
+      }
+    }
+  ],
+  "connections": [
+    { "id": "lb-app", "from": "web-lb", "to": "app-asg", "kind": "traffic", "properties": { "protocol": "https", "port": 443 } },
+    { "id": "app-db", "from": "app-asg", "to": "orders-db", "kind": "data", "properties": { "protocol": "postgres", "port": 5432 } }
+  ]
+}

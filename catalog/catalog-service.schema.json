@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.cloudarchitect.ai/catalog/service/1.0",
+  "title": "CatalogService",
+  "description": "One catalog-as-code service definition (blueprint doc 14). A service targets EITHER component abstract types (abstractTypes) OR a group kind (groupKind). Its `properties` JSON-Schema fragment drives pass-2 validation, the property form, IaC, and cost.",
+  "type": "object",
+  "required": ["key", "provider", "name", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "key": {
+      "type": "string",
+      "pattern": "^(aws|azure|gcp|generic)\\.[a-z0-9_]+$",
+      "description": "Catalog key, e.g. aws.rds. Referenced by component.binding.service."
+    },
+    "provider": { "enum": ["aws", "azure", "gcp", "generic"] },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "status": { "enum": ["ga", "preview", "deprecated"] },
+    "icon": { "type": "string", "description": "Path into the icon set, e.g. aws/database/rds.svg" },
+    "docs": { "type": "string", "format": "uri" },
+    "abstractTypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$" },
+      "description": "Component taxonomy paths this service can bind to (doc 05). Mutually exclusive with groupKind."
+    },
+    "groupKind": {
+      "enum": ["region", "zone", "network", "subnet", "tier", "domain", "account", "cluster", "custom"],
+      "description": "For services that materialize as a CAML group (e.g. aws.vpc -> network). Mutually exclusive with abstractTypes."
+    },
+    "capabilities": { "type": "object", "description": "Capability answers inherited from the abstract type (free-form for now)." },
+    "properties": {
+      "type": "object",
+      "description": "Map of property name -> JSON Schema fragment. The pass-2 validator builds an object schema from this.",
+      "additionalProperties": { "type": "object" }
+    },
+    "connectionRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inbound": { "type": "array", "items": { "$ref": "#/$defs/ConnectionRule" } },
+        "outbound": { "type": "array", "items": { "$ref": "#/$defs/ConnectionRule" } }
+      }
+    },
+    "costDimensions": { "type": "array" },
+    "iac": { "type": "object" },
+    "equivalents": { "type": "array" },
+    "evalCases": { "type": "array" }
+  },
+  "oneOf": [{ "required": ["abstractTypes"] }, { "required": ["groupKind"] }],
+  "$defs": {
+    "ConnectionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kinds": {
+          "type": "array",
+          "items": { "enum": ["traffic", "data", "async", "dependency", "replication", "peering", "identity"] }
+        },
+        "protocols": { "type": "array", "items": { "type": "string" } },
+        "from": { "type": "array", "items": { "type": "string" } },
+        "to": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["kinds"]
+    }
+  }
+}

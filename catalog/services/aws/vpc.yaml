@@ -1,0 +1,18 @@
+key: aws.vpc
+provider: aws
+name: Amazon VPC
+description: Isolated virtual network. Materializes as a CAML group of kind `network`.
+status: ga
+icon: aws/networking/vpc.svg
+docs: https://docs.aws.amazon.com/vpc/latest/userguide/
+groupKind: network
+capabilities:
+  isolation: { supported: true }
+  ipv6: { supported: true }
+properties:
+  cidr:
+    type: string
+    pattern: "^(\\d{1,3}\\.){3}\\d{1,3}/(1[6-9]|2[0-8])$"
+    description: IPv4 CIDR block, /16 to /28.
+  enableDnsHostnames: { type: boolean, default: true }
+  enableDnsSupport: { type: boolean, default: true }

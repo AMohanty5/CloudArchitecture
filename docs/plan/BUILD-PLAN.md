@@ -80,14 +80,21 @@ hiring happens.
 > empty-object-vs-absent). Fixed: a whole-object appearance/disappearance is now
 > one atomic change. Diff fixtures 07 & 09 re-pinned to the atomic form.
 
-### Day 6 — Catalog format + first 5 services
+### Day 6 — Catalog format + first 5 services ✅ (2026-06-13)
 **Goal:** Catalog-as-code pipeline exists (doc 14 format).
-- [ ] `catalog/` layout: `services/aws/*.yaml`, JSON Schema for the catalog format itself, lint script
-- [ ] Author 5 services end-to-end minus IaC templates: `aws.vpc`, `aws.subnet`, `aws.alb`, `aws.ec2_asg`, `aws.rds` (schema + capabilities + connection rules + icon refs)
-- [ ] Loader in `packages/caml` (or new `packages/catalog`): load + validate catalog, expose typed lookup
-- [ ] Pass-2 validation wired: component properties checked against bound service schema
+- [x] `catalog/` layout: `services/aws/*.yaml` + `catalog-service.schema.json` (the format schema); `pnpm --filter @cac/catalog check` lints all content (CI gate)
+- [x] Authored 5 services minus IaC templates: `aws.vpc`, `aws.subnet` (group-kind services), `aws.alb`, `aws.ec2_asg`, `aws.rds` (component services) — schema + capabilities + connection rules + icon refs
+- [x] New `packages/catalog`: `loadCatalog` (parse YAML + validate against format schema, dup-key/provider checks, typed lookup incl. group-kind index)
+- [x] Pass-2 wired: `validateAgainstCatalog` checks component **and** group properties against the bound service schema; `unknown-service` / `type-mismatch` / `catalog-property` error codes added to the shared `CamlError`
 
-**Done when:** the doc 05 example model passes pass-1 + pass-2 validation against the seed catalog; a bogus property (`instanceClass: "huge"`) is rejected with a catalog-sourced message.
+**Done when:** the doc-05-style example (`packages/catalog/fixtures/web-3tier.example.json`, over the 5 seed services) passes pass-1 + pass-2 ✅; `instanceClass: "huge"` is rejected with `aws.rds "orders-db": property "instanceClass" must match pattern …` ✅.
+
+> Day 6 notes: chose a separate `packages/catalog` over folding into caml (catalog has
+> its own deps — yaml — and grows into the Catalog Service, doc 03). Group-kind services
+> (vpc/subnet) validate via a group's effective provider (own, else nearest ancestor).
+> Two gotchas: a `services/**/*.yaml` literal in a JSDoc closed the block comment early
+> (`*/`); and Ajv `strictRequired` rejects the `oneOf` "exactly one of abstractTypes/
+> groupKind" idiom — disabled that one sub-check.
 
 ---
 

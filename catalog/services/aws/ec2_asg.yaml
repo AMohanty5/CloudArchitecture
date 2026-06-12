@@ -1,0 +1,25 @@
+key: aws.ec2_asg
+provider: aws
+name: EC2 Auto Scaling Group
+description: A fleet of EC2 instances managed as one scalable, self-healing unit.
+status: ga
+icon: aws/compute/ec2_asg.svg
+docs: https://docs.aws.amazon.com/autoscaling/ec2/userguide/
+abstractTypes: [compute.vm.autoscaling_group]
+capabilities:
+  autoscaling: { supported: true, mechanism: target-tracking }
+  selfHealing: { supported: true }
+properties:
+  instanceType:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*\\.[a-z0-9]+$"
+    description: EC2 instance type, e.g. m5.large.
+  minSize: { type: integer, minimum: 0 }
+  maxSize: { type: integer, minimum: 1 }
+  desiredCapacity: { type: integer, minimum: 0 }
+  amiId: { type: string, pattern: "^ami-[0-9a-f]{8,17}$" }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [network.loadbalancer.l7, network.loadbalancer.l4] }
+  outbound:
+    - { kinds: [data], to: [database.relational, database.cache, storage.object] }

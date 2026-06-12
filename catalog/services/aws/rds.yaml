@@ -1,0 +1,35 @@
+key: aws.rds
+provider: aws
+name: Amazon RDS
+description: Managed relational database (PostgreSQL, MySQL, MariaDB).
+status: ga
+icon: aws/database/rds.svg
+docs: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/
+abstractTypes: [database.relational]
+capabilities:
+  ha: { supported: true, mechanism: multi-az }
+  backup: { supported: true }
+properties:
+  engine:
+    type: string
+    enum: [postgres, mysql, mariadb]
+    default: postgres
+  engineVersion:
+    type: string
+  instanceClass:
+    type: string
+    pattern: "^db\\.[a-z0-9]+\\.[a-z0-9]+$"
+    description: RDS instance class, e.g. db.r6g.large.
+    costDimension: instance_hours
+  multiAz: { type: boolean, default: false }
+  allocatedStorageGb:
+    type: integer
+    minimum: 20
+    maximum: 65536
+  storageEncrypted: { type: boolean, default: true, securityRelevant: true }
+  kmsKeyRef: { type: string }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [postgres, mysql], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+  outbound:
+    - { kinds: [replication], to: [database.relational] }

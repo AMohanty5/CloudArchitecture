@@ -1,0 +1,31 @@
+key: aws.alb
+provider: aws
+name: Application Load Balancer
+description: Layer-7 HTTP/HTTPS load balancer.
+status: ga
+icon: aws/networking/alb.svg
+docs: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/
+abstractTypes: [network.loadbalancer.l7]
+capabilities:
+  tlsTermination: { supported: true }
+  pathRouting: { supported: true }
+properties:
+  scheme:
+    type: string
+    enum: [internet-facing, internal]
+    default: internet-facing
+  ipAddressType:
+    type: string
+    enum: [ipv4, dualstack]
+    default: ipv4
+  idleTimeoutSeconds:
+    type: integer
+    minimum: 1
+    maximum: 4000
+    default: 60
+  http2Enabled: { type: boolean, default: true }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], protocols: [http, https], from: [network.cdn, network.gateway.api, external] }
+  outbound:
+    - { kinds: [traffic], protocols: [http, https], to: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }

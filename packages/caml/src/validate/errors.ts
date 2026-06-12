@@ -10,7 +10,13 @@ export type CamlErrorCode =
   /** Group containment contains a cycle. */
   | 'group-cycle'
   /** Group nesting exceeds the maximum depth of 8. */
-  | 'group-depth';
+  | 'group-depth'
+  /** Pass 2: a component/group binds to a catalog service that does not exist. */
+  | 'unknown-service'
+  /** Pass 2: a property violates the bound catalog service's property schema. */
+  | 'catalog-property'
+  /** Pass 2: the component's abstract type is incompatible with the bound service. */
+  | 'type-mismatch';
 
 export interface CamlError {
   code: CamlErrorCode;
