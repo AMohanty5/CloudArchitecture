@@ -24,11 +24,11 @@
           "id": "pol-enc",
           "changes": [
             { "path": "enforce", "before": "error", "after": "warn" },
-            { "path": "params.kms", "after": "cmk" }
+            { "path": "params", "after": { "kms": "cmk" } }
           ]
         }
       ]
     },
-    "mentions": ["~ pol-enc:", "enforce: \"error\" → \"warn\"", "params.kms: (none) → \"cmk\""]
+    "mentions": ["~ pol-enc:", "enforce: \"error\" → \"warn\"", "params: (none) →"]
   }
 }

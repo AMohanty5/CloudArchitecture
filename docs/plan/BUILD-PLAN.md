@@ -66,13 +66,19 @@ hiring happens.
 
 **Done when:** every fixture produces the expected typed change set ✅; summary output reads like a sane PR description ✅ (mention assertions per case). Shared fast-check generators extracted to `src/testing/` (build-excluded).
 
-### Day 5 — Patch apply/invert + round-trip guarantee
+### Day 5 — Patch apply/invert + round-trip guarantee ✅ (2026-06-13)
 **Goal:** The mutation primitive the canvas, AI, and merge all use.
-- [ ] RFC-6902 apply with CAML-aware validation post-apply; patch inversion
-- [ ] `applyDiff(a, diff(a,b)) ≡ b` property test over generated model pairs
-- [ ] `caml` package README: API surface + invariants (this package gets the doc 15 "most-tested" treatment)
+- [x] RFC-6902 apply (full op set, content-agnostic, never mutates input) + `invertPatch` (exact reverse) + `applyModelPatch` (CAML-aware validation post-apply, throws `PatchError` with `.errors`)
+- [x] `applyDiff` (inverse of `diffModels`); `hashModel(applyDiff(a, diff(a,b))) === hashModel(b)` property test green over 1k generated pairs (+ 500 single-mutation, 200 no-op)
+- [x] `caml` package README: API surface + the five property-tested invariants
 
-**Done when:** round-trip property test green over 1k pairs; package coverage > 90% branches.
+**Done when:** round-trip property test green over 1k pairs ✅; package coverage > 90% branches ✅ (92% branch / 96% stmts; patch.ts 97%).
+
+> Day 5 notes: making the round-trip total exposed a Day-4 representational gap —
+> the differ recursed object-vs-`undefined` into per-key deletions, which left an
+> empty `{}` shell on apply (and left `diffIsEmpty ⟺ equal-hash` false for
+> empty-object-vs-absent). Fixed: a whole-object appearance/disappearance is now
+> one atomic change. Diff fixtures 07 & 09 re-pinned to the atomic form.
 
 ### Day 6 — Catalog format + first 5 services
 **Goal:** Catalog-as-code pipeline exists (doc 14 format).

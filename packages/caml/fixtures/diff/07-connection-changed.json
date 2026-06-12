@@ -32,17 +32,14 @@
       "modified": [
         {
           "id": "lb-app",
-          "changes": [
-            { "path": "properties.port", "after": 443 },
-            { "path": "properties.protocol", "after": "https" }
-          ]
+          "changes": [{ "path": "properties", "after": { "protocol": "https", "port": 443 } }]
         },
         {
           "id": "app-db",
-          "changes": [{ "path": "properties.encrypted", "after": true }]
+          "changes": [{ "path": "properties", "after": { "encrypted": true } }]
         }
       ]
     },
-    "mentions": ["~ lb-app:", "properties.protocol: (none) → \"https\"", "properties.encrypted: (none) → true"]
+    "mentions": ["~ lb-app:", "properties: (none) →", "~ app-db:"]
   }
 }

@@ -6,7 +6,7 @@
  *  - structural validation (schema + integrity) — Day 2 ✅
  *  - canonicalization + content hashing — Day 3 ✅
  *  - typed diff — Day 4 ✅
- *  - patch apply/invert — Day 5
+ *  - patch apply/invert + typed-diff round-trip — Day 5 ✅
  *
  * Invariant: this package is pure TypeScript with no dependency on app code.
  */
@@ -31,3 +31,6 @@ export type {
   DiffStats,
 } from './diff/diff.js';
 export { formatDiff } from './diff/format.js';
+export { applyPatch, applyModelPatch, invertPatch, PatchError } from './patch/patch.js';
+export type { JsonPatch, JsonPatchOp } from './patch/patch.js';
+export { applyDiff } from './patch/apply-diff.js';

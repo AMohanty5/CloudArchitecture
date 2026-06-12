@@ -143,9 +143,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Deep object diff producing dotted-path changes. Plain objects recurse
- * (an object vs. `undefined` recurses against `{}` so individual key
- * additions/removals get precise paths); arrays and scalars are atomic and
+ * Deep object diff producing dotted-path changes. Two plain objects recurse
+ * for precise per-key paths; an object appearing or disappearing entirely is a
+ * single atomic change carrying the whole object (so a diff can be replayed
+ * exactly — `applyDiff` reconstructs absent-vs-empty faithfully, which key-level
+ * recursion into `undefined` could not). Arrays and scalars are atomic and
  * compared canonically.
  */
 function diffObjects(
@@ -163,10 +165,7 @@ function diffObjects(
     if (b === undefined && a === undefined) continue;
     const path = basePath ? `${basePath}.${key}` : key;
 
-    const recursable =
-      (isPlainObject(b) || isPlainObject(a)) &&
-      (isPlainObject(b) || b === undefined) &&
-      (isPlainObject(a) || a === undefined);
+    const recursable = isPlainObject(b) && isPlainObject(a);
     if (recursable) {
       changes.push(...diffObjects(b as Record<string, unknown>, a as Record<string, unknown>, path));
       continue;
