@@ -100,13 +100,19 @@ hiring happens.
 
 ## Stage B — System of record: API + persistence (Days 7–11)
 
-### Day 7 — Core app skeleton + DB migrations
+### Day 7 — Core app skeleton + DB migrations ✅ (2026-06-13)
 **Goal:** NestJS modular monolith with the doc 15 module layout and the doc 04 core tables.
-- [ ] Modules scaffolded: `architecture`, `catalog`, `events` (others stubbed); eslint-boundaries rule enforcing public-api-only imports
-- [ ] Migrations (Drizzle or TypeORM + raw SQL): `architectures`, `model_commits`, `branches` exactly per doc 04 (incl. RLS policies, even though single-tenant locally — `tenant_id` defaulted)
-- [ ] Config, health endpoint, OpenAPI setup, request logging
+- [x] Modules under `src/modules/*`: `architecture`, `catalog`, `events` active + full doc-15 set stubbed; eslint-boundaries enforces import-only-via-`api.ts` (verified: internal import → `boundaries/entry-point` error)
+- [x] Migrations (`pg` + embedded SQL, runner tracks `schema_migrations`): `architectures`, `model_commits`, `branches` per doc 04 (FKs to deferred tenancy tables omitted) — RLS enabled on all three with the `tenant_isolation` policy; `tenant_id` defaults to the single-tenant id; pool sets `app.tenant_id` per connection
+- [x] Config (env + defaults), `/health` (now pings DB), Swagger at `/docs`, request-logging middleware
 
-**Done when:** `pnpm dev:core` boots against docker Postgres; migrations apply cleanly twice (idempotence); `/health` and `/docs` (Swagger) respond.
+**Done when:** core boots against docker Postgres (verified on EC2 — `/health` → `db:up`) ✅; migrations idempotent (boot applies `0001`, re-runs are clean no-ops) ✅; `/health` + `/docs` (HTTP 200, `/docs-json` serves OpenAPI) respond ✅.
+
+> Day 7 notes: persistence decision recorded in DECISIONS.md (raw SQL + `pg`, no ORM).
+> This resolves the Day-1 deferred Postgres check — verified against the docker Postgres
+> running on the EC2 box (local Docker Desktop intentionally not started). Migrations run
+> on boot and via `pnpm --filter @cac/core migrate`. eslint-boundaries needs the TS import
+> resolver to classify relative cross-module imports.
 
 ### Day 8 — Architecture endpoints: create / commit / read
 **Goal:** The sacred write path (doc 12 invariant 3).

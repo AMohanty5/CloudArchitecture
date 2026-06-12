@@ -10,6 +10,7 @@
     "test": "turbo run test",
     "lint": "eslint .",
     "dev": "turbo run dev",
+    "dev:core": "pnpm --filter @cac/core dev",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\""
   },
   "pnpm": {
@@ -18,6 +19,8 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "eslint": "^9.17.0",
+    "eslint-import-resolver-typescript": "^3.7.0",
+    "eslint-plugin-boundaries": "^5.0.1",
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2",

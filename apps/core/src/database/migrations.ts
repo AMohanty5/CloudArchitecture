@@ -1,0 +1,79 @@
+/**
+ * Ordered, immutable SQL migrations (blueprint doc 04). Embedded as TS so they
+ * ship in `dist` and run identically under tsx and node — no file copying.
+ * Expand-and-contract only; never edit an applied migration, add a new one.
+ *
+ * Note vs doc 04: foreign keys to not-yet-created tenancy tables (workspaces) are
+ * omitted — those tables arrive in Stage F. `tenant_id` defaults to the
+ * single-tenant id and RLS is enabled with the doc-04 tenant_isolation policy.
+ */
+export interface Migration {
+  id: string;
+  sql: string;
+}
+
+export const migrations: Migration[] = [
+  {
+    id: '0001_init_architecture',
+    sql: /* sql */ `
+      CREATE TABLE IF NOT EXISTS architectures (
+        id              UUID PRIMARY KEY,
+        tenant_id       UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        workspace_id    UUID NOT NULL,
+        name            TEXT NOT NULL,
+        description     TEXT,
+        lifecycle       TEXT NOT NULL DEFAULT 'draft',
+        default_branch  TEXT NOT NULL DEFAULT 'main',
+        catalog_version TEXT NOT NULL,
+        created_by      UUID NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (workspace_id, name)
+      );
+
+      CREATE TABLE IF NOT EXISTS model_commits (
+        hash             CHAR(64) NOT NULL,
+        architecture_id  UUID NOT NULL REFERENCES architectures(id),
+        tenant_id        UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        parent_hashes    CHAR(64)[] NOT NULL DEFAULT '{}',
+        origin           TEXT NOT NULL,
+        message          TEXT NOT NULL,
+        rationale        JSONB,
+        model            JSONB,
+        model_blob_ref   TEXT,
+        model_size_bytes INT NOT NULL,
+        layout           JSONB,
+        stats            JSONB NOT NULL,
+        author_id        UUID,
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (architecture_id, hash)
+      );
+      CREATE INDEX IF NOT EXISTS model_commits_arch_created_idx
+        ON model_commits (architecture_id, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS branches (
+        architecture_id UUID NOT NULL,
+        name            TEXT NOT NULL,
+        tenant_id       UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        head_hash       CHAR(64) NOT NULL,
+        kind            TEXT NOT NULL DEFAULT 'design',
+        protected       BOOLEAN NOT NULL DEFAULT false,
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (architecture_id, name)
+      );
+
+      -- Row-Level Security (doc 04): defense in depth. tenant_id matches the
+      -- per-connection app.tenant_id GUC. missing_ok so an unset GUC errors safe.
+      ALTER TABLE architectures ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON architectures
+        USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+      ALTER TABLE model_commits ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON model_commits
+        USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+      ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON branches
+        USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+    `,
+  },
+];

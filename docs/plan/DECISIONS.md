@@ -16,6 +16,18 @@ violates the load-bearing rules (commit-only write path, module boundaries,
 catalog-as-code), so the team plan stays valid if hiring happens.
 **Revisit when:** First external users or first hire.
 
+## 2026-06-13 — Persistence: raw SQL migrations + `pg`, not an ORM (Day 7)
+**Context:** Build plan offered Drizzle or TypeORM + raw SQL for the core tables.
+**Decision:** Use the `pg` driver directly with hand-written, embedded SQL migrations
+(ordered TS array, tracked in `schema_migrations`, applied on boot + via a CLI). No ORM
+for now; typed query helpers per table will live in the architecture module.
+**Rationale:** doc 04 leans on Postgres-native features (RLS policies, JSONB, `CHAR(64)[]`,
+later pgvector/AGE) that are clearer as raw SQL than through ORM abstractions; one fewer
+abstraction for a solo build; migrations embedded as TS so they ship in `dist` and run
+identically under tsx/node. Idempotence comes from the runner, not the DDL.
+**Revisit when:** query volume/complexity makes typed query-building (Drizzle) pay for
+itself, or when a non-owner DB role is introduced and RLS must actually bite.
+
 ## Open — to be decided at the day indicated
 - **Day 27:** AI service in Python (blueprint choice, doc 03) vs TypeScript module
   (one fewer runtime for a solo builder). Leaning TS until agent complexity demands
