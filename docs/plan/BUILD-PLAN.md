@@ -50,13 +50,13 @@ hiring happens.
 > of the import. Generated types: `title`/`$id` must be stripped before
 > json-schema-to-typescript or they override the root type name.
 
-### Day 3 — Canonicalizer + content hashing
+### Day 3 — Canonicalizer + content hashing ✅ (2026-06-13)
 **Goal:** Deterministic identity for models (the commit primitive, doc 05).
-- [ ] Canonicalizer: sorted keys, id-sorted arrays, layout/annotations excluded, stable number/string normalization
-- [ ] SHA-256 `hashModel(doc)` over canonical form
-- [ ] Property-based tests (fast-check): hash invariant under key order, array order, layout/annotation changes; hash *changes* on any semantic mutation
+- [x] Canonicalizer: sorted keys, id-sorted arrays, annotations excluded, finite-number guard, undefined-dropping (layout is a commit sidecar, never inside CamlDocument)
+- [x] SHA-256 `hashModel(doc)` over canonical form via @noble/hashes (pure JS — browser-ready for the canvas later)
+- [x] Property-based tests (fast-check, 1,000 runs): invariant under key order / id-array order / annotation changes / JSON round-trips; changes on every semantic mutation class (rename, retype, add component, property change, connection change)
 
-**Done when:** property tests pass over 1k generated permutations; two semantically identical docs with wildly different formatting hash identically.
+**Done when:** property tests pass over 1k generated permutations ✅; two semantically identical docs with wildly different formatting hash identically ✅ (scrambled e-commerce fixture test + golden hash pinned as regression guard).
 
 ### Day 4 — Typed diff
 **Goal:** `diffModels(a, b) → ModelDiff` (doc 02 value object).
