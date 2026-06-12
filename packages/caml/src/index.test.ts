@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { CAML_VERSION, isCamlVersionSupported } from './index.js';
+import { CAML_VERSION, camlSchema, indexModel, validateStructure } from './index.js';
 
-describe('caml package smoke', () => {
-  it('exposes the supported CAML version', () => {
+describe('package surface', () => {
+  it('exports the supported CAML version', () => {
     expect(CAML_VERSION).toBe('1.0');
   });
 
-  it('accepts the supported version and rejects others', () => {
-    expect(isCamlVersionSupported('1.0')).toBe(true);
-    expect(isCamlVersionSupported('0.9')).toBe(false);
-    expect(isCamlVersionSupported('2.0')).toBe(false);
+  it('exports the schema, validator, and indexer', () => {
+    expect(String(camlSchema['$id'])).toContain('caml/1.0');
+    expect(typeof validateStructure).toBe('function');
+    expect(typeof indexModel).toBe('function');
   });
 });

@@ -13,12 +13,19 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "gen": "tsx scripts/generate.ts",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
   },
   "devDependencies": {
     "@cac/config": "workspace:*",
     "@vitest/coverage-v8": "^3.0.0",
+    "json-schema-to-typescript": "^15.0.3",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.2",
     "vitest": "^3.0.0"
   }

@@ -1,0 +1,69 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_SRVLESS1",
+  "name": "Serverless API",
+  "requirements": [
+    {
+      "id": "req-latency",
+      "kind": "latency",
+      "statement": "p99 under 200ms",
+      "quantity": { "p99_ms": 200 }
+    }
+  ],
+  "components": [
+    {
+      "id": "api",
+      "type": "network.gateway.api",
+      "binding": { "provider": "aws", "service": "aws.api_gateway" },
+      "name": "Public API"
+    },
+    {
+      "id": "handler",
+      "type": "compute.serverless.function",
+      "binding": { "provider": "aws", "service": "aws.lambda" },
+      "name": "Request Handler",
+      "scaling": { "mode": "serverless" },
+      "operations": { "monitoring": { "metrics": true, "logs": true, "traces": true } }
+    },
+    {
+      "id": "table",
+      "type": "database.keyvalue",
+      "binding": { "provider": "aws", "service": "aws.dynamodb" },
+      "name": "Main Table",
+      "properties": { "billingMode": "PAY_PER_REQUEST" }
+    },
+    {
+      "id": "jobs",
+      "type": "messaging.queue",
+      "binding": { "provider": "aws", "service": "aws.sqs" },
+      "name": "Background Jobs",
+      "properties": { "dlq": true }
+    }
+  ],
+  "connections": [
+    { "id": "api-to-handler", "from": "api", "to": "handler", "kind": "traffic" },
+    {
+      "id": "handler-to-table",
+      "from": "handler",
+      "to": "table",
+      "kind": "data",
+      "properties": { "encrypted": true, "authentication": "iam" }
+    },
+    {
+      "id": "handler-to-jobs",
+      "from": "handler",
+      "to": "jobs",
+      "kind": "async",
+      "properties": { "pattern": "publish" }
+    }
+  ],
+  "policies": [
+    {
+      "id": "pol-observe",
+      "kind": "operations.monitoring",
+      "statement": "All compute emits metrics, logs and traces",
+      "appliesTo": { "typePrefix": "compute." },
+      "enforce": "warn"
+    }
+  ]
+}

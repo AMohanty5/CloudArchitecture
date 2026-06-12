@@ -1,0 +1,30 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_ABSTRACT",
+  "name": "Early-stage design (no provider bindings)",
+  "groups": [
+    { "id": "tier-edge", "kind": "tier", "name": "Edge" },
+    { "id": "tier-app", "kind": "tier", "name": "Application" },
+    { "id": "tier-data", "kind": "tier", "name": "Data" }
+  ],
+  "components": [
+    { "id": "users", "type": "user.browser", "name": "End Users" },
+    { "id": "lb", "type": "network.loadbalancer.l7", "name": "Load Balancer", "group": "tier-edge" },
+    { "id": "app", "type": "compute.container", "name": "Application", "group": "tier-app" },
+    { "id": "db", "type": "database.relational", "name": "Database", "group": "tier-data" },
+    { "id": "cache", "type": "database.cache", "name": "Cache", "group": "tier-data" }
+  ],
+  "connections": [
+    { "id": "users-to-lb", "from": "users", "to": "lb", "kind": "traffic" },
+    { "id": "lb-to-app", "from": "lb", "to": "app", "kind": "traffic" },
+    { "id": "app-to-db", "from": "app", "to": "db", "kind": "data" },
+    { "id": "app-to-cache", "from": "app", "to": "cache", "kind": "data" }
+  ],
+  "annotations": [
+    {
+      "target": "db",
+      "kind": "todo",
+      "body": "Decide relational engine once provider is chosen."
+    }
+  ]
+}

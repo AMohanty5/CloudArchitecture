@@ -1,0 +1,6 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_BADTYPE0",
+  "name": "Component type not in the taxonomy",
+  "components": [{ "id": "web", "type": "compute.quantum", "name": "Quantum Web" }]
+}

@@ -1,0 +1,7 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_BADCONN0",
+  "name": "Connection points at a missing component",
+  "components": [{ "id": "web", "type": "compute.vm", "name": "Web" }],
+  "connections": [{ "id": "c1", "from": "web", "to": "ghost", "kind": "traffic" }]
+}

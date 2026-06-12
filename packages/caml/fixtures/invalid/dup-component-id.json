@@ -1,0 +1,9 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_DUPID000",
+  "name": "Two components share an id",
+  "components": [
+    { "id": "web", "type": "compute.vm", "name": "Web A" },
+    { "id": "web", "type": "compute.vm", "name": "Web B" }
+  ]
+}

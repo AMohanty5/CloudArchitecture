@@ -1,0 +1,13 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_BADBIND0",
+  "name": "Binding service key violates the catalog-key pattern",
+  "components": [
+    {
+      "id": "api-lb",
+      "type": "network.loadbalancer.l7",
+      "name": "Load Balancer",
+      "binding": { "provider": "aws", "service": "aws.ALB!" }
+    }
+  ]
+}

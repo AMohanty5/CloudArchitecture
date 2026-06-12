@@ -1,0 +1,12 @@
+{
+  "missing-name.json": { "codes": ["schema"], "mentions": ["name"] },
+  "bad-id-pattern.json": { "codes": ["schema"], "mentions": ["Web_Server"] },
+  "unknown-type.json": { "codes": ["schema"], "mentions": ["web"] },
+  "bad-binding-service.json": { "codes": ["schema"], "mentions": ["api-lb", "binding.service"] },
+  "dup-component-id.json": { "codes": ["duplicate-id"], "mentions": ["web"] },
+  "unresolved-connection-ref.json": { "codes": ["unresolved-ref"], "mentions": ["ghost", "c1"] },
+  "unresolved-group-ref.json": { "codes": ["unresolved-ref"], "mentions": ["ghost-group", "web"] },
+  "group-cycle.json": { "codes": ["group-cycle"], "mentions": ["group-a", "group-b"] },
+  "group-depth.json": { "codes": ["group-depth"], "mentions": ["g9", "max 8"] },
+  "bad-policy-kind.json": { "codes": ["schema"], "mentions": ["p1"] }
+}

@@ -1,0 +1,8 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_BADGRP00",
+  "name": "Component placed in a missing group",
+  "components": [
+    { "id": "web", "type": "compute.vm", "name": "Web", "group": "ghost-group" }
+  ]
+}

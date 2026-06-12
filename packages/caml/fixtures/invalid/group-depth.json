@@ -1,0 +1,17 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_GRPDEEP0",
+  "name": "Group nesting exceeds max depth of 8",
+  "components": [],
+  "groups": [
+    { "id": "g1", "kind": "custom", "name": "L1" },
+    { "id": "g2", "kind": "custom", "name": "L2", "parent": "g1" },
+    { "id": "g3", "kind": "custom", "name": "L3", "parent": "g2" },
+    { "id": "g4", "kind": "custom", "name": "L4", "parent": "g3" },
+    { "id": "g5", "kind": "custom", "name": "L5", "parent": "g4" },
+    { "id": "g6", "kind": "custom", "name": "L6", "parent": "g5" },
+    { "id": "g7", "kind": "custom", "name": "L7", "parent": "g6" },
+    { "id": "g8", "kind": "custom", "name": "L8", "parent": "g7" },
+    { "id": "g9", "kind": "custom", "name": "L9", "parent": "g8" }
+  ]
+}

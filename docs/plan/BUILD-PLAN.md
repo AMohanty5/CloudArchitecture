@@ -37,14 +37,18 @@ hiring happens.
 > Day 1 notes: pnpm installed via `npm i -g pnpm` (corepack EPERM under nvm-windows);
 > esbuild postinstall allowlisted via `pnpm.onlyBuiltDependencies`.
 
-### Day 2 — CAML types + structural validator
+### Day 2 — CAML types + structural validator ✅ (2026-06-13)
 **Goal:** `packages/caml` validates real documents against `schemas/caml-1.0.schema.json`.
-- [ ] Generate TS types from the schema (json-schema-to-typescript) + handwritten ergonomic wrappers (`CamlDocument`, lookup maps by id)
-- [ ] Ajv-compiled validator with error mapping to element paths (`components[3].properties` → `component "orders-db"`)
-- [ ] Reference fixtures: 5 valid models (incl. the doc 05 e-commerce example), 10 invalid ones (bad refs, dup ids, group cycles)
-- [ ] Group containment checks (acyclic, depth ≤ 8) beyond what JSON Schema can express
+- [x] Generate TS types from the schema (json-schema-to-typescript via `pnpm --filter @cac/caml gen`; schema embedded as TS module with drift-guard test) + `indexModel` lookup maps
+- [x] Ajv-compiled validator (Ajv 2020-12, strict + allowUnionTypes) with element-anchored error mapping (`component "api-lb" (components[1].binding.service): …`)
+- [x] Reference fixtures: 5 valid models (incl. the doc 05 e-commerce example), 10 invalid + `expected.json` manifest
+- [x] Integrity checks beyond JSON Schema: global id uniqueness, reference resolution (connections/groups/overrides/policies), group cycles, depth ≤ 8
 
-**Done when:** all fixtures classified correctly; invalid fixtures produce human-readable, element-anchored errors.
+**Done when:** all fixtures classified correctly ✅ (26 tests green); invalid fixtures produce human-readable, element-anchored errors ✅.
+
+> Day 2 notes: ajv/ajv-formats are CJS — under NodeNext ESM the class is on `.default`
+> of the import. Generated types: `title`/`$id` must be stripped before
+> json-schema-to-typescript or they override the root type name.
 
 ### Day 3 — Canonicalizer + content hashing
 **Goal:** Deterministic identity for models (the commit primitive, doc 05).

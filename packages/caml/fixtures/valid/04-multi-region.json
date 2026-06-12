@@ -1,0 +1,68 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_MULTIREG",
+  "name": "Multi-region active-passive",
+  "requirements": [
+    {
+      "id": "req-dr",
+      "kind": "rpo_rto",
+      "statement": "RPO 5 minutes, RTO 1 hour",
+      "quantity": { "rpo_minutes": 5, "rto_minutes": 60 }
+    }
+  ],
+  "groups": [
+    { "id": "region-primary", "kind": "region", "name": "us-east-1", "provider": "aws" },
+    { "id": "region-standby", "kind": "region", "name": "us-west-2", "provider": "aws" }
+  ],
+  "components": [
+    {
+      "id": "app-primary",
+      "type": "compute.container.orchestrator.service",
+      "binding": { "provider": "aws", "service": "aws.eks_service" },
+      "name": "App (primary)",
+      "group": "region-primary",
+      "count": 3
+    },
+    {
+      "id": "db-primary",
+      "type": "database.relational",
+      "binding": { "provider": "aws", "service": "aws.aurora_postgresql" },
+      "name": "DB (primary)",
+      "group": "region-primary",
+      "criticality": "critical",
+      "properties": { "multiAz": true, "globalDatabase": true }
+    },
+    {
+      "id": "db-standby",
+      "type": "database.relational",
+      "binding": { "provider": "aws", "service": "aws.aurora_postgresql" },
+      "name": "DB (standby replica)",
+      "group": "region-standby",
+      "properties": { "multiAz": true }
+    },
+    {
+      "id": "dns",
+      "type": "network.dns",
+      "binding": { "provider": "aws", "service": "aws.route53" },
+      "name": "Failover DNS"
+    }
+  ],
+  "connections": [
+    { "id": "dns-to-app", "from": "dns", "to": "app-primary", "kind": "traffic" },
+    {
+      "id": "app-to-db",
+      "from": "app-primary",
+      "to": "db-primary",
+      "kind": "data",
+      "properties": { "protocol": "postgres", "encrypted": true }
+    },
+    {
+      "id": "db-replication",
+      "from": "db-primary",
+      "to": "db-standby",
+      "kind": "replication",
+      "direction": "uni",
+      "properties": { "encrypted": true }
+    }
+  ]
+}

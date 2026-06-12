@@ -1,0 +1,159 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_01HVX3K9",
+  "name": "E-commerce Platform — US",
+  "metadata": {
+    "owner": "team-commerce",
+    "catalogVersion": "2026.06.1",
+    "tags": ["production", "pci"]
+  },
+  "requirements": [
+    {
+      "id": "req-availability",
+      "kind": "availability",
+      "statement": "99.95% for storefront",
+      "quantity": { "slo": 0.9995 }
+    },
+    {
+      "id": "req-scale",
+      "kind": "scalability",
+      "statement": "50M MAU, 30k peak RPS",
+      "quantity": { "peak_rps": 30000 }
+    }
+  ],
+  "groups": [
+    { "id": "region-use1", "kind": "region", "name": "us-east-1", "provider": "aws" },
+    {
+      "id": "vpc-main",
+      "kind": "network",
+      "name": "Main VPC",
+      "parent": "region-use1",
+      "properties": { "cidr": "10.0.0.0/16" }
+    },
+    {
+      "id": "subnet-public-a",
+      "kind": "subnet",
+      "name": "public-a",
+      "parent": "vpc-main",
+      "properties": { "cidr": "10.0.1.0/24", "zone": "us-east-1a", "public": true }
+    },
+    {
+      "id": "subnet-app-a",
+      "kind": "subnet",
+      "name": "app-a",
+      "parent": "vpc-main",
+      "properties": { "cidr": "10.0.10.0/24", "zone": "us-east-1a", "public": false }
+    }
+  ],
+  "components": [
+    {
+      "id": "cdn",
+      "type": "network.cdn",
+      "binding": { "provider": "aws", "service": "aws.cloudfront" },
+      "name": "Storefront CDN",
+      "properties": { "priceClass": "PriceClass_All", "waf": true }
+    },
+    {
+      "id": "api-lb",
+      "type": "network.loadbalancer.l7",
+      "binding": { "provider": "aws", "service": "aws.alb" },
+      "name": "API Load Balancer",
+      "group": "subnet-public-a",
+      "properties": { "scheme": "internet-facing", "tls": { "minVersion": "1.2" } }
+    },
+    {
+      "id": "checkout-svc",
+      "type": "compute.container.orchestrator.service",
+      "binding": { "provider": "aws", "service": "aws.eks_service" },
+      "name": "Checkout Service",
+      "group": "subnet-app-a",
+      "properties": { "replicas": { "min": 6, "max": 60 }, "cpu": "2", "memory": "4Gi" },
+      "scaling": { "mode": "horizontal", "min": 6, "max": 60, "metric": "cpu", "target": 60 }
+    },
+    {
+      "id": "orders-db",
+      "type": "database.relational",
+      "binding": { "provider": "aws", "service": "aws.aurora_postgresql" },
+      "name": "Orders Database",
+      "group": "subnet-app-a",
+      "criticality": "critical",
+      "dataClassification": "confidential",
+      "properties": {
+        "engineVersion": "16",
+        "instanceClass": "db.r6g.2xlarge",
+        "multiAz": true,
+        "encryption": { "atRest": true, "kmsKeyRef": "alias/orders" }
+      },
+      "operations": { "backup": { "enabled": true, "retentionDays": 35, "pitr": true } }
+    },
+    {
+      "id": "order-events",
+      "type": "messaging.queue",
+      "binding": { "provider": "aws", "service": "aws.sqs" },
+      "name": "Order Events Queue",
+      "properties": { "fifo": true, "dlq": true }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": "cdn",
+      "to": "api-lb",
+      "kind": "traffic",
+      "properties": { "protocol": "https", "port": 443 }
+    },
+    {
+      "id": "c2",
+      "from": "api-lb",
+      "to": "checkout-svc",
+      "kind": "traffic",
+      "properties": { "protocol": "https", "port": 8443, "mtls": true }
+    },
+    {
+      "id": "c3",
+      "from": "checkout-svc",
+      "to": "orders-db",
+      "kind": "data",
+      "properties": { "protocol": "postgres", "port": 5432, "encrypted": true }
+    },
+    {
+      "id": "c4",
+      "from": "checkout-svc",
+      "to": "order-events",
+      "kind": "async",
+      "properties": { "pattern": "publish" }
+    }
+  ],
+  "policies": [
+    {
+      "id": "pol-encrypt-all",
+      "kind": "security.encryption",
+      "statement": "All data stores encrypted at rest with CMK",
+      "appliesTo": { "typePrefix": "database." },
+      "enforce": "error"
+    },
+    {
+      "id": "pol-no-public-db",
+      "kind": "security.exposure",
+      "statement": "No database reachable from internet-facing components without WAF",
+      "enforce": "error"
+    },
+    {
+      "id": "pol-multi-az",
+      "kind": "reliability.redundancy",
+      "statement": "Stateful services span at least 2 zones",
+      "appliesTo": { "typePrefix": "database." },
+      "params": { "minZones": 2 },
+      "enforce": "error"
+    }
+  ],
+  "deployments": [
+    {
+      "id": "prod",
+      "environment": "production",
+      "overrides": [
+        { "target": "checkout-svc", "properties": { "replicas": { "min": 12, "max": 120 } } }
+      ]
+    }
+  ]
+}

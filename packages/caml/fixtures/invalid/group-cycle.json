@@ -1,0 +1,10 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_GRPCYCLE",
+  "name": "Group containment cycle",
+  "components": [],
+  "groups": [
+    { "id": "group-a", "kind": "custom", "name": "A", "parent": "group-b" },
+    { "id": "group-b", "kind": "custom", "name": "B", "parent": "group-a" }
+  ]
+}

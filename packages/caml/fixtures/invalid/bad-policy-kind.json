@@ -1,0 +1,9 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_BADPOL00",
+  "name": "Policy kind outside the allowed categories",
+  "components": [],
+  "policies": [
+    { "id": "p1", "kind": "speed.fast", "statement": "Make it fast", "enforce": "error" }
+  ]
+}

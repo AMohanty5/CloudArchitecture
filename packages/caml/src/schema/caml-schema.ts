@@ -1,0 +1,903 @@
+/* AUTO-GENERATED from schemas/caml-1.0.schema.json — do not edit by hand.
+ * Regenerate with: pnpm --filter @cac/caml gen
+ */
+export const camlSchema = {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.cloudarchitect.ai/caml/1.0/caml-1.0.schema.json",
+  "title": "CAML — Cloud Architecture Modeling Language",
+  "description": "Normative schema for CAML 1.0 architecture documents. Pass 1 of 3 in the validation pipeline: structural validation. Pass 2 (catalog property validation) and pass 3 (semantic rules) are applied by the Validation Engine. Canonicalization for content hashing: UTF-8, sorted object keys, arrays sorted by 'id' where elements carry one, no insignificant whitespace, 'layout' and 'annotations' excluded.",
+  "type": "object",
+  "required": [
+    "camlVersion",
+    "id",
+    "name",
+    "components"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "camlVersion": {
+      "const": "1.0",
+      "description": "Schema version this document conforms to. On-read upgraders migrate older versions forward."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^arch_[A-Z0-9]{8,26}$",
+      "description": "Stable architecture identifier, assigned at creation, never changes."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Requirement"
+      },
+      "description": "Functional and non-functional requirements the design must satisfy. Both user-stated and AI-inferred (source flag distinguishes)."
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Component"
+      },
+      "maxItems": 5000
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Connection"
+      },
+      "maxItems": 20000
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Group"
+      },
+      "maxItems": 1000
+    },
+    "policies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Policy"
+      }
+    },
+    "deployments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Deployment"
+      }
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Annotation"
+      },
+      "description": "Non-semantic notes. Excluded from content hash."
+    }
+  },
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "description": "Author-assigned, stable across commits. The diff anchor. Renames change 'name', never 'id'."
+    },
+    "AbstractType": {
+      "type": "string",
+      "description": "Taxonomy path. Leaf values enumerated below; intermediate paths (e.g. 'compute.container') are valid for early-stage/abstract designs and are refined later.",
+      "enum": [
+        "compute",
+        "compute.vm",
+        "compute.vm.autoscaling_group",
+        "compute.baremetal",
+        "compute.container",
+        "compute.container.orchestrator",
+        "compute.container.orchestrator.service",
+        "compute.container.instance",
+        "compute.container.registry",
+        "compute.serverless",
+        "compute.serverless.function",
+        "compute.serverless.app",
+        "compute.batch",
+        "network",
+        "network.cdn",
+        "network.dns",
+        "network.dns.zone",
+        "network.dns.record_policy",
+        "network.loadbalancer",
+        "network.loadbalancer.l4",
+        "network.loadbalancer.l7",
+        "network.loadbalancer.global",
+        "network.gateway",
+        "network.gateway.api",
+        "network.gateway.nat",
+        "network.gateway.internet",
+        "network.gateway.vpn",
+        "network.gateway.transit",
+        "network.firewall",
+        "network.firewall.waf",
+        "network.firewall.network",
+        "network.firewall.ddos",
+        "network.link",
+        "network.link.peering",
+        "network.link.direct",
+        "network.endpoint.private",
+        "network.servicemesh",
+        "network.ip.static",
+        "database",
+        "database.relational",
+        "database.relational.serverless",
+        "database.document",
+        "database.keyvalue",
+        "database.widecolumn",
+        "database.graph",
+        "database.timeseries",
+        "database.cache",
+        "database.search",
+        "database.warehouse",
+        "database.ledger",
+        "database.vector",
+        "storage",
+        "storage.object",
+        "storage.block",
+        "storage.file",
+        "storage.archive",
+        "storage.transfer",
+        "storage.backup",
+        "messaging",
+        "messaging.queue",
+        "messaging.topic",
+        "messaging.stream",
+        "messaging.eventbus",
+        "messaging.broker.mqtt",
+        "messaging.broker.amqp",
+        "messaging.broker.kafka",
+        "integration",
+        "integration.workflow",
+        "integration.etl",
+        "integration.api_management",
+        "integration.appflow",
+        "integration.scheduler",
+        "security",
+        "security.identity",
+        "security.identity.idp",
+        "security.identity.federation",
+        "security.secrets",
+        "security.keys",
+        "security.certificate",
+        "security.scanner.vulnerability",
+        "security.scanner.posture",
+        "security.audit",
+        "security.hsm",
+        "observability",
+        "observability.metrics",
+        "observability.logs",
+        "observability.traces",
+        "observability.alerting",
+        "observability.dashboard",
+        "observability.synthetics",
+        "analytics",
+        "analytics.query",
+        "analytics.bi",
+        "analytics.catalog",
+        "analytics.processing.spark",
+        "ml",
+        "ml.training",
+        "ml.inference",
+        "ml.embedding",
+        "ml.platform",
+        "ml.llm",
+        "edge",
+        "edge.iot.core",
+        "edge.iot.gateway",
+        "edge.mobile.backend",
+        "edge.compute",
+        "devtools",
+        "devtools.cicd",
+        "devtools.repo",
+        "devtools.artifact",
+        "devtools.iac",
+        "user",
+        "user.browser",
+        "user.mobile_app",
+        "user.internal",
+        "external",
+        "external.saas",
+        "external.partner_system",
+        "external.onprem",
+        "generic",
+        "generic.unmodeled",
+        "generic.custom"
+      ]
+    },
+    "Provider": {
+      "enum": [
+        "aws",
+        "azure",
+        "gcp",
+        "generic"
+      ]
+    },
+    "Metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "Team or person accountable"
+        },
+        "catalogVersion": {
+          "type": "string",
+          "description": "Catalog release the model was authored against, e.g. '2026.06.1'"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "maxItems": 50
+        },
+        "domain": {
+          "type": "string"
+        },
+        "lifecycle": {
+          "enum": [
+            "concept",
+            "design",
+            "approved",
+            "deployed",
+            "deprecated"
+          ]
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "rel",
+              "url"
+            ],
+            "properties": {
+              "rel": {
+                "enum": [
+                  "repo",
+                  "ticket",
+                  "doc",
+                  "dashboard",
+                  "runbook",
+                  "other"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "dataClassification": {
+          "enum": [
+            "public",
+            "internal",
+            "confidential",
+            "restricted"
+          ]
+        },
+        "custom": {
+          "type": "object",
+          "description": "Tenant-defined fields; validated against tenant metadata schema if one is registered"
+        }
+      }
+    },
+    "Requirement": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "statement"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "enum": [
+            "availability",
+            "scalability",
+            "latency",
+            "throughput",
+            "durability",
+            "security",
+            "compliance",
+            "budget",
+            "rpo_rto",
+            "data_residency",
+            "operability",
+            "other"
+          ]
+        },
+        "statement": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "quantity": {
+          "type": "object",
+          "description": "Machine-checkable parameters, keys by kind. Examples: {slo: 0.9995}, {peak_rps: 30000}, {p99_ms: 200}, {rpo_minutes: 5, rto_minutes: 60}, {monthly_usd_max: 25000}, {regions_allowed: ['eu-*']}",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string",
+              "boolean",
+              "array"
+            ]
+          }
+        },
+        "source": {
+          "enum": [
+            "user",
+            "inferred"
+          ],
+          "default": "user"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Set when source=inferred"
+        },
+        "priority": {
+          "enum": [
+            "must",
+            "should",
+            "could"
+          ],
+          "default": "must"
+        }
+      }
+    },
+    "Binding": {
+      "type": "object",
+      "required": [
+        "provider",
+        "service"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "service": {
+          "type": "string",
+          "pattern": "^(aws|azure|gcp|generic)\\.[a-z0-9_]{2,64}$",
+          "description": "Catalog key. Existence and property conformance checked in validation pass 2."
+        },
+        "serviceVersion": {
+          "type": "string",
+          "description": "Optional pin, e.g. engine major version where the catalog versions schemas"
+        }
+      }
+    },
+    "Component": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "type": {
+          "$ref": "#/$defs/AbstractType"
+        },
+        "binding": {
+          "$ref": "#/$defs/Binding"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "group": {
+          "$ref": "#/$defs/Id"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 1,
+          "description": "Identical replicas rendered as a stacked node; distinct configs require distinct components"
+        },
+        "properties": {
+          "type": "object",
+          "description": "Pass-2 schema = capability schema of 'type' merged with service schema of 'binding.service'. Unknown keys are pass-2 errors for bound components, warnings for abstract ones."
+        },
+        "scaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "none",
+                "horizontal",
+                "vertical",
+                "serverless"
+              ],
+              "default": "none"
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "metric": {
+              "enum": [
+                "cpu",
+                "memory",
+                "rps",
+                "queue_depth",
+                "schedule",
+                "custom"
+              ]
+            },
+            "target": {
+              "type": "number"
+            }
+          }
+        },
+        "operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "backup": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "retentionDays": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pitr": {
+                  "type": "boolean"
+                },
+                "crossRegion": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "monitoring": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "boolean"
+                },
+                "logs": {
+                  "type": "boolean"
+                },
+                "traces": {
+                  "type": "boolean"
+                },
+                "alerts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Alert intents, e.g. 'error_rate>1%', resolved to provider alarms at IaC generation"
+                }
+              }
+            },
+            "patching": {
+              "enum": [
+                "managed",
+                "automated",
+                "manual"
+              ]
+            }
+          }
+        },
+        "dataClassification": {
+          "enum": [
+            "public",
+            "internal",
+            "confidential",
+            "restricted"
+          ],
+          "description": "Highest classification of data this component stores/processes; drives exposure rules"
+        },
+        "criticality": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ],
+          "description": "Business criticality; weights validation severity and DR recommendations"
+        },
+        "importRef": {
+          "type": "object",
+          "description": "Present when origin is discovery or IaC import",
+          "properties": {
+            "cloudResourceId": {
+              "type": "string",
+              "description": "ARN / Azure resource ID / GCP self-link"
+            },
+            "sourceFormat": {
+              "enum": [
+                "discovery",
+                "terraform",
+                "cloudformation",
+                "drawio",
+                "vsdx"
+              ]
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "raw": {
+              "type": "object",
+              "description": "Preserved unmapped properties for generic.unmodeled"
+            }
+          }
+        }
+      }
+    },
+    "Connection": {
+      "type": "object",
+      "required": [
+        "id",
+        "from",
+        "to",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "from": {
+          "$ref": "#/$defs/Id",
+          "description": "Component or group id. Group-level edges mean 'all members'."
+        },
+        "to": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "enum": [
+            "traffic",
+            "data",
+            "async",
+            "dependency",
+            "replication",
+            "peering",
+            "identity",
+            "observability"
+          ],
+          "description": "traffic=request/response; data=read/write to a store; async=queue/topic/event; dependency=non-network logical dependency; replication=data sync between stores/regions; peering=network-level link; identity=authn/z relationship; observability=telemetry flow"
+        },
+        "direction": {
+          "enum": [
+            "uni",
+            "bi"
+          ],
+          "default": "uni"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "protocol": {
+              "enum": [
+                "https",
+                "http",
+                "tcp",
+                "udp",
+                "grpc",
+                "websocket",
+                "postgres",
+                "mysql",
+                "redis",
+                "mongodb",
+                "amqp",
+                "kafka",
+                "mqtt",
+                "smb",
+                "nfs",
+                "dns",
+                "icmp",
+                "custom"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "encrypted": {
+              "type": "boolean"
+            },
+            "mtls": {
+              "type": "boolean"
+            },
+            "authentication": {
+              "enum": [
+                "none",
+                "iam",
+                "oauth",
+                "api_key",
+                "mtls_cert",
+                "password",
+                "managed_identity"
+              ]
+            },
+            "pattern": {
+              "enum": [
+                "request_response",
+                "publish",
+                "subscribe",
+                "push",
+                "pull",
+                "batch",
+                "stream"
+              ]
+            },
+            "bandwidthMbps": {
+              "type": "number"
+            },
+            "expectedRps": {
+              "type": "number"
+            },
+            "observed": {
+              "type": "boolean",
+              "description": "true = derived from flow logs/config by discovery, not designed"
+            }
+          }
+        }
+      }
+    },
+    "Group": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "enum": [
+            "region",
+            "zone",
+            "network",
+            "subnet",
+            "tier",
+            "domain",
+            "account",
+            "cluster",
+            "namespace",
+            "resource_group",
+            "project",
+            "custom"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "parent": {
+          "$ref": "#/$defs/Id",
+          "description": "Containment must be acyclic; max depth 8; kind nesting rules (e.g. subnet⊂network⊂region) checked in pass 3"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "properties": {
+          "type": "object",
+          "description": "Kind-dependent: network/subnet take cidr, zone, public; region takes the provider region code; account/project take the external identifier"
+        }
+      }
+    },
+    "Policy": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "statement",
+        "enforce"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "type": "string",
+          "pattern": "^(security|reliability|performance|cost|operations|compliance)\\.[a-z_]+$",
+          "description": "Well-known kinds map to built-in parameterized rules (security.encryption, security.exposure, security.least_privilege, reliability.redundancy, reliability.backup, reliability.multi_region, performance.capacity, cost.budget, cost.tagging, operations.monitoring, compliance.residency). Unknown kinds are tenant-custom and require a registered rule."
+        },
+        "statement": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Human-readable intent; shown in reports"
+        },
+        "appliesTo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "typePrefix": {
+              "type": "string"
+            },
+            "componentIds": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Id"
+              }
+            },
+            "groupIds": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Id"
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dataClassificationAtLeast": {
+              "enum": [
+                "internal",
+                "confidential",
+                "restricted"
+              ]
+            }
+          },
+          "description": "Empty/omitted = whole architecture"
+        },
+        "params": {
+          "type": "object",
+          "description": "Rule parameters, e.g. {minZones: 2}, {kms: 'cmk'}, {monthlyUsdMax: 25000}"
+        },
+        "enforce": {
+          "enum": [
+            "error",
+            "warn",
+            "info"
+          ]
+        }
+      }
+    },
+    "Deployment": {
+      "type": "object",
+      "required": [
+        "id",
+        "environment"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "environment": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "description": {
+          "type": "string"
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accountRef": {
+              "type": "string",
+              "description": "AWS account / Azure subscription / GCP project this environment deploys to"
+            },
+            "regionOverride": {
+              "type": "string"
+            },
+            "namingConvention": {
+              "type": "string",
+              "description": "Token template, e.g. '{org}-{env}-{component}' — used by IaC generation and twin matching"
+            }
+          }
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "$ref": "#/$defs/Id"
+              },
+              "properties": {
+                "type": "object"
+              },
+              "scaling": {
+                "type": "object"
+              },
+              "disabled": {
+                "type": "boolean",
+                "description": "Component absent in this environment"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Annotation": {
+      "type": "object",
+      "required": [
+        "target",
+        "kind",
+        "body"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "Component/connection/group id, or 'document'"
+        },
+        "kind": {
+          "enum": [
+            "note",
+            "adr",
+            "review",
+            "todo",
+            "link",
+            "ai_rationale",
+            "translation_caveat"
+          ]
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "author": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+} as Record<string, unknown>;
