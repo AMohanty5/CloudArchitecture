@@ -1,0 +1,26 @@
+{
+  "name": "@cac/api-client",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "gen": "openapi-typescript ./openapi.json -o ./src/generated/schema.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.0"
+  },
+  "devDependencies": {
+    "@cac/config": "workspace:*",
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,373 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liveness + database reachability."
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/architectures": {
+      "post": {
+        "operationId": "ArchitectureController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateArchitectureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created with a default `main` branch and an empty initial commit."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/commits": {
+      "post": {
+        "operationId": "ArchitectureController_commit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Appended commit. 409 if expectedParent != head; 422 on validation errors."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/model": {
+      "get": {
+        "operationId": "ArchitectureController_getModel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved head model. ETag = head commit hash; supports If-None-Match (304)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/commits": {
+      "get": {
+        "operationId": "ArchitectureController_listCommits",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Commit history, newest first, keyset-paginated (cursor + nextCursor)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/diff": {
+      "get": {
+        "operationId": "ArchitectureController_diff",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Typed ModelDiff between two refs (commit hash or branch name) + summary."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/commits/{hash}": {
+      "get": {
+        "operationId": "ArchitectureController_getCommit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hash",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Immutable commit by hash (content-addressed, cache forever)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/catalog/services": {
+      "get": {
+        "operationId": "CatalogController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Search query, e.g. \"load balancer\".",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked palette search results."
+          }
+        },
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/services/{key}": {
+      "get": {
+        "operationId": "CatalogController_detail",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full service definition incl. the property JSON Schema for the form generator."
+          }
+        },
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/icons/{key}": {
+      "get": {
+        "operationId": "CatalogController_icon",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder SVG icon for a service (real icon packs are a Backlog item)."
+          }
+        },
+        "tags": [
+          "catalog"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "CloudArchitect Core API",
+    "description": "System of record for CAML architectures (blueprint doc 03).",
+    "version": "0.0.1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "CreateArchitectureDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable architecture name."
+          },
+          "description": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "Workspace id (defaults to the single-tenant workspace)."
+          },
+          "catalogVersion": {
+            "type": "string",
+            "description": "Catalog version to pin (defaults to \"dev\")."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CommitDto": {
+        "type": "object",
+        "properties": {
+          "expectedParent": {
+            "type": "string",
+            "description": "Optimistic lock — the commit hash this change is based on. 409 if the head moved."
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message."
+          },
+          "model": {
+            "type": "object",
+            "description": "Full CAML model (mutually exclusive with patch)."
+          },
+          "patch": {
+            "description": "RFC-6902 patch applied to the parent commit (mutually exclusive with model).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "layout": {
+            "type": "object",
+            "description": "Layout sidecar — positions/sizes, excluded from the content hash."
+          }
+        },
+        "required": [
+          "expectedParent",
+          "message"
+        ]
+      }
+    }
+  }
+}

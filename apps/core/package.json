@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "migrate": "tsx src/database/migrate.cli.ts",
     "seed": "tsx src/database/seed.cli.ts",
+    "openapi": "node dist/openapi.cli.js",
     "test": "vitest run",
     "test:int": "vitest run -c vitest.integration.config.mts"
   },
@@ -25,6 +26,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@cac/api-client": "workspace:*",
     "@cac/config": "workspace:*",
     "@testcontainers/postgresql": "^10.13.0",
     "@types/node": "^22.10.0",

@@ -150,13 +150,27 @@ hiring happens.
 > token to a dependency-free `catalog.tokens.ts`. rankServices is pure/unit-tested; the
 > store layering (Redis cache → Postgres durable → in-memory) keeps reads working through outages.
 
-### Day 11 — Generated API client + contract tests
+### Day 11 — Generated API client + contract tests ✅ (2026-06-13)
 **Goal:** Frontend never hand-writes fetch calls.
-- [ ] OpenAPI spec emitted from NestJS decorators; `packages/api-client` generated (openapi-typescript + thin wrapper)
-- [ ] Contract test: client against running core app for the Day 8–10 surface
-- [ ] CI updated: spin Postgres service container, run integration + contract suites
+- [x] OpenAPI emitted from the NestJS decorators (`pnpm --filter @cac/core openapi` → `packages/api-client/openapi.json`); `@cac/api-client` = openapi-typescript types + an `openapi-fetch` wrapper (`createCoreClient`); root `pnpm -w run gen:api` regenerates
+- [x] Contract test (`contract.int.spec.ts`): spawns the **built** core against a testcontainers Postgres and drives the Day 8–10 surface with the generated client (create/commit/read/history/diff/catalog), incl. a typed 409
+- [x] CI updated: Redis service + a `test:int` step running the integration + contract suites (Postgres via Testcontainers)
 
-**Done when:** `apps/web` can import a typed client and fetch a model; CI green end-to-end.
+**Done when:** `apps/web` imports the typed client and fetches a model ✅ (web unit test, mocked fetch); the CI step commands pass — unit 9/9 local, integration+contract **11/11 on EC2** (same suite CI runs).
+
+> Day 11 notes: esbuild (tsx/vitest) does **not** emit decorator metadata, so Nest DI can't
+> resolve type-injected providers there. Consequences: the OpenAPI emit runs from `dist`
+> (`node dist/openapi.cli.js`, tsc-emitted metadata) with publish-on-boot skipped via
+> `CAC_SKIP_PUBLISH`; and the contract test drives the built server as a child process
+> rather than booting the app in-VM. Generated spec/types are committed so builds/CI need
+> no live app to regenerate. (Implication: `pnpm dev:core` under tsx won't run Nest DI —
+> use the built `start`, or add an SWC runner later.)
+
+---
+
+**Stage B complete (Days 7–11):** core monolith + RLS migrations, the architecture
+write path (create/commit/read), history + diff + seed, catalog endpoints + Redis cache,
+and a generated typed API client with contract tests — all running on the EC2 box.
 
 ---
 

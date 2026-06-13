@@ -8,6 +8,11 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
 
@@ -29,5 +34,13 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Test
+      - name: Test (unit)
         run: pnpm test
+
+      # Integration + contract suites spin their own Postgres via Testcontainers
+      # (Docker is available on GitHub runners). The contract test boots the built
+      # core (apps/core/dist/main.js) and drives it with the generated client.
+      - name: Test (integration + contract)
+        run: pnpm --filter @cac/core test:int
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'true'

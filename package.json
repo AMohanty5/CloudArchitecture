@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "dev": "turbo run dev",
     "dev:core": "pnpm --filter @cac/core dev",
+    "gen:api": "pnpm --filter @cac/core build && pnpm --filter @cac/core openapi && pnpm --filter @cac/api-client gen",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\""
   },
   "pnpm": {

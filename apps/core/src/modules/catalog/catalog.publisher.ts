@@ -24,6 +24,8 @@ export class CatalogPublisher implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
+    // Skip the publish side effects when we only need the wired app (OpenAPI emit).
+    if (process.env.CAC_SKIP_PUBLISH === '1') return;
     const services = [...this.catalog.servicesByKey.values()];
     let pg = false;
     let cache = false;
