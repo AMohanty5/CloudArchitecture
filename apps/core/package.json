@@ -7,9 +7,12 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "migrate": "tsx src/database/migrate.cli.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:int": "vitest run -c vitest.integration.config.mts"
   },
   "dependencies": {
+    "@cac/caml": "workspace:*",
+    "@cac/catalog": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
@@ -21,6 +24,7 @@
   },
   "devDependencies": {
     "@cac/config": "workspace:*",
+    "@testcontainers/postgresql": "^10.13.0",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.0",
     "tsx": "^4.19.0",

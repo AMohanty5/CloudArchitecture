@@ -15,13 +15,14 @@ export const PG_POOL = Symbol('PG_POOL');
   providers: [
     {
       provide: PG_POOL,
-      useFactory: (): Pool => {
-        const pool = new Pool({ connectionString: loadConfig().databaseUrl, max: 10 });
-        pool.on('connect', (client) => {
-          void client.query(`SET app.tenant_id = '${DEFAULT_TENANT_ID}'`);
-        });
-        return pool;
-      },
+      useFactory: (): Pool =>
+        // Set the tenant GUC at session start (server `options`) — no per-connect
+        // query, so no races and no "already executing" deprecation warning.
+        new Pool({
+          connectionString: loadConfig().databaseUrl,
+          max: 10,
+          options: `-c app.tenant_id=${DEFAULT_TENANT_ID}`,
+        }),
     },
   ],
   exports: [PG_POOL],

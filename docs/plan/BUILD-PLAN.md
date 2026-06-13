@@ -114,13 +114,20 @@ hiring happens.
 > on boot and via `pnpm --filter @cac/core migrate`. eslint-boundaries needs the TS import
 > resolver to classify relative cross-module imports.
 
-### Day 8 — Architecture endpoints: create / commit / read
+### Day 8 — Architecture endpoints: create / commit / read ✅ (2026-06-13)
 **Goal:** The sacred write path (doc 12 invariant 3).
-- [ ] `POST /v1/architectures` (creates default branch + empty initial commit)
-- [ ] `POST .../branches/{branch}/commits` — full-model or patch body, optimistic lock on `expectedParent` (409), pass-1+2 validation (422 with element paths), canonical hash, layout sidecar
-- [ ] `GET .../branches/{branch}/model` with ETag = head hash; `GET .../commits/{hash}` (immutable, cache headers)
+- [x] `POST /api/v1/architectures` (creates default `main` branch + empty initial commit; returns id + head hash)
+- [x] `POST .../branches/{branch}/commits` — full-model **or** RFC-6902 patch body, optimistic lock on `expectedParent` (409), pass-1 (structural) + pass-2 (catalog) validation (422, problem+json with element-path `errors`), canonical hash, layout sidecar; no-op when content unchanged
+- [x] `GET .../branches/{branch}/model` with `ETag` = head hash + `If-None-Match` 304; `GET .../commits/{hash}` (immutable, `Cache-Control: …immutable`)
 
-**Done when:** integration tests (testcontainers Postgres): happy path, stale-parent 409 under concurrent commits, invalid model 422; committing the doc 05 example returns a stable hash across runs.
+**Done when:** integration tests (testcontainers Postgres) green — happy path, stale-parent 409, invalid-model 422 with paths, and the doc-05-style example commits to a stable hash across independent architectures ✅ (4/4 on EC2). RFC 9457 problem+json + `/api/v1` prefix (health/docs excluded).
+
+> Day 8 notes: catalog loaded once at boot by CatalogModule (CATALOG token, injected for
+> pass-2); commit validates the post-apply model (patch via `applyPatch`, then unified
+> pass-1+2). Tenant GUC set via libpq `options=-c app.tenant_id=…` at session start (no
+> per-connect query → no pg deprecation warning). Integration tests are Docker-gated:
+> kept out of the default `pnpm test` (no local Docker) and run via `pnpm --filter
+> @cac/core test:int` on the EC2 box. HTTP surface smoke-tested live (ETag, problem+json).
 
 ### Day 9 — History + diff endpoints
 **Goal:** Versioning is visible.

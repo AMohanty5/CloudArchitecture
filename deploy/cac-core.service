@@ -11,6 +11,7 @@ Environment=NODE_ENV=production
 Environment=PORT=3001
 Environment=DATABASE_URL=postgresql://cac:cac@localhost:5432/cac
 Environment=REDIS_URL=redis://localhost:6379
+Environment=CATALOG_DIR=/home/ec2-user/app/catalog
 ExecStart=/usr/bin/node /home/ec2-user/app/apps/core/dist/main.js
 Restart=on-failure
 RestartSec=3

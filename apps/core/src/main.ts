@@ -8,6 +8,7 @@ import { loadConfig } from './config/config';
 import { PG_POOL } from './database/database.module';
 import { runMigrations } from './database/migrate';
 import { requestLogger } from './common/request-logger';
+import { ProblemDetailsFilter } from './common/problem-details.filter';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -15,6 +16,9 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   app.use(requestLogger);
+  app.useGlobalFilters(new ProblemDetailsFilter());
+  // REST surface lives under /api/v1 (doc 08); health + docs stay at the root.
+  app.setGlobalPrefix('api/v1', { exclude: ['health'] });
 
   // Apply pending migrations on boot (idempotent; doc 04 expand-and-contract).
   const pool = app.get<Pool>(PG_POOL);
