@@ -129,13 +129,13 @@ hiring happens.
 > kept out of the default `pnpm test` (no local Docker) and run via `pnpm --filter
 > @cac/core test:int` on the EC2 box. HTTP surface smoke-tested live (ETag, problem+json).
 
-### Day 9 — History + diff endpoints
+### Day 9 — History + diff endpoints ✅ (2026-06-13)
 **Goal:** Versioning is visible.
-- [ ] `GET .../commits` (paginated history) ; `GET .../diff?from=&to=` returning the Day 4 typed diff
-- [ ] Commit `stats` computed on write (component/connection counts, providers)
-- [ ] Seed script: loads 3 fixture architectures with multi-commit histories (demo + test data)
+- [x] `GET .../commits` keyset-paginated history (newest-first, `cursor`/`nextCursor` on `(created_at, hash)`); `GET .../diff?from=&to=` → Day-4 typed `ModelDiff` + `formatDiff` summary, refs resolve as branch-name-then-hash
+- [x] Commit `stats` (component/connection/group counts + providers) computed on write (Day 8) and surfaced in history
+- [x] `seedDatabase` + `pnpm --filter @cac/core seed`: 3 fixture architectures with multi-commit histories (Acme Web 4 commits, Batch Compute 3, Orders Datastore 3) — deterministic + rerunnable (deletes seed rows first; stable hashes)
 
-**Done when:** diff endpoint output matches the caml-package diff for seeded histories; seed script is rerunnable.
+**Done when:** diff endpoint output `toEqual` the caml-package `diffModels` for seeded histories ✅; seed rerunnable (two runs → identical hashes) ✅. Integration: 9/9 on EC2 (incl. pagination walk + branch-ref diff); live-smoked seed + `GET commits` + `GET diff`.
 
 ### Day 10 — Catalog service endpoints + Redis cache
 **Goal:** The palette's data source.

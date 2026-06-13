@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ArchitectureService } from './architecture.service';
 import { CommitDto, CreateArchitectureDto } from './dto';
 
@@ -44,6 +44,22 @@ export class ArchitectureController {
     res.setHeader('ETag', hash);
     res.setHeader('Cache-Control', 'no-cache'); // head moves — revalidate every read
     return model;
+  }
+
+  @Get(':id/commits')
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'cursor', required: false })
+  @ApiOkResponse({ description: 'Commit history, newest first, keyset-paginated (cursor + nextCursor).' })
+  listCommits(@Param('id') id: string, @Query('limit') limit?: string, @Query('cursor') cursor?: string) {
+    return this.service.listCommits(id, { limit: limit ? Number(limit) : undefined, cursor });
+  }
+
+  @Get(':id/diff')
+  @ApiQuery({ name: 'from', required: true })
+  @ApiQuery({ name: 'to', required: true })
+  @ApiOkResponse({ description: 'Typed ModelDiff between two refs (commit hash or branch name) + summary.' })
+  diff(@Param('id') id: string, @Query('from') from: string, @Query('to') to: string) {
+    return this.service.diff(id, from, to);
   }
 
   @Get(':id/commits/:hash')

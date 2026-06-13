@@ -7,8 +7,8 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { applyPatch, hashModel, PatchError, validateStructure } from '@cac/caml';
-import type { CamlDocument } from '@cac/caml';
+import { applyPatch, diffModels, formatDiff, hashModel, PatchError, validateStructure } from '@cac/caml';
+import type { CamlDocument, ModelDiff } from '@cac/caml';
 import { validateAgainstCatalog } from '@cac/catalog';
 import type { Catalog } from '@cac/catalog';
 import { CATALOG } from '../catalog/api';
@@ -156,4 +156,79 @@ export class ArchitectureService {
       model: commit.model,
     };
   }
+
+  async listCommits(
+    architectureId: string,
+    options: { limit?: number; cursor?: string },
+  ): Promise<{ commits: CommitMeta[]; nextCursor: string | null }> {
+    if (!(await this.repo.architectureExists(architectureId))) {
+      throw new NotFoundException(`architecture ${architectureId} not found`);
+    }
+    const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
+    const rows = await this.repo.listCommits(architectureId, limit + 1, decodeCursor(options.cursor));
+
+    let nextCursor: string | null = null;
+    if (rows.length > limit) {
+      const last = rows[limit - 1]!;
+      nextCursor = encodeCursor(last.created_at, last.hash);
+      rows.length = limit;
+    }
+    return {
+      commits: rows.map((r) => ({
+        hash: r.hash,
+        parents: r.parent_hashes,
+        origin: r.origin,
+        message: r.message,
+        stats: r.stats,
+        authorId: r.author_id,
+        createdAt: r.created_at,
+      })),
+      nextCursor,
+    };
+  }
+
+  /** Typed ModelDiff between two refs (commit hash or branch name). */
+  async diff(
+    architectureId: string,
+    from: string,
+    to: string,
+  ): Promise<{ from: string; to: string; summary: string; diff: ModelDiff }> {
+    if (!from || !to) throw new BadRequestException('both "from" and "to" are required');
+    const fromHash = await this.resolveRef(architectureId, from);
+    const toHash = await this.resolveRef(architectureId, to);
+    const a = await this.repo.getCommit(architectureId, fromHash);
+    if (!a) throw new NotFoundException(`commit ${fromHash} not found`);
+    const b = await this.repo.getCommit(architectureId, toHash);
+    if (!b) throw new NotFoundException(`commit ${toHash} not found`);
+    const diff = diffModels(a.model, b.model);
+    return { from: fromHash, to: toHash, summary: formatDiff(diff), diff };
+  }
+
+  /** A ref is a branch name (resolved to its head) or, failing that, a commit hash. */
+  private async resolveRef(architectureId: string, ref: string): Promise<string> {
+    const head = await this.repo.getBranchHead(architectureId, ref);
+    return head ?? ref;
+  }
+}
+
+export interface CommitMeta {
+  hash: string;
+  parents: string[];
+  origin: string;
+  message: string;
+  stats: unknown;
+  authorId: string | null;
+  createdAt: Date;
+}
+
+function encodeCursor(createdAt: Date, hash: string): string {
+  return Buffer.from(`${createdAt.toISOString()}|${hash}`).toString('base64url');
+}
+
+function decodeCursor(cursor?: string): { createdAt: Date; hash: string } | undefined {
+  if (!cursor) return undefined;
+  const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
+  const sep = decoded.lastIndexOf('|');
+  if (sep === -1) throw new BadRequestException('invalid cursor');
+  return { createdAt: new Date(decoded.slice(0, sep)), hash: decoded.slice(sep + 1) };
 }

@@ -120,4 +120,39 @@ export class ArchitectureRepository {
     );
     return res.rows[0] ?? null;
   }
+
+  /**
+   * Commit history newest-first, keyset-paginated on (created_at, hash) so it is
+   * stable even when commits share a timestamp. Fetches `limit` rows; the caller
+   * passes `limit + 1` to detect a next page.
+   */
+  async listCommits(
+    architectureId: string,
+    limit: number,
+    cursor?: { createdAt: Date; hash: string },
+  ): Promise<CommitMetaRow[]> {
+    const params: unknown[] = [architectureId, limit];
+    let predicate = 'architecture_id = $1';
+    if (cursor) {
+      predicate += ' AND (created_at, hash) < ($3, $4)';
+      params.push(cursor.createdAt, cursor.hash);
+    }
+    const res = await this.pool.query<CommitMetaRow>(
+      `SELECT hash, parent_hashes, origin, message, stats, author_id, created_at
+       FROM model_commits WHERE ${predicate}
+       ORDER BY created_at DESC, hash DESC LIMIT $2`,
+      params,
+    );
+    return res.rows;
+  }
+}
+
+export interface CommitMetaRow {
+  hash: string;
+  parent_hashes: string[];
+  origin: string;
+  message: string;
+  stats: CommitStats;
+  author_id: string | null;
+  created_at: Date;
 }

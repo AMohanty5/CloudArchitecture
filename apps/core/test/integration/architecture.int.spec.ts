@@ -6,13 +6,15 @@ import { HttpException } from '@nestjs/common';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
-import { hashModel } from '@cac/caml';
+import { diffModels, hashModel } from '@cac/caml';
 import type { CamlDocument } from '@cac/caml';
 import { loadCatalog } from '@cac/catalog';
+import type { Catalog } from '@cac/catalog';
 import { runMigrations } from '../../src/database/migrate';
 import { DEFAULT_TENANT_ID } from '../../src/config/config';
 import { ArchitectureRepository } from '../../src/modules/architecture/architecture.repository';
 import { ArchitectureService } from '../../src/modules/architecture/architecture.service';
+import { seedDatabase } from '../../src/modules/architecture/seed';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const catalogDir = path.resolve(here, '../../../../catalog');
@@ -22,6 +24,7 @@ const example = (): CamlDocument => JSON.parse(readFileSync(examplePath, 'utf8')
 let container: StartedPostgreSqlContainer;
 let pool: Pool;
 let service: ArchitectureService;
+let catalog: Catalog;
 
 const statusOf = (err: unknown): number => (err instanceof HttpException ? err.getStatus() : 0);
 
@@ -32,7 +35,8 @@ beforeAll(async () => {
     options: `-c app.tenant_id=${DEFAULT_TENANT_ID}`,
   });
   await runMigrations(pool);
-  service = new ArchitectureService(new ArchitectureRepository(pool), loadCatalog(catalogDir));
+  catalog = loadCatalog(catalogDir);
+  service = new ArchitectureService(new ArchitectureRepository(pool), catalog);
 }, 180_000);
 
 afterAll(async () => {
@@ -99,5 +103,56 @@ describe('Architecture write path (integration)', () => {
 
     expect(ra.hash).toBe(rb.hash);
     expect(ra.hash).toBe(hashModel(example()));
+  });
+});
+
+describe('History, diff, and seed (integration)', () => {
+  it('seed is rerunnable and builds multi-commit histories with stable hashes', async () => {
+    const first = await seedDatabase(pool, catalog);
+    const second = await seedDatabase(pool, catalog);
+    expect(first).toHaveLength(3);
+    expect(first.every((s) => s.commits.length >= 3)).toBe(true);
+    expect(second.map((s) => s.commits.map((c) => c.hash))).toEqual(first.map((s) => s.commits.map((c) => c.hash)));
+  });
+
+  it('GET commits returns the seeded history newest-first', async () => {
+    const seeds = await seedDatabase(pool, catalog);
+    const arch = seeds[0]!;
+    const { commits } = await service.listCommits(arch.id, {});
+    expect(commits).toHaveLength(arch.commits.length);
+    expect(commits[0]!.hash).toBe(arch.commits[arch.commits.length - 1]!.hash); // newest first
+    expect(commits.at(-1)!.hash).toBe(arch.commits[0]!.hash);
+  });
+
+  it('keyset pagination walks the whole history without overlap', async () => {
+    const seeds = await seedDatabase(pool, catalog);
+    const arch = seeds[0]!; // 4 commits
+    const page1 = await service.listCommits(arch.id, { limit: 2 });
+    expect(page1.commits).toHaveLength(2);
+    expect(page1.nextCursor).not.toBeNull();
+    const page2 = await service.listCommits(arch.id, { limit: 2, cursor: page1.nextCursor! });
+    const seen = [...page1.commits, ...page2.commits].map((c) => c.hash);
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(seen).toHaveLength(arch.commits.length);
+  });
+
+  it('diff endpoint output matches the caml-package diff for seeded histories', async () => {
+    const seeds = await seedDatabase(pool, catalog);
+    const arch = seeds[0]!;
+    const firstCommit = arch.commits[0]!;
+    const lastCommit = arch.commits.at(-1)!;
+    const res = await service.diff(arch.id, firstCommit.hash, lastCommit.hash);
+    expect(res.from).toBe(firstCommit.hash);
+    expect(res.to).toBe(lastCommit.hash);
+    expect(res.diff).toEqual(diffModels(firstCommit.model, lastCommit.model));
+  });
+
+  it('diff resolves a branch name (main) to its head', async () => {
+    const seeds = await seedDatabase(pool, catalog);
+    const arch = seeds[0]!;
+    const firstCommit = arch.commits[0]!;
+    const lastCommit = arch.commits.at(-1)!;
+    const res = await service.diff(arch.id, firstCommit.hash, 'main');
+    expect(res.to).toBe(lastCommit.hash); // main head = last seeded commit
   });
 });
