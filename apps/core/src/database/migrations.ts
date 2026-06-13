@@ -76,4 +76,30 @@ export const migrations: Migration[] = [
         USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
     `,
   },
+  {
+    id: '0002_catalog_services',
+    sql: /* sql */ `
+      -- Published catalog (doc 03 §3.6, doc 14): global (not tenant-scoped), one
+      -- row per (version, key). Populated on boot from catalog-as-code content.
+      CREATE TABLE IF NOT EXISTS catalog_services (
+        version          TEXT NOT NULL,
+        key              TEXT NOT NULL,
+        provider         TEXT NOT NULL,
+        name             TEXT NOT NULL,
+        description      TEXT,
+        status           TEXT NOT NULL,
+        icon             TEXT,
+        docs             TEXT,
+        abstract_types   TEXT[] NOT NULL DEFAULT '{}',
+        group_kind       TEXT,
+        capabilities     JSONB NOT NULL DEFAULT '{}',
+        properties       JSONB NOT NULL DEFAULT '{}',
+        connection_rules JSONB NOT NULL DEFAULT '{}',
+        published_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (version, key)
+      );
+      CREATE INDEX IF NOT EXISTS catalog_services_provider_idx
+        ON catalog_services (version, provider);
+    `,
+  },
 ];

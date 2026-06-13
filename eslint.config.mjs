@@ -22,7 +22,7 @@ export default tseslint.config(
       'boundaries/include': ['apps/core/src/**/*.ts'],
       'boundaries/elements': [
         { type: 'module', pattern: 'apps/core/src/modules/*', capture: ['name'] },
-        { type: 'shared', pattern: 'apps/core/src/(common|config|database)/**' },
+        { type: 'shared', pattern: 'apps/core/src/(common|config|database|redis)/**' },
         { type: 'root', pattern: 'apps/core/src/*.ts', mode: 'file' },
       ],
     },

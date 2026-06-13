@@ -137,13 +137,18 @@ hiring happens.
 
 **Done when:** diff endpoint output `toEqual` the caml-package `diffModels` for seeded histories ✅; seed rerunnable (two runs → identical hashes) ✅. Integration: 9/9 on EC2 (incl. pagination walk + branch-ref diff); live-smoked seed + `GET commits` + `GET diff`.
 
-### Day 10 — Catalog service endpoints + Redis cache
+### Day 10 — Catalog service endpoints + Redis cache ✅ (2026-06-13)
 **Goal:** The palette's data source.
-- [ ] Catalog publish-on-boot: load `catalog/` → Postgres tables + Redis cache
-- [ ] `GET /v1/catalog/services?q=&provider=` (search), `GET /v1/catalog/services/{key}` (full schema for property forms)
-- [ ] Icon static serving pipeline (start with placeholder set; official icon packs tracked in Backlog)
+- [x] Publish-on-boot (`CatalogPublisher`): `catalog/` (in-memory CATALOG) → Postgres `catalog_services` (migration 0002, upsert) + Redis index; failures are logged, not fatal
+- [x] `GET /api/v1/catalog/services?q=&provider=` (ranked search, pure `rankServices`), `GET /api/v1/catalog/services/{key}` (full service incl. the `properties` JSON Schema for the form generator); reads Redis → Postgres → in-memory fallback
+- [x] `GET /api/v1/catalog/icons/{key}` serves a deterministic placeholder SVG (real icon packs remain a Backlog item); `RedisModule` (ioredis) added
 
-**Done when:** search returns ranked results for "load balancer"; service detail returns the property JSON Schema the form generator will consume.
+**Done when:** search `"load balancer"` → `[aws.alb]` ranked (score 48, rds/vpc excluded) ✅; `services/aws.rds` returns the property schema (engine/instanceClass-with-pattern/multiAz/…) ✅. Verified live on EC2: boot published 5 services (postgres=true, redis=true), 5 PG rows, Redis index present, icon 200 image/svg+xml.
+
+> Day 10 notes: hit a circular import (`CATALOG` token defined in catalog.module.ts while
+> its providers imported it back) — Nest DI failed with undefined param metadata; moved the
+> token to a dependency-free `catalog.tokens.ts`. rankServices is pure/unit-tested; the
+> store layering (Redis cache → Postgres durable → in-memory) keeps reads working through outages.
 
 ### Day 11 — Generated API client + contract tests
 **Goal:** Frontend never hand-writes fetch calls.

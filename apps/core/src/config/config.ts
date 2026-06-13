@@ -4,6 +4,7 @@ import path from 'node:path';
 export interface CoreConfig {
   port: number;
   databaseUrl: string;
+  redisUrl: string;
   /** Catalog-as-code content dir (repo `catalog/`). */
   catalogDir: string;
 }
@@ -12,6 +13,7 @@ export function loadConfig(): CoreConfig {
   return {
     port: Number(process.env.PORT ?? 3001),
     databaseUrl: process.env.DATABASE_URL ?? 'postgresql://cac:cac@localhost:5432/cac',
+    redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
     // From apps/core (cwd at runtime + during tests) the repo catalog/ is two up.
     catalogDir: process.env.CATALOG_DIR ?? path.resolve(process.cwd(), '../../catalog'),
   };
