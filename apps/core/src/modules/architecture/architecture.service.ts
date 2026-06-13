@@ -29,6 +29,20 @@ export class ArchitectureService {
     @Inject(CATALOG) private readonly catalog: Catalog,
   ) {}
 
+  async listArchitectures(): Promise<
+    Array<{ id: string; name: string; description: string | null; defaultBranch: string; lifecycle: string; createdAt: Date }>
+  > {
+    const rows = await this.repo.listArchitectures();
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      defaultBranch: r.default_branch,
+      lifecycle: r.lifecycle,
+      createdAt: r.created_at,
+    }));
+  }
+
   async create(input: CreateArchitectureDto): Promise<{ id: string; defaultBranch: string; head: string }> {
     const id = randomUUID();
     const camlId = `arch_${randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;

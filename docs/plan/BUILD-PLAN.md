@@ -176,13 +176,18 @@ and a generated typed API client with contract tests — all running on the EC2 
 
 ## Stage C — The canvas (Days 12–20)
 
-### Day 12 — Canvas shell
+### Day 12 — Canvas shell ✅ (2026-06-13)
 **Goal:** React Flow renders a CAML model read-only.
-- [ ] `apps/web` routes: architecture list → editor; TanStack Query wiring to api-client
-- [ ] Projector v1: CAML + layout → React Flow nodes/edges (doc 06 derivation layer)
-- [ ] `ServiceNode` (icon, name, binding badge) + basic edge rendering; pan/zoom/minimap/fit-view
+- [x] `apps/web` routes (react-router): list `/` → editor `/architectures/:id`; TanStack Query hooks (`useArchitectures`, `useModel`) over the generated `@cac/api-client`. Added `GET /api/v1/architectures` (list) to core + regenerated the client
+- [x] Projector v1 (pure, unit-tested): CAML + optional layout sidecar → React Flow nodes/edges with a nested box auto-layout (parents precede children; ELK is Day 18)
+- [x] `ServiceNode` (catalog icon + name + binding badge) and `GroupNode` (labelled container); `@xyflow/react` canvas with `Background`/`MiniMap`/`Controls`/`fitView`, read-only
 
-**Done when:** seeded e-commerce fixture renders correctly from the API; refreshing loses nothing.
+**Done when:** the seeded 3-tier fixture (Acme Web Platform: 3 components, 5 nested groups) loads from the API and projects correctly ✅ (projector tests + live list/model endpoints verified on EC2; web SPA served on :4173); refresh re-fetches from the API (read-only, server is source of truth) so nothing is lost ✅.
+
+> Day 12 notes: pixel-level rendering is the user's to eyeball via an SSH tunnel
+> (`-L 4173:localhost:4173 -L 3001:localhost:3001`); CI/headless coverage is the pure
+> projector test + an App smoke test (the canvas route isn't mounted under jsdom to avoid
+> React-Flow's ResizeObserver needs). Begins Stage C.
 
 ### Day 13 — Palette + drop-to-create
 **Goal:** First mutation through the real write path.

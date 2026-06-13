@@ -27,7 +27,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["ArchitectureController_list"];
         put?: never;
         post: operations["ArchitectureController_create"];
         delete?: never;
@@ -208,6 +208,24 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Liveness + database reachability. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List architectures, newest first. */
             200: {
                 headers: {
                     [name: string]: unknown;

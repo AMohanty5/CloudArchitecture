@@ -16,6 +16,12 @@ interface HttpRes {
 export class ArchitectureController {
   constructor(private readonly service: ArchitectureService) {}
 
+  @Get()
+  @ApiOkResponse({ description: 'List architectures, newest first.' })
+  list() {
+    return this.service.listArchitectures();
+  }
+
   @Post()
   @ApiOkResponse({ description: 'Created with a default `main` branch and an empty initial commit.' })
   create(@Body() body: CreateArchitectureDto) {

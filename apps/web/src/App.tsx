@@ -1,8 +1,12 @@
+import { Route, Routes } from 'react-router-dom';
+import { ArchitectureList } from './pages/ArchitectureList';
+import { Editor } from './pages/Editor';
+
 export function App() {
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>Cloud Architect Copilot</h1>
-      <p>Day 1 scaffold. The canvas lands in Stage C (Days 12–20).</p>
-    </main>
+    <Routes>
+      <Route path="/" element={<ArchitectureList />} />
+      <Route path="/architectures/:id" element={<Editor />} />
+    </Routes>
   );
 }

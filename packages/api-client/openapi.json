@@ -16,6 +16,18 @@
       }
     },
     "/architectures": {
+      "get": {
+        "operationId": "ArchitectureController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List architectures, newest first."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      },
       "post": {
         "operationId": "ArchitectureController_create",
         "parameters": [],

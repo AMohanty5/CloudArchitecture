@@ -105,6 +105,14 @@ export class ArchitectureRepository {
     return (res.rowCount ?? 0) > 0;
   }
 
+  async listArchitectures(): Promise<ArchitectureRow[]> {
+    const res = await this.pool.query<ArchitectureRow>(
+      `SELECT id, name, description, default_branch, lifecycle, created_at
+       FROM architectures ORDER BY created_at DESC`,
+    );
+    return res.rows;
+  }
+
   async getBranchHead(architectureId: string, name: string): Promise<string | null> {
     const res = await this.pool.query<{ head_hash: string }>(
       'SELECT head_hash FROM branches WHERE architecture_id = $1 AND name = $2',
@@ -145,6 +153,15 @@ export class ArchitectureRepository {
     );
     return res.rows;
   }
+}
+
+export interface ArchitectureRow {
+  id: string;
+  name: string;
+  description: string | null;
+  default_branch: string;
+  lifecycle: string;
+  created_at: Date;
 }
 
 export interface CommitMetaRow {
