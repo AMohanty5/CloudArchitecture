@@ -1,10 +1,15 @@
+import { useCallback, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
 import { Inspector } from '../canvas/Inspector';
+import { EdgeInspector } from '../canvas/EdgeInspector';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
-import type { ProjectableModel } from '../canvas/projector';
+import { useConnectionRules } from '../lib/queries';
+import { evaluateConnection, makeConnectionId } from '../canvas/connections';
+import type { ConnectVerdict } from '../canvas/Canvas';
+import type { CamlComponent, ProjectableModel } from '../canvas/projector';
 
 const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
   loading: { label: 'Loading…', color: '#94a3b8' },
@@ -16,9 +21,46 @@ const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
 
 export function Editor() {
   const { id = '' } = useParams();
-  const { model, layout, saveState, errors, selectedId, select, addComponent, setProperty, rename } = useEditor(id);
+  const editor = useEditor(id);
+  const { model, layout, saveState, errors, selectedId, selectedEdgeId } = editor;
   const badge = SAVE_BADGE[saveState];
-  const selected = model?.components?.find((c) => c.id === selectedId);
+
+  const components: CamlComponent[] = model?.components ?? [];
+  const byId = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
+  const serviceKeys = useMemo(
+    () => [...new Set(components.map((c) => c.binding?.service).filter((s): s is string => Boolean(s)))],
+    [components],
+  );
+  const rulesByService = useConnectionRules(serviceKeys);
+
+  // Resolve a candidate edge (source→target node ids) to a catalog verdict.
+  const verdict = useCallback(
+    (sourceId: string, targetId: string) => {
+      if (sourceId === targetId) return { allowed: false, kinds: [], protocols: [], reason: 'A node cannot connect to itself' };
+      const from = byId.get(sourceId);
+      const to = byId.get(targetId);
+      if (!from || !to) return { allowed: false, kinds: [], protocols: [], reason: 'Unknown endpoint' };
+      return evaluateConnection(
+        { type: from.type, rules: rulesByService.get(from.binding?.service ?? '') },
+        { type: to.type, rules: rulesByService.get(to.binding?.service ?? '') },
+      );
+    },
+    [byId, rulesByService],
+  );
+
+  const evaluate = useCallback((source: string, target: string): ConnectVerdict => verdict(source, target), [verdict]);
+
+  const onConnect = useCallback(
+    (source: string, target: string) => {
+      const v = verdict(source, target);
+      if (!v.allowed) return;
+      editor.connect({ id: makeConnectionId(), from: source, to: target, kind: v.kinds[0]! });
+    },
+    [verdict, editor],
+  );
+
+  const selectedComponent = byId.get(selectedId ?? '');
+  const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -45,18 +87,35 @@ export function Editor() {
             <Canvas
               model={model as ProjectableModel}
               layout={{ positions: layout }}
-              onDropService={addComponent}
+              onDropService={editor.addComponent}
               selectedId={selectedId}
-              onSelect={select}
+              onSelect={editor.select}
+              selectedEdgeId={selectedEdgeId}
+              onSelectEdge={editor.selectEdge}
+              evaluate={evaluate}
+              onConnect={onConnect}
             />
           ) : null}
         </div>
-        <Inspector
-          component={selected}
-          errors={errors}
-          onRename={(name) => selectedId && rename(selectedId, name)}
-          onSetProperty={(key, value) => selectedId && setProperty(selectedId, key, value)}
-        />
+        {selectedEdge ? (
+          <EdgeInspector
+            connection={selectedEdge}
+            kindOptions={verdict(selectedEdge.from, selectedEdge.to).kinds}
+            onSetKind={(kind) => editor.setConnectionKind(selectedEdge.id, kind)}
+            onSetProperty={(key, value) => editor.setConnectionProperty(selectedEdge.id, key, value)}
+            onDisconnect={() => {
+              editor.disconnect(selectedEdge.id);
+              editor.selectEdge(undefined);
+            }}
+          />
+        ) : (
+          <Inspector
+            component={selectedComponent}
+            errors={errors}
+            onRename={(name) => selectedId && editor.rename(selectedId, name)}
+            onSetProperty={(key, value) => selectedId && editor.setProperty(selectedId, key, value)}
+          />
+        )}
       </div>
     </div>
   );

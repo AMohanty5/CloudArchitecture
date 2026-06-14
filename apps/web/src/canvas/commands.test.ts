@@ -59,4 +59,32 @@ describe('commands', () => {
     expect(next.components![0]!.name).toBe('Orders DB');
     expect(withRds.components![0]!.name).toBe('DB'); // input untouched
   });
+
+  const conn = { id: 'conn-1', from: 'alb-1', to: 'asg-1', kind: 'traffic' };
+
+  it('applyCommand Connect appends a connection without mutating the input', () => {
+    const next = applyCommand(base, { type: 'Connect', connection: conn });
+    expect(next.connections).toEqual([conn]);
+    expect(base.connections).toBeUndefined(); // input untouched
+  });
+
+  it('applyCommand Disconnect removes the connection by id', () => {
+    const connected = applyCommand(base, { type: 'Connect', connection: conn });
+    const next = applyCommand(connected, { type: 'Disconnect', connectionId: 'conn-1' });
+    expect(next.connections).toEqual([]);
+  });
+
+  it('applyCommand SetConnectionKind changes the kind', () => {
+    const connected = applyCommand(base, { type: 'Connect', connection: conn });
+    const next = applyCommand(connected, { type: 'SetConnectionKind', connectionId: 'conn-1', kind: 'data' });
+    expect(next.connections![0]!.kind).toBe('data');
+  });
+
+  it('applyCommand SetConnectionProperty sets and clears connection properties', () => {
+    const connected = applyCommand(base, { type: 'Connect', connection: conn });
+    const set = applyCommand(connected, { type: 'SetConnectionProperty', connectionId: 'conn-1', key: 'port', value: 443 });
+    expect(set.connections![0]!.properties).toEqual({ port: 443 });
+    const cleared = applyCommand(set, { type: 'SetConnectionProperty', connectionId: 'conn-1', key: 'port', value: undefined });
+    expect(cleared.connections![0]!.properties).toBeUndefined();
+  });
 });

@@ -224,13 +224,22 @@ and a generated typed API client with contract tests — all running on the EC2 
 > textarea with local parse-error state — unused by the 5 seed services (all scalar), present for
 > completeness.
 
-### Day 15 — Connections
+### Day 15 — Connections ✅ (2026-06-14)
 **Goal:** Drawing edges that mean something.
-- [ ] Connect interaction (drag from handle); `Connect` command; connection kind picker (traffic/data/async) with smart default from catalog `connectionRules`
-- [ ] Invalid targets visually rejected during drag (rules from catalog)
-- [ ] Kind-styled edges (solid/dashed/dotted + color per doc 06); edge property panel (protocol, port, encrypted)
+- [x] Connect interaction (drag from handle, `nodesConnectable`); `Connect`/`Disconnect`/`SetConnectionKind`/`SetConnectionProperty` commands; kind picker in the edge inspector with the smart default = first kind the catalog permits. Rules fetched per in-model service via `useConnectionRules` (cache-shared with `useCatalogService`)
+- [x] Pure `evaluateConnection` (`canvas/connections.ts`): a connection is permitted when the source's outbound rule `to` includes the target's abstract type OR the target's inbound rule `from` includes the source's — unit-tested (ALB→ASG traffic, ASG→RDS data, ALB→RDS + reverse rejected, self/missing-rules rejected). `isValidConnection` blocks invalid drops during drag and surfaces the catalog reason as a hint banner
+- [x] Kind-styled edges (`edgeStyle`: traffic=solid blue, data=dashed green, async=dotted purple, replication/dependency/…) applied in the projector; edge inspector edits protocol (enum) / port / encrypted + delete
 
-**Done when:** ALB→ASG (traffic) allowed, ALB→RDS (data) rejected with explanation; edge properties persist.
+**Done when:** ALB→ASG (traffic) allowed, ALB→RDS (data) rejected with explanation; edge properties persist. Headless: web 31/31 (connections 7, commands 12, projector/PropertyForm/api/App), tsc/eslint/`vite build` clean. Live drag→validate→edit eyeballed on EC2 via the SSH tunnel.
+
+> Day 15 notes: connection validation is client-side for now (drag-time UX) — the server has no
+> connection-rules pass yet, so an invalid edge is simply never drawn. Verdict semantics are OR
+> (either endpoint may authorize) with the kind set unioned across matched rules; this gives the
+> right answer for every seed-service pair and avoids false rejections when a catalog author only
+> specifies one side. The invalid-drag hint uses a ref-guarded setState so React Flow's repeated
+> `isValidConnection` calls during hover don't thrash. `ConnectionProperties` is typed (protocol/
+> port/encrypted + index signature), so the shared `setKey` helper's `Record` result casts through
+> it on `SetConnectionProperty`.
 
 ### Day 16 — Groups & containment
 **Goal:** VPC ⊃ subnet ⊃ instance nesting works.

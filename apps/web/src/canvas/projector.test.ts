@@ -43,9 +43,11 @@ describe('project', () => {
     });
   });
 
-  it('projects connections to labelled edges', () => {
+  it('projects connections to labelled, kind-styled edges', () => {
     const { edges } = project(threeTier);
-    expect(edges).toEqual([{ id: 'lb-app', source: 'web-lb', target: 'app-asg', label: 'traffic', data: { kind: 'traffic' } }]);
+    expect(edges).toEqual([
+      { id: 'lb-app', source: 'web-lb', target: 'app-asg', label: 'traffic', data: { kind: 'traffic' }, style: { stroke: '#2563eb' } },
+    ]);
   });
 
   it('honours a layout sidecar when present', () => {

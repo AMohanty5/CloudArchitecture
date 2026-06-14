@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { client } from './client';
 import { applyCommand, componentFromService, makeComponentId } from '../canvas/commands';
 import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
+import type { CamlConnection } from '../canvas/projector';
 
 export type SaveState = 'loading' | 'saving' | 'saved' | 'conflict' | 'error';
 
@@ -20,10 +21,16 @@ export interface EditorApi {
   /** Validation errors from the last rejected (422) commit; cleared on the next success. */
   errors: CommitError[];
   selectedId: string | undefined;
+  selectedEdgeId: string | undefined;
   select: (id: string | undefined) => void;
+  selectEdge: (id: string | undefined) => void;
   addComponent: (service: ServiceLike, position: { x: number; y: number }) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
   rename: (componentId: string, name: string) => void;
+  connect: (connection: CamlConnection) => void;
+  disconnect: (connectionId: string) => void;
+  setConnectionKind: (connectionId: string, kind: string) => void;
+  setConnectionProperty: (connectionId: string, key: string, value: unknown) => void;
 }
 
 const DEBOUNCE_MS = 700;
@@ -41,6 +48,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
   const [saveState, setSaveState] = useState<SaveState>('loading');
   const [errors, setErrors] = useState<CommitError[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(undefined);
 
   const modelRef = useRef<EditableModel | undefined>(undefined);
   const committedRef = useRef<EditableModel | undefined>(undefined);
@@ -144,7 +152,44 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [execute],
   );
 
+  const connect = useCallback((connection: CamlConnection) => execute({ type: 'Connect', connection }), [execute]);
+  const disconnect = useCallback((connectionId: string) => execute({ type: 'Disconnect', connectionId }), [execute]);
+  const setConnectionKind = useCallback(
+    (connectionId: string, kind: string) => execute({ type: 'SetConnectionKind', connectionId, kind }),
+    [execute],
+  );
+  const setConnectionProperty = useCallback(
+    (connectionId: string, key: string, value: unknown) => execute({ type: 'SetConnectionProperty', connectionId, key, value }),
+    [execute],
+  );
+
+  // Node and edge selection are mutually exclusive (one inspector at a time).
+  const select = useCallback((nodeId: string | undefined) => {
+    setSelectedId(nodeId);
+    if (nodeId) setSelectedEdgeId(undefined);
+  }, []);
+  const selectEdge = useCallback((edgeId: string | undefined) => {
+    setSelectedEdgeId(edgeId);
+    if (edgeId) setSelectedId(undefined);
+  }, []);
+
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  return { model, layout, saveState, errors, selectedId, select: setSelectedId, addComponent, setProperty, rename };
+  return {
+    model,
+    layout,
+    saveState,
+    errors,
+    selectedId,
+    selectedEdgeId,
+    select,
+    selectEdge,
+    addComponent,
+    setProperty,
+    rename,
+    connect,
+    disconnect,
+    setConnectionKind,
+    setConnectionProperty,
+  };
 }

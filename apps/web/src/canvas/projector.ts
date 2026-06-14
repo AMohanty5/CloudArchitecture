@@ -5,6 +5,8 @@
  * so a freshly-committed model still renders with intact group containment.
  */
 
+import { edgeStyle } from './connections';
+
 export interface CamlComponent {
   id: string;
   name: string;
@@ -13,11 +15,20 @@ export interface CamlComponent {
   group?: string;
   properties?: Record<string, unknown>;
 }
+export interface ConnectionProperties {
+  protocol?: string;
+  port?: number;
+  encrypted?: boolean;
+  [key: string]: unknown;
+}
 export interface CamlConnection {
   id: string;
   from: string;
   to: string;
   kind: string;
+  direction?: 'uni' | 'bi';
+  name?: string;
+  properties?: ConnectionProperties;
 }
 export interface CamlGroup {
   id: string;
@@ -51,6 +62,7 @@ export interface ProjectedEdge {
   target: string;
   label: string;
   data: { kind: string };
+  style: { stroke: string; strokeDasharray?: string };
 }
 export interface Projection {
   nodes: ProjectedNode[];
@@ -138,6 +150,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
     target: c.to,
     label: c.kind,
     data: { kind: c.kind },
+    style: edgeStyle(c.kind),
   }));
 
   return { nodes, edges };
