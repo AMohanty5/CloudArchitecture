@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
@@ -14,7 +14,8 @@ import { evaluateConnection, makeConnectionId } from '../canvas/connections';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
 import { buildDiffView } from '../canvas/diffView';
-import type { ConnectVerdict } from '../canvas/Canvas';
+import { downloadDataUrl, downloadBlob, safeFilename } from '../lib/download';
+import type { ConnectVerdict, CanvasExporter } from '../canvas/Canvas';
 import type { CamlComponent, CamlGroup, ProjectableModel } from '../canvas/projector';
 import type { ServiceLike, EditableModel } from '../canvas/commands';
 
@@ -29,6 +30,27 @@ function inFormField(el: EventTarget | null): boolean {
   const t = el as HTMLElement | null;
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 }
+
+const selectStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '5px 7px',
+  borderRadius: 6,
+  border: '1px solid #cbd5e1',
+  fontSize: 13,
+};
+const exportActionStyle: React.CSSProperties = {
+  width: '100%',
+  marginTop: 10,
+  marginBottom: 8,
+  padding: '6px 8px',
+  borderRadius: 6,
+  border: 'none',
+  background: '#2563eb',
+  color: '#fff',
+  fontSize: 13,
+  cursor: 'pointer',
+};
 
 function toolBtn(enabled: boolean): React.CSSProperties {
   return {
@@ -114,6 +136,26 @@ export function Editor() {
     },
     [id, editor],
   );
+
+  // ---- Export (Day 21): client PNG (html-to-image) + server SVG ----
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportTheme, setExportTheme] = useState<'light' | 'dark'>('light');
+  const [pngScale, setPngScale] = useState(2);
+  const exporterRef = useRef<CanvasExporter | null>(null);
+  const archName = (model as { name?: string } | undefined)?.name ?? 'architecture';
+
+  const exportPng = useCallback(async () => {
+    const dataUrl = await exporterRef.current?.toPngDataUrl({ pixelRatio: pngScale, dark: exportTheme === 'dark' });
+    if (dataUrl) downloadDataUrl(dataUrl, safeFilename(archName, 'png'));
+    setExportOpen(false);
+  }, [pngScale, exportTheme, archName]);
+
+  const exportSvg = useCallback(async () => {
+    const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
+    const res = await fetch(`${base}/architectures/${id}/branches/main/export.svg?theme=${exportTheme}`);
+    downloadBlob(await res.blob(), safeFilename(archName, 'svg'));
+    setExportOpen(false);
+  }, [id, exportTheme, archName]);
 
   const components: CamlComponent[] = model?.components ?? [];
   const groups: CamlGroup[] = model?.groups ?? [];
@@ -308,6 +350,60 @@ export function Editor() {
         >
           🕑 History
         </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setExportOpen((v) => !v)}
+            disabled={diffActive || !model}
+            title="Export PNG / SVG"
+            style={{
+              marginLeft: 4,
+              padding: '4px 10px',
+              borderRadius: 6,
+              border: '1px solid #e2e8f0',
+              background: exportOpen ? '#eff6ff' : '#fff',
+              color: diffActive || !model ? '#cbd5e1' : exportOpen ? '#2563eb' : '#334155',
+              cursor: diffActive || !model ? 'default' : 'pointer',
+              fontSize: 13,
+            }}
+          >
+            ⬇ Export
+          </button>
+          {exportOpen ? (
+            <div
+              style={{
+                position: 'absolute',
+                top: '110%',
+                left: 0,
+                zIndex: 10,
+                width: 200,
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: 8,
+                boxShadow: '0 4px 16px rgba(15,23,42,0.12)',
+                padding: 12,
+                fontSize: 13,
+              }}
+            >
+              <label style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Theme</label>
+              <select value={exportTheme} onChange={(e) => setExportTheme(e.target.value as 'light' | 'dark')} style={selectStyle}>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+              <label style={{ display: 'block', fontSize: 11, color: '#94a3b8', margin: '10px 0 4px' }}>PNG scale</label>
+              <select value={pngScale} onChange={(e) => setPngScale(Number(e.target.value))} style={selectStyle}>
+                <option value={1}>1×</option>
+                <option value={2}>2×</option>
+                <option value={3}>3×</option>
+              </select>
+              <button onClick={() => void exportPng()} style={exportActionStyle}>
+                Download PNG
+              </button>
+              <button onClick={() => void exportSvg()} style={{ ...exportActionStyle, marginBottom: 0 }}>
+                Download SVG
+              </button>
+            </div>
+          ) : null}
+        </div>
         <span style={{ marginLeft: 'auto', fontSize: 13, color: badge.color }}>{badge.label}</span>
       </header>
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -337,6 +433,7 @@ export function Editor() {
               onSelectEdge={editor.selectEdge}
               evaluate={evaluate}
               onConnect={onConnect}
+              registerExporter={(api) => (exporterRef.current = api)}
             />
           ) : null}
         </div>

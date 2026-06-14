@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/com
 import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ArchitectureService } from './architecture.service';
 import { CommitDto, CreateArchitectureDto } from './dto';
+import { renderSvg } from '../diagram/api';
 
 interface HttpReq {
   headers: Record<string, string | string[] | undefined>;
@@ -50,6 +51,21 @@ export class ArchitectureController {
     res.setHeader('ETag', hash);
     res.setHeader('Cache-Control', 'no-cache'); // head moves — revalidate every read
     return model;
+  }
+
+  @Get(':id/branches/:branch/export.svg')
+  @ApiQuery({ name: 'theme', required: false, description: 'light (default) | dark' })
+  @ApiOkResponse({ description: 'Presentation-ready SVG of the branch head model (true vectors).' })
+  async exportSvg(
+    @Param('id') id: string,
+    @Param('branch') branch: string,
+    @Query('theme') theme: string | undefined,
+    @Res({ passthrough: true }) res: HttpRes,
+  ): Promise<string> {
+    const { model } = await this.service.getModel(id, branch);
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Content-Disposition', 'inline; filename="architecture.svg"');
+    return renderSvg(model, { theme: theme === 'dark' ? 'dark' : 'light' });
   }
 
   @Get(':id/commits')

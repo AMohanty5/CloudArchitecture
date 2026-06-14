@@ -331,12 +331,19 @@ and a generated typed API client with contract tests — all running on the EC2 
 
 ## Stage D — Projections: export + IaC (Days 21–26)
 
-### Day 21 — PNG/SVG export
-- [ ] Client PNG (html-to-image of viewport, 2x scale)
-- [ ] Server SVG serializer from projected graph (true vectors, embedded icons) as a `core` module endpoint
-- [ ] Export menu with size/theme options
+### Day 21 — PNG/SVG export ✅ (2026-06-14)
+- [x] Client PNG via `html-to-image`: the canvas registers a `CanvasExporter` handle (`registerExporter`) that fits all nodes (`getNodesBounds` + `getViewportForBounds`) and rasterises the React Flow viewport at a chosen pixel ratio (1×/2×/3×)
+- [x] Server SVG serializer in the **diagram** module (`renderSvg`, pure): absolute nested-box layout mirroring the canvas projector, kind-styled group containers + edges, inline icon tiles, light/dark themes; exposed via `diagram/api.ts` and wired to `GET /api/v1/architectures/{id}/branches/{branch}/export.svg?theme=` on the architecture controller (boundary-respecting cross-module import). Unit-tested (well-formed SVG, all elements present, escaping, dark theme)
+- [x] Export popover in the editor header: theme (light/dark), PNG scale, Download PNG / Download SVG (disabled in diff mode)
 
-**Done when:** both exports of the e-commerce fixture look presentation-ready.
+**Done when:** both exports of the e-commerce fixture look presentation-ready. SVG verified **live** — `GET …/export.svg` for the seeded Acme 3-tier returns valid `image/svg+xml` (2.7 KB, nested region→VPC→subnet, kind-tinted). Headless: core 9/9 (svg 3), web 59/59, tsc/eslint/builds clean. PNG is build-verified; visual eyeball on EC2. Begins Stage D.
+
+> Day 21 notes: the SVG serializer lives in the `diagram` module (doc-15 home) and re-derives its own
+> absolute layout from the model rather than depending on the web projector — same nested-box geometry,
+> so on-screen and exported diagrams agree. The endpoint sits on the architecture controller (it already
+> reads models) and imports `renderSvg` through `diagram/api.ts`, satisfying eslint-boundaries. Web fetches
+> the SVG URL directly (it returns image/svg+xml, not JSON), so no API-client regen was needed. Icons are
+> inline coloured tiles (the placeholder pack) — real provider icon packs remain a Backlog/licensing item.
 
 ### Day 22 — Terraform IR + generator skeleton
 - [ ] Typed IR: CAML → resource graph with provider blocks, refs, dependencies (doc 03 §3.9)

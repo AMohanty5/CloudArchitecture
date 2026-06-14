@@ -1,7 +1,17 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Background,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  ReactFlowProvider,
+  getNodesBounds,
+  getViewportForBounds,
+  useReactFlow,
+} from '@xyflow/react';
 import type { Connection, Edge, Node, NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { toPng } from 'html-to-image';
 import { project } from './projector';
 import type { LayoutSidecar, ProjectableModel } from './projector';
 import { ServiceNode } from './ServiceNode';
@@ -17,6 +27,11 @@ const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
 export interface ConnectVerdict {
   allowed: boolean;
   reason?: string;
+}
+
+/** Imperative export handle the canvas registers with its parent (Day 21). */
+export interface CanvasExporter {
+  toPngDataUrl: (opts: { pixelRatio: number; dark: boolean }) => Promise<string | null>;
 }
 
 interface CanvasProps {
@@ -37,10 +52,25 @@ interface CanvasProps {
   onConnect?: (source: string, target: string) => void;
   /** Diff overlay: element/connection id → change status (added/removed/modified). */
   diffStatus?: Record<string, DiffStatus>;
+  /** Receives an export handle once the flow is mounted (PNG of the whole diagram). */
+  registerExporter?: (exporter: CanvasExporter) => void;
 }
 
 /** Inner flow — lives inside ReactFlowProvider so it can use the instance for screen→flow coords. */
-function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSelect, selectedEdgeId, onSelectEdge, evaluate, onConnect, diffStatus }: CanvasProps) {
+function Flow({
+  model,
+  layout,
+  onDropService,
+  invalidGroupIds,
+  selectedId,
+  onSelect,
+  selectedEdgeId,
+  onSelectEdge,
+  evaluate,
+  onConnect,
+  diffStatus,
+  registerExporter,
+}: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
     () =>
@@ -71,10 +101,39 @@ function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSel
       }),
     [edges, selectedEdgeId, diffStatus],
   );
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNodes } = useReactFlow();
   const editable = Boolean(onDropService);
   const selectable = Boolean(onSelect || onSelectEdge);
   const connectable = Boolean(onConnect);
+
+  // Register a whole-diagram PNG exporter: fit all nodes into a fixed canvas, then
+  // rasterise the React Flow viewport at the requested pixel ratio (doc 06 export).
+  useEffect(() => {
+    if (!registerExporter) return;
+    registerExporter({
+      toPngDataUrl: async ({ pixelRatio, dark }) => {
+        const viewport = document.querySelector<HTMLElement>('.react-flow__viewport');
+        const all = getNodes();
+        if (!viewport || all.length === 0) return null;
+        const bounds = getNodesBounds(all);
+        const padding = 48;
+        const width = Math.ceil(bounds.width) + padding * 2;
+        const height = Math.ceil(bounds.height) + padding * 2;
+        const vp = getViewportForBounds(bounds, width, height, 0.2, 2, padding);
+        return toPng(viewport, {
+          backgroundColor: dark ? '#0f172a' : '#ffffff',
+          width,
+          height,
+          pixelRatio,
+          style: {
+            width: `${width}px`,
+            height: `${height}px`,
+            transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})`,
+          },
+        });
+      },
+    });
+  }, [registerExporter, getNodes]);
 
   const [hint, setHint] = useState<string | null>(null);
   const hintRef = useRef<string | null>(null);
