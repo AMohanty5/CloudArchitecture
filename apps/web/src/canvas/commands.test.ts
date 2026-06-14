@@ -131,4 +131,33 @@ describe('commands', () => {
     const prop = applyCommand(renamed, { type: 'SetGroupProperty', groupId: 'vpc-1', key: 'cidr', value: '10.0.0.0/16' });
     expect(prop.groups![0]!.properties).toEqual({ cidr: '10.0.0.0/16' });
   });
+
+  it('applyCommand RemoveComponent prunes the component and any connection touching it', () => {
+    const withConn: EditableModel = {
+      ...base,
+      components: [
+        { id: 'a', type: 'network.loadbalancer.l7', name: 'A' },
+        { id: 'b', type: 'compute.vm.autoscaling_group', name: 'B' },
+      ],
+      connections: [{ id: 'c-1', from: 'a', to: 'b', kind: 'traffic' }],
+    };
+    const next = applyCommand(withConn, { type: 'RemoveComponent', componentId: 'a' });
+    expect(next.components!.map((c) => c.id)).toEqual(['b']);
+    expect(next.connections).toEqual([]); // dangling connection pruned
+  });
+
+  it('applyCommand RemoveGroup orphans direct children to the top level', () => {
+    const m: EditableModel = {
+      ...base,
+      groups: [
+        { id: 'vpc-1', kind: 'network', name: 'VPC' },
+        { id: 'sub-1', kind: 'subnet', name: 'Subnet', parent: 'vpc-1' },
+      ],
+      components: [{ id: 'db-1', type: 'database.relational', name: 'DB', group: 'vpc-1' }],
+    };
+    const next = applyCommand(m, { type: 'RemoveGroup', groupId: 'vpc-1' });
+    expect(next.groups!.map((g) => g.id)).toEqual(['sub-1']);
+    expect(next.groups![0]!.parent).toBeUndefined(); // child group orphaned
+    expect(next.components![0]!.group).toBeUndefined(); // child component orphaned
+  });
 });

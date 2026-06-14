@@ -259,13 +259,22 @@ and a generated typed API client with contract tests — all running on the EC2 
 > testable; the build-from-scratch acceptance is met by drop-into-container. Containment is
 > client-side surfacing only (pass-3 server rules remain future work).
 
-### Day 17 — Undo/redo + keyboard + clipboard
+### Day 17 — Undo/redo + keyboard + clipboard ✅ (2026-06-14)
 **Goal:** It feels like a real editor.
-- [ ] Command history with semantic grouping (drag = one entry); undo/redo (local stack now; Yjs migration is Stage E)
-- [ ] Keyboard map: ⌘Z/⇧⌘Z, Del, ⌘D duplicate, arrows nudge, ⌘A, Esc, Space-pan
-- [ ] Copy/paste as `application/x-caml+json` fragment with id re-mapping on paste
+- [x] Pure `History<T>` stack (`canvas/history.ts`) with semantic coalescing — consecutive same-`groupKey` transitions (e.g. a burst of same-field property edits) collapse to one undo entry; undo/redo wired through `useEditor` (each undo/redo re-commits the reverted model). Local stack now; Yjs migration is Stage E
+- [x] Keyboard map (`Editor`): ⌘Z/⇧⌘Z (+⌘Y) undo/redo, Del/Backspace delete (edge→Disconnect, component→RemoveComponent, group→RemoveGroup), ⌘D duplicate, arrows nudge (⇧ = 1px), Esc clear, Space-pan (React Flow `panActivationKeyCode`; RF's own delete disabled). `RemoveComponent` prunes touching connections; `RemoveGroup` orphans children to top level
+- [x] Copy/paste as `application/x-caml+json` (`canvas/clipboard.ts`, via document copy/paste events + text/plain fallback): a component copies itself, a group copies its subtree + internal connections; `remapFragment` mints fresh ids and rewires every ref (group/parent/from/to), dropping refs that point outside the fragment
 
-**Done when:** 20-operation editing session fully reversible; paste between two architectures works.
+**Done when:** 20-operation editing session fully reversible; paste between two architectures works. Headless: web 54/54 (history 5, clipboard 6, commands 20, connections/containment/projector/PropertyForm/api/App), tsc/eslint/`vite build` clean. Live undo-chain + cross-architecture paste eyeballed on EC2 via the SSH tunnel.
+
+> Day 17 notes: undo/redo track the **semantic model** (content-addressed); layout nudges are
+> cosmetic (sidecar only) and intentionally not in the undo stack — and since commits are keyed on
+> the model hash, a layout-only change rides the next model commit rather than creating its own.
+> 409/422 reset the history to the known-good server/committed model (invalid optimistic edits are
+> discarded with the undo branch). Clipboard uses the DOM `copy`/`paste` events so the custom MIME
+> actually round-trips (the async Clipboard API only exposes text); paste works across architectures
+> because it's the OS clipboard. ⌘A select-all is deferred with multi-select (Backlog). Drag-to-
+> reparent existing nodes (from Day 16) remains deferred — not required by either day's acceptance.
 
 ### Day 18 — ELK auto-layout
 **Goal:** "Tidy up" + sane initial layout.

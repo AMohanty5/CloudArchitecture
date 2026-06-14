@@ -35,7 +35,11 @@ export type Command =
   | { type: 'MoveToGroup'; componentId: string; group: string | undefined }
   | { type: 'MoveGroup'; groupId: string; parent: string | undefined }
   | { type: 'RenameGroup'; groupId: string; name: string }
-  | { type: 'SetGroupProperty'; groupId: string; key: string; value: unknown };
+  | { type: 'SetGroupProperty'; groupId: string; key: string; value: unknown }
+  // Removing a component also prunes any connection that touches it (no dangling refs).
+  | { type: 'RemoveComponent'; componentId: string }
+  // Removing a group orphans its direct children to the top level (non-destructive).
+  | { type: 'RemoveGroup'; groupId: string };
 
 /** Apply a command to the model, returning a new model (never mutates the input). */
 export function applyCommand(model: EditableModel, cmd: Command): EditableModel {
@@ -67,6 +71,20 @@ export function applyCommand(model: EditableModel, cmd: Command): EditableModel 
       return mapGroup(model, cmd.groupId, (g) => ({ ...g, name: cmd.name }));
     case 'SetGroupProperty':
       return mapGroup(model, cmd.groupId, (g) => ({ ...g, properties: setKey(g.properties, cmd.key, cmd.value) }));
+    case 'RemoveComponent':
+      return {
+        ...model,
+        components: (model.components ?? []).filter((c) => c.id !== cmd.componentId),
+        connections: (model.connections ?? []).filter((c) => c.from !== cmd.componentId && c.to !== cmd.componentId),
+      };
+    case 'RemoveGroup':
+      return {
+        ...model,
+        groups: (model.groups ?? [])
+          .filter((g) => g.id !== cmd.groupId)
+          .map((g) => (g.parent === cmd.groupId ? withOptional(g, 'parent', undefined) : g)),
+        components: (model.components ?? []).map((c) => (c.group === cmd.groupId ? withOptional(c, 'group', undefined) : c)),
+      };
   }
 }
 

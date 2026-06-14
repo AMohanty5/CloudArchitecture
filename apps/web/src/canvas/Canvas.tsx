@@ -138,6 +138,8 @@ function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSel
         isValidConnection={connectable ? isValidConnection : undefined}
         onConnect={connectable ? handleConnect : undefined}
         onConnectStart={() => showHint(null)}
+        deleteKeyCode={null}
+        panActivationKeyCode="Space"
         proOptions={{ hideAttribution: true }}
       >
         <Background />

@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { client } from './client';
 import { applyCommand, componentFromService, groupFromService, makeComponentId } from '../canvas/commands';
 import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
+import { project } from '../canvas/projector';
 import type { CamlConnection } from '../canvas/projector';
+import { canRedo as canRedoFn, canUndo as canUndoFn, initHistory, record, redo as redoFn, undo as undoFn } from '../canvas/history';
+import type { History } from '../canvas/history';
+import { remapFragment } from '../canvas/clipboard';
+import type { CamlFragment } from '../canvas/clipboard';
 
 export type SaveState = 'loading' | 'saving' | 'saved' | 'conflict' | 'error';
 
@@ -14,18 +19,24 @@ export interface CommitError {
   message: string;
 }
 
+type Position = { x: number; y: number };
+
 export interface EditorApi {
   model: EditableModel | undefined;
-  layout: Record<string, { x: number; y: number }>;
+  layout: Record<string, Position>;
   saveState: SaveState;
   /** Validation errors from the last rejected (422) commit; cleared on the next success. */
   errors: CommitError[];
   selectedId: string | undefined;
   selectedEdgeId: string | undefined;
+  canUndo: boolean;
+  canRedo: boolean;
   select: (id: string | undefined) => void;
   selectEdge: (id: string | undefined) => void;
+  undo: () => void;
+  redo: () => void;
   /** Add a component; `group` nests it (and skips the free-position sidecar entry). */
-  addComponent: (service: ServiceLike, position: { x: number; y: number }, group?: string) => void;
+  addComponent: (service: ServiceLike, position: Position, group?: string) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
   rename: (componentId: string, name: string) => void;
   connect: (connection: CamlConnection) => void;
@@ -33,35 +44,78 @@ export interface EditorApi {
   setConnectionKind: (connectionId: string, kind: string) => void;
   setConnectionProperty: (connectionId: string, key: string, value: unknown) => void;
   /** Add a group from a group-kind service; `parent` nests it. */
-  addGroup: (service: ServiceLike, position: { x: number; y: number }, parent?: string) => void;
+  addGroup: (service: ServiceLike, position: Position, parent?: string) => void;
   moveToGroup: (componentId: string, group: string | undefined) => void;
   moveGroup: (groupId: string, parent: string | undefined) => void;
   renameGroup: (groupId: string, name: string) => void;
   setGroupProperty: (groupId: string, key: string, value: unknown) => void;
+  removeComponent: (componentId: string) => void;
+  removeGroup: (groupId: string) => void;
+  duplicate: (componentId: string) => void;
+  nudge: (nodeId: string, dx: number, dy: number) => void;
+  paste: (fragment: CamlFragment) => void;
 }
 
 const DEBOUNCE_MS = 700;
 
+/** The undo/redo coalescing key for a command (rapid same-field edits → one entry). */
+function commandGroupKey(cmd: Command): string | undefined {
+  switch (cmd.type) {
+    case 'SetProperty':
+      return `prop:${cmd.componentId}:${cmd.key}`;
+    case 'Rename':
+      return `rename:${cmd.componentId}`;
+    case 'SetConnectionProperty':
+      return `connprop:${cmd.connectionId}:${cmd.key}`;
+    case 'SetConnectionKind':
+      return `connkind:${cmd.connectionId}`;
+    case 'SetGroupProperty':
+      return `gprop:${cmd.groupId}:${cmd.key}`;
+    case 'RenameGroup':
+      return `grename:${cmd.groupId}`;
+    case 'MoveToGroup':
+      return `move:${cmd.componentId}`;
+    case 'MoveGroup':
+      return `gmove:${cmd.groupId}`;
+    default:
+      return undefined; // Add*/Remove*/Connect/Disconnect/paste = discrete entries
+  }
+}
+
 /**
- * Canvas editor state (CommandBus v1, blueprint doc 06). Commands mutate a local
- * CAML doc optimistically; a debounced micro-commit persists it via the write
- * path. 409 (head moved) reloads from the server; 422 (invalid) rolls back to the
- * last committed model. Layout positions are client-side (sent as the commit's
- * layout sidecar). Refs back the debounced closure so it always sees latest state.
+ * Canvas editor state (CommandBus v1 + local undo/redo, blueprint doc 06). Commands
+ * mutate a history-backed local CAML doc optimistically; a debounced micro-commit
+ * persists the present via the write path. 409 (head moved) reloads from the server;
+ * 422 (invalid) rolls back to the last committed model (history reset to that point).
+ * Layout positions are client-side, sent as the commit's layout sidecar.
  */
 export function useEditor(id: string, branch = 'main'): EditorApi {
   const [model, setModel] = useState<EditableModel>();
-  const [layout, setLayout] = useState<Record<string, { x: number; y: number }>>({});
+  const [layout, setLayout] = useState<Record<string, Position>>({});
   const [saveState, setSaveState] = useState<SaveState>('loading');
   const [errors, setErrors] = useState<CommitError[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(undefined);
 
+  const historyRef = useRef<History<EditableModel> | null>(null);
   const modelRef = useRef<EditableModel | undefined>(undefined);
   const committedRef = useRef<EditableModel | undefined>(undefined);
   const headRef = useRef<string | undefined>(undefined);
-  const layoutRef = useRef<Record<string, { x: number; y: number }>>({});
+  const layoutRef = useRef<Record<string, Position>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const scheduleCommit = useCallback((commitFn: () => void) => {
+    setSaveState('saving');
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(commitFn, DEBOUNCE_MS);
+  }, []);
+
+  // Reset the editing session to a known-good model (initial load, 409 rebase, 422 revert).
+  const reset = useCallback((m: EditableModel) => {
+    historyRef.current = initHistory(m);
+    modelRef.current = m;
+    setModel(m);
+  }, []);
 
   const load = useCallback(async () => {
     const { data, error, response } = await client.GET('/architectures/{id}/branches/{branch}/model', {
@@ -72,12 +126,11 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
       return;
     }
     const m = data as EditableModel;
-    modelRef.current = m;
     committedRef.current = m;
     headRef.current = response.headers.get('etag') ?? undefined;
-    setModel(m);
+    reset(m);
     setSaveState('saved');
-  }, [id, branch]);
+  }, [id, branch, reset]);
 
   useEffect(() => {
     setSaveState('loading');
@@ -102,17 +155,13 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     if (error || !data) {
       if (response?.status === 409) {
         setSaveState('conflict');
-        await load(); // rebase onto server head (discards the optimistic change)
+        await load(); // rebase onto server head (discards the optimistic change + history)
       } else {
         // 422 (invalid) or other: roll back to the last committed model and surface
         // the catalog/structural messages so the inspector can show them inline.
         setSaveState('error');
         setErrors((error as unknown as { errors?: CommitError[] } | undefined)?.errors ?? []);
-        const restored = committedRef.current;
-        if (restored) {
-          modelRef.current = restored;
-          setModel(restored);
-        }
+        if (committedRef.current) reset(committedRef.current);
       }
       return;
     }
@@ -120,32 +169,71 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     committedRef.current = current;
     setErrors([]);
     setSaveState('saved');
-  }, [id, branch, load]);
+  }, [id, branch, load, reset]);
+
+  // Commit a new present model into history (coalescing on `key`) and schedule a save.
+  const commitPresent = useCallback(
+    (next: EditableModel, key: string | undefined) => {
+      const h = historyRef.current;
+      if (!h) return;
+      const nh = record(h, next, key);
+      historyRef.current = nh;
+      modelRef.current = next;
+      setModel(next);
+      scheduleCommit(() => void commit());
+    },
+    [commit, scheduleCommit],
+  );
 
   const execute = useCallback(
     (cmd: Command) => {
       const base = modelRef.current;
       if (!base) return;
-      const next = applyCommand(base, cmd);
-      modelRef.current = next;
-      setModel(next);
-      setSaveState('saving');
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void commit(), DEBOUNCE_MS);
+      commitPresent(applyCommand(base, cmd), commandGroupKey(cmd));
     },
-    [commit],
+    [commitPresent],
   );
+
+  const executeBatch = useCallback(
+    (cmds: Command[], key: string) => {
+      const base = modelRef.current;
+      if (!base || cmds.length === 0) return;
+      const next = cmds.reduce((m, c) => applyCommand(m, c), base);
+      commitPresent(next, key);
+    },
+    [commitPresent],
+  );
+
+  const undo = useCallback(() => {
+    const h = historyRef.current;
+    if (!h || !canUndoFn(h)) return;
+    const nh = undoFn(h);
+    historyRef.current = nh;
+    modelRef.current = nh.present;
+    setModel(nh.present);
+    scheduleCommit(() => void commit());
+  }, [commit, scheduleCommit]);
+
+  const redo = useCallback(() => {
+    const h = historyRef.current;
+    if (!h || !canRedoFn(h)) return;
+    const nh = redoFn(h);
+    historyRef.current = nh;
+    modelRef.current = nh.present;
+    setModel(nh.present);
+    scheduleCommit(() => void commit());
+  }, [commit, scheduleCommit]);
 
   // Record a free (top-level) drop position in the layout sidecar. Nested elements are
   // omitted — the projector auto-lays-them-out inside their parent container.
-  const remember = useCallback((nodeId: string, position: { x: number; y: number }) => {
+  const remember = useCallback((nodeId: string, position: Position) => {
     const next = { ...layoutRef.current, [nodeId]: position };
     layoutRef.current = next;
     setLayout(next);
   }, []);
 
   const addComponent = useCallback(
-    (service: ServiceLike, position: { x: number; y: number }, group?: string) => {
+    (service: ServiceLike, position: Position, group?: string) => {
       const componentId = makeComponentId(service.key);
       const component = componentFromService(service, componentId);
       if (!component) return; // group-kind services become groups (addGroup)
@@ -157,7 +245,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
   );
 
   const addGroup = useCallback(
-    (service: ServiceLike, position: { x: number; y: number }, parent?: string) => {
+    (service: ServiceLike, position: Position, parent?: string) => {
       const groupId = makeComponentId(service.key);
       const group = groupFromService(service, groupId, parent);
       if (!group) return; // component services become components (addComponent)
@@ -166,6 +254,48 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     },
     [execute, remember],
   );
+
+  const duplicate = useCallback(
+    (componentId: string) => {
+      const source = modelRef.current?.components?.find((c) => c.id === componentId);
+      if (!source) return;
+      const newId = makeComponentId(source.binding?.service ?? source.type);
+      const clone = { ...source, id: newId };
+      const pos = layoutRef.current[componentId];
+      if (pos) remember(newId, { x: pos.x + 32, y: pos.y + 32 });
+      execute({ type: 'AddComponent', component: clone });
+    },
+    [execute, remember],
+  );
+
+  const paste = useCallback(
+    (fragment: CamlFragment) => {
+      const remapped = remapFragment(fragment);
+      const cmds: Command[] = [
+        ...remapped.groups.map((group): Command => ({ type: 'AddGroup', group })),
+        ...remapped.components.map((component): Command => ({ type: 'AddComponent', component })),
+        ...remapped.connections.map((connection): Command => ({ type: 'Connect', connection })),
+      ];
+      if (cmds.length === 0) return;
+      // Cascade top-level pasted nodes so they don't all land on the origin.
+      let i = 0;
+      for (const g of remapped.groups) if (!g.parent) remember(g.id, { x: 60 + i++ * 28, y: 60 + i * 28 });
+      for (const c of remapped.components) if (!c.group) remember(c.id, { x: 60 + i++ * 28, y: 60 + i * 28 });
+      executeBatch(cmds, `paste:${Math.random()}`);
+    },
+    [executeBatch, remember],
+  );
+
+  const nudge = useCallback((nodeId: string, dx: number, dy: number) => {
+    // Base off the node's currently-projected position (correct space for nested nodes too).
+    const base =
+      layoutRef.current[nodeId] ??
+      project(modelRef.current ?? {}, { positions: layoutRef.current }).nodes.find((n) => n.id === nodeId)?.position;
+    if (!base) return;
+    const next = { ...layoutRef.current, [nodeId]: { x: base.x + dx, y: base.y + dy } };
+    layoutRef.current = next;
+    setLayout(next);
+  }, []);
 
   const moveToGroup = useCallback(
     (componentId: string, group: string | undefined) => execute({ type: 'MoveToGroup', componentId, group }),
@@ -180,17 +310,14 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     (groupId: string, key: string, value: unknown) => execute({ type: 'SetGroupProperty', groupId, key, value }),
     [execute],
   );
+  const removeComponent = useCallback((componentId: string) => execute({ type: 'RemoveComponent', componentId }), [execute]);
+  const removeGroup = useCallback((groupId: string) => execute({ type: 'RemoveGroup', groupId }), [execute]);
 
   const setProperty = useCallback(
     (componentId: string, key: string, value: unknown) => execute({ type: 'SetProperty', componentId, key, value }),
     [execute],
   );
-
-  const rename = useCallback(
-    (componentId: string, name: string) => execute({ type: 'Rename', componentId, name }),
-    [execute],
-  );
-
+  const rename = useCallback((componentId: string, name: string) => execute({ type: 'Rename', componentId, name }), [execute]);
   const connect = useCallback((connection: CamlConnection) => execute({ type: 'Connect', connection }), [execute]);
   const disconnect = useCallback((connectionId: string) => execute({ type: 'Disconnect', connectionId }), [execute]);
   const setConnectionKind = useCallback(
@@ -214,6 +341,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  const h = historyRef.current;
   return {
     model,
     layout,
@@ -221,8 +349,12 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     errors,
     selectedId,
     selectedEdgeId,
+    canUndo: h ? canUndoFn(h) : false,
+    canRedo: h ? canRedoFn(h) : false,
     select,
     selectEdge,
+    undo,
+    redo,
     addComponent,
     setProperty,
     rename,
@@ -235,5 +367,10 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     moveGroup,
     renameGroup,
     setGroupProperty,
+    removeComponent,
+    removeGroup,
+    duplicate,
+    nudge,
+    paste,
   };
 }

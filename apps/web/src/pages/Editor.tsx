@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
@@ -10,9 +10,36 @@ import type { SaveState } from '../lib/useEditor';
 import { useConnectionRules } from '../lib/queries';
 import { evaluateConnection, makeConnectionId } from '../canvas/connections';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
+import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
 import type { ConnectVerdict } from '../canvas/Canvas';
 import type { CamlComponent, CamlGroup, ProjectableModel } from '../canvas/projector';
 import type { ServiceLike } from '../canvas/commands';
+
+const ARROW_DELTA: Record<string, [number, number]> = {
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+};
+
+function inFormField(el: EventTarget | null): boolean {
+  const t = el as HTMLElement | null;
+  return !!t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+}
+
+function toolBtn(enabled: boolean): React.CSSProperties {
+  return {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    border: '1px solid #e2e8f0',
+    background: '#fff',
+    color: enabled ? '#334155' : '#cbd5e1',
+    cursor: enabled ? 'pointer' : 'default',
+    fontSize: 14,
+    lineHeight: 1,
+  };
+}
 
 const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
   loading: { label: 'Loading…', color: '#94a3b8' },
@@ -103,6 +130,77 @@ export function Editor() {
     [groupsById, componentsById, editor],
   );
 
+  const deleteSelection = useCallback(() => {
+    if (selectedEdgeId) {
+      editor.disconnect(selectedEdgeId);
+      editor.selectEdge(undefined);
+    } else if (selectedId) {
+      if (groupsById.has(selectedId)) editor.removeGroup(selectedId);
+      else editor.removeComponent(selectedId);
+      editor.select(undefined);
+    }
+  }, [editor, selectedId, selectedEdgeId, groupsById]);
+
+  // Keyboard map (blueprint doc 06): undo/redo, delete, duplicate, nudge, escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (inFormField(e.target)) return; // let inspector fields keep native editing/undo
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (mod && key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) editor.redo();
+        else editor.undo();
+      } else if (mod && key === 'y') {
+        e.preventDefault();
+        editor.redo();
+      } else if (mod && key === 'd') {
+        e.preventDefault();
+        if (selectedId && componentsById.has(selectedId)) editor.duplicate(selectedId);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelection();
+      } else if (e.key === 'Escape') {
+        editor.select(undefined);
+        editor.selectEdge(undefined);
+      } else if (selectedId && ARROW_DELTA[e.key]) {
+        e.preventDefault();
+        const step = e.shiftKey ? 1 : 8;
+        const [dx, dy] = ARROW_DELTA[e.key]!;
+        editor.nudge(selectedId, dx * step, dy * step);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editor, selectedId, componentsById, deleteSelection]);
+
+  // Copy/paste as an application/x-caml+json fragment with id re-mapping on paste.
+  useEffect(() => {
+    const onCopy = (e: ClipboardEvent) => {
+      if (inFormField(document.activeElement) || !model || !selectedId) return;
+      const fragment = buildFragment(model, selectedId);
+      if (!fragment) return;
+      const json = JSON.stringify(fragment);
+      e.clipboardData?.setData(CAML_FRAGMENT_MIME, json);
+      e.clipboardData?.setData('text/plain', json);
+      e.preventDefault();
+    };
+    const onPaste = (e: ClipboardEvent) => {
+      if (inFormField(document.activeElement)) return;
+      const raw = e.clipboardData?.getData(CAML_FRAGMENT_MIME) || e.clipboardData?.getData('text/plain') || '';
+      const fragment = parseFragment(raw);
+      if (!fragment) return;
+      e.preventDefault();
+      editor.paste(fragment);
+    };
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('paste', onPaste);
+    return () => {
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('paste', onPaste);
+    };
+  }, [editor, model, selectedId]);
+
   const selectedComponent = componentsById.get(selectedId ?? '');
   const selectedGroup = groupsById.get(selectedId ?? '');
   const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
@@ -129,6 +227,14 @@ export function Editor() {
           ← Architectures
         </Link>
         <strong>Editor</strong>
+        <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+          <button onClick={editor.undo} disabled={!editor.canUndo} title="Undo (⌘Z)" style={toolBtn(editor.canUndo)}>
+            ↶
+          </button>
+          <button onClick={editor.redo} disabled={!editor.canRedo} title="Redo (⇧⌘Z)" style={toolBtn(editor.canRedo)}>
+            ↷
+          </button>
+        </div>
         <span style={{ marginLeft: 'auto', fontSize: 13, color: badge.color }}>{badge.label}</span>
       </header>
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
