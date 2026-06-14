@@ -1,11 +1,23 @@
 import { Link, useParams } from 'react-router-dom';
-import { useModel } from '../lib/queries';
 import { Canvas } from '../canvas/Canvas';
+import { Palette } from '../canvas/Palette';
+import { useEditor } from '../lib/useEditor';
+import type { SaveState } from '../lib/useEditor';
 import type { ProjectableModel } from '../canvas/projector';
+
+const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
+  loading: { label: 'Loading…', color: '#94a3b8' },
+  saving: { label: '● Saving…', color: '#d97706' },
+  saved: { label: '● Saved', color: '#16a34a' },
+  conflict: { label: '● Conflict — reloaded from server', color: '#ea580c' },
+  error: { label: '● Save failed — reverted', color: '#dc2626' },
+};
 
 export function Editor() {
   const { id = '' } = useParams();
-  const { data, isLoading, isError } = useModel(id);
+  const { model, layout, saveState, addComponent } = useEditor(id);
+  const badge = SAVE_BADGE[saveState];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <header
@@ -22,10 +34,20 @@ export function Editor() {
           ← Architectures
         </Link>
         <strong>Editor</strong>
-        {isLoading ? <span style={{ color: '#94a3b8' }}>loading…</span> : null}
-        {isError ? <span style={{ color: '#dc2626' }}>failed to load</span> : null}
+        <span style={{ marginLeft: 'auto', fontSize: 13, color: badge.color }}>{badge.label}</span>
       </header>
-      <div style={{ flex: 1, minHeight: 0 }}>{data ? <Canvas model={data as ProjectableModel} /> : null}</div>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        <Palette />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {model ? (
+            <Canvas
+              model={model as ProjectableModel}
+              layout={{ positions: layout }}
+              onDropService={addComponent}
+            />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

@@ -22,6 +22,28 @@ export function useArchitectures(): UseQueryResult<ArchitectureSummary[]> {
   });
 }
 
+export interface ServiceSummary {
+  key: string;
+  name: string;
+  provider: string;
+  abstractTypes?: string[];
+  groupKind?: string;
+  status: string;
+  iconUrl: string;
+  score: number;
+}
+
+export function useCatalogSearch(q: string): UseQueryResult<ServiceSummary[]> {
+  return useQuery({
+    queryKey: ['catalog', q],
+    queryFn: async (): Promise<ServiceSummary[]> => {
+      const { data, error } = await client.GET('/catalog/services', { params: { query: { q } } });
+      if (error) throw new Error('catalog search failed');
+      return (data ?? []) as ServiceSummary[];
+    },
+  });
+}
+
 export function useModel(id: string, branch = 'main'): UseQueryResult<unknown> {
   return useQuery({
     queryKey: ['model', id, branch],

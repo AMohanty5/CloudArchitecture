@@ -189,13 +189,23 @@ and a generated typed API client with contract tests — all running on the EC2 
 > projector test + an App smoke test (the canvas route isn't mounted under jsdom to avoid
 > React-Flow's ResizeObserver needs). Begins Stage C.
 
-### Day 13 — Palette + drop-to-create
+### Day 13 — Palette + drop-to-create ✅ (2026-06-14)
 **Goal:** First mutation through the real write path.
-- [ ] Palette panel: catalog search, grouped by abstract type, drag source
-- [ ] CommandBus v1 (doc 06): `AddComponent` command → local CAML doc mutation → debounced commit to API (autosave = micro-commits)
-- [ ] Optimistic UI + rollback on 409/422; save-state indicator (saved / saving / conflict)
+- [x] Palette panel (`canvas/Palette.tsx`): catalog search over `useCatalogSearch`, grouped by abstract type, HTML5 drag source (`application/x-caml-service` MIME); group-kind services shown disabled (drop creates groups in Day 16)
+- [x] CommandBus v1 (doc 06): `applyCommand`/`AddComponent` (pure, never mutates input) → `useEditor` holds the local CAML doc, mutates optimistically, debounces (700ms) a full-model micro-commit through the Day 8 write path with the head ETag as `expectedParent`; drop position recorded in the layout sidecar
+- [x] Optimistic UI + rollback: 409 → reload server head (`conflict`), other errors → revert to last committed model (`error`); header save-state indicator (loading / saving / saved / conflict / error). Canvas is now a drop target (`ReactFlowProvider` + `screenToFlowPosition`) wired in `pages/Editor.tsx`
 
-**Done when:** drag `aws.alb` onto canvas → node appears instantly → network tab shows a commit → reload shows it persisted.
+**Done when:** drag `aws.alb` onto canvas → node appears instantly → network tab shows a commit → reload shows it persisted. Headless coverage green: `commands.test.ts` (4) + projector/api/App = 12/12, web tsc/eslint/`vite build` clean. Live drop→commit→reload eyeballed on EC2 via the SSH tunnel (`-L 4173 -L 3001`), as with Day 12.
+
+> Day 13 notes: the Day-13 primitives (commands/Palette/useEditor) were scaffolded but
+> unwired — the editor still rendered the read-only Day-12 `useModel`/`Canvas`. Wired
+> them: `Editor` now drives `useEditor`; `Canvas` gained an optional `onDropService`
+> (drop handlers no-op without it, so read-only callers are unaffected). Two gotchas:
+> React 19 `useRef<T>()` needs an explicit `undefined` initial arg; and the generated
+> client types `model`/`layout` as `Record<string, never>` (opaque `CamlDocument`/sidecar
+> in the OpenAPI), so the commit body casts through it. Layout sidecar is persisted on
+> commit but the model GET doesn't return it yet — reloaded nodes fall back to the
+> projector's auto-layout (sidecar read-back is a later layout-day concern, not Day 13).
 
 ### Day 14 — Selection + property panel (the schema-driven form)
 **Goal:** Edit any service's properties with zero per-service UI code (doc 06).
