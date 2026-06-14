@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
@@ -13,7 +14,7 @@ const KIND_STYLE: Record<string, { bg: string; fg: string; border: string }> = {
 const DEFAULT_STYLE = { bg: 'rgba(148,163,184,0.10)', fg: '#475569', border: '#e2e8f0' };
 
 /** A containment box (region / VPC / subnet / tier) with a kind-styled, labelled header. */
-export function GroupNode({ data, selected }: NodeProps) {
+function GroupNodeImpl({ data, selected }: NodeProps) {
   const d = data as { label?: string; kind?: string; invalid?: boolean; diffStatus?: DiffStatus };
   const k = KIND_STYLE[d.kind ?? ''] ?? DEFAULT_STYLE;
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
@@ -48,3 +49,5 @@ export function GroupNode({ data, selected }: NodeProps) {
     </div>
   );
 }
+
+export const GroupNode = memo(GroupNodeImpl);

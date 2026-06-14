@@ -1,12 +1,45 @@
-import { Handle, Position } from '@xyflow/react';
+import { memo } from 'react';
+import { Handle, Position, useStore } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
 
-/** A component node: icon + name + binding badge (blueprint doc 06). */
-export function ServiceNode({ data, selected }: NodeProps) {
+/** Below this zoom the node renders as a low-detail chip (perf at scale, doc 06). */
+const LOD_ZOOM = 0.4;
+
+/** A component node: icon + name + binding badge (blueprint doc 06). Memoized + zoom-LOD'd. */
+function ServiceNodeImpl({ data, selected }: NodeProps) {
   const d = data as { name?: string; type?: string; service?: string; diffStatus?: DiffStatus };
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
+  // Boolean selector → this node only re-renders when it crosses the LOD threshold.
+  const lowDetail = useStore((s) => s.transform[2] < LOD_ZOOM);
+  const border = diffColor ? `2px solid ${diffColor}` : selected ? '1px solid #2563eb' : '1px solid #cbd5e1';
+
+  if (lowDetail) {
+    return (
+      <div
+        style={{
+          width: 190,
+          height: 64,
+          boxSizing: 'border-box',
+          background: '#fff',
+          border,
+          opacity: d.diffStatus === 'removed' ? 0.55 : 1,
+          borderRadius: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 12px',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        <Handle type="target" position={Position.Left} />
+        <div style={{ fontWeight: 700, fontSize: 22, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+        <Handle type="source" position={Position.Right} />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -14,7 +47,7 @@ export function ServiceNode({ data, selected }: NodeProps) {
         height: 64,
         boxSizing: 'border-box',
         background: '#ffffff',
-        border: diffColor ? `2px solid ${diffColor}` : selected ? '1px solid #2563eb' : '1px solid #cbd5e1',
+        border,
         opacity: d.diffStatus === 'removed' ? 0.55 : 1,
         borderRadius: 10,
         padding: '8px 10px',
@@ -45,3 +78,5 @@ export function ServiceNode({ data, selected }: NodeProps) {
     </div>
   );
 }
+
+export const ServiceNode = memo(ServiceNodeImpl);

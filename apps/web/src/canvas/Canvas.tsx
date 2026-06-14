@@ -157,6 +157,8 @@ function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSel
         onConnectStart={() => showHint(null)}
         deleteKeyCode={null}
         panActivationKeyCode="Space"
+        onlyRenderVisibleElements
+        minZoom={0.1}
         proOptions={{ hideAttribution: true }}
       >
         <Background />

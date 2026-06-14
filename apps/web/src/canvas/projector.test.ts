@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { project } from './projector';
+import { generateLargeModel } from './fixtures';
 import type { ProjectableModel } from './projector';
 
 const threeTier: ProjectableModel = {
@@ -57,5 +58,16 @@ describe('project', () => {
 
   it('handles an empty model', () => {
     expect(project({ components: [] })).toEqual({ nodes: [], edges: [] });
+  });
+
+  it('projects a 500-component model with correct counts and parent-before-child order', () => {
+    const model = generateLargeModel(500);
+    const { nodes, edges } = project(model);
+    expect(nodes.filter((n) => n.type === 'service')).toHaveLength(500);
+    expect(nodes.filter((n) => n.type === 'group')).toHaveLength(model.groups!.length);
+    expect(edges).toHaveLength(model.connections!.length);
+    // Every child node appears after its parent (React Flow requirement for nested nodes).
+    const index = new Map(nodes.map((n, i) => [n.id, i]));
+    for (const n of nodes) if (n.parentId) expect(index.get(n.parentId)!).toBeLessThan(index.get(n.id)!);
   });
 });

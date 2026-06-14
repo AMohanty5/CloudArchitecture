@@ -260,7 +260,7 @@ export function Editor() {
         <Link to="/" style={{ color: '#2563eb', textDecoration: 'none' }}>
           ← Architectures
         </Link>
-        <strong>Editor</strong>
+        <strong>{(model as { name?: string } | undefined)?.name ?? 'Editor'}</strong>
         <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
           <button onClick={editor.undo} disabled={!editor.canUndo} title="Undo (⌘Z)" style={toolBtn(editor.canUndo)}>
             ↶

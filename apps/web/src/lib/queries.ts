@@ -11,6 +11,13 @@ export interface ArchitectureSummary {
   createdAt: string;
 }
 
+/** Create a new architecture (default `main` branch + empty initial commit). */
+export async function createArchitecture(name: string): Promise<{ id: string }> {
+  const { data, error } = await client.POST('/architectures', { body: { name } });
+  if (error || !data) throw new Error('failed to create architecture');
+  return data as { id: string };
+}
+
 export function useArchitectures(): UseQueryResult<ArchitectureSummary[]> {
   return useQuery({
     queryKey: ['architectures'],
