@@ -83,7 +83,13 @@ export function Editor() {
   // ---- History & diff (Day 19) ----
   const [historyOpen, setHistoryOpen] = useState(false);
   const [compare, setCompare] = useState<string[]>([]); // up to two selected commit hashes
-  const commits = useCommits(id);
+  // Gated on the panel being open: each open fetches the latest commits (incl. edits
+  // made since editor load), and a manual refetch covers re-opening without remount.
+  const commits = useCommits(id, historyOpen);
+  const refetchCommits = commits.refetch;
+  useEffect(() => {
+    if (historyOpen) void refetchCommits();
+  }, [historyOpen, refetchCommits]);
   const indexOf = useCallback((hash: string) => (commits.data ?? []).findIndex((c) => c.hash === hash), [commits.data]);
   // Commits are newest-first: the lower index is newer (→ `to`), the higher is older (→ `from`).
   const [fromHash, toHash] = useMemo(() => {

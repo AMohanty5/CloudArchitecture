@@ -313,18 +313,19 @@ and a generated typed API client with contract tests — all running on the EC2 
 ### Day 20 — Stage C hardening + perf pass ✅ (2026-06-14)
 **Goal:** Solid at realistic scale.
 - [x] 500-node fixture (`canvas/fixtures.ts` `generateLargeModel`, deterministic VPC⊃subnet nesting + sparse edges) + projector scale test (counts + parent-before-child at 500); perf: `onlyRenderVisibleElements` + `minZoom={0.1}`, `React.memo`'d `ServiceNode`/`GroupNode`, memoized projection, zoom LOD v1 — below 0.4 zoom service nodes render as low-detail chips via a boolean `useStore` selector (re-renders only on threshold cross)
-- [~] Playwright e2e `e2e/golden-journey.spec.ts` (create → build 12 → edit → diff → reload) + `playwright.config.ts` + `pnpm --filter @cac/web e2e` — **authored**; runs against a deployed stack (`CAC_E2E_BASE_URL`), CI execution deferred (needs the full stack stood up, like the Docker-gated integration tests). Not yet green-in-CI
-- [x] Paper-cut sweep — top fixes: **New-architecture create** flow (the list page had no way to create one — now an inline name + button → `POST` → editor); editor header shows the architecture name; (remaining paper cuts → Backlog)
+- [x] Playwright e2e `e2e/golden-journey.spec.ts` (create → drag-build 12 → edit → diff → reload) + `playwright.config.ts` + `pnpm --filter @cac/web e2e` — **green (6.7s)** against the live EC2 stack over an SSH tunnel (`CAC_E2E_BASE_URL`). Full-stack CI wiring (stand the stack up in the runner) is deferred, like the Docker-gated integration tests
+- [x] Paper-cut sweep — top fixes: **New-architecture create** flow (the list page had no way to create one — now an inline name + button → `POST` → editor); **stale history list** (the commit list cached from editor-load never refreshed → diff couldn't see new commits; now gated on panel-open + always-stale, refetched on open); editor header shows the architecture name; (remaining → Backlog)
 
-**Done when:** 500-node fixture interactive at 60fps-ish (no visible jank dragging) — perf measures in place + scale test green; the fps eyeball is on EC2. Golden journey green in CI — **partially**: the journey is authored and runnable against the deployed stack; CI wiring/execution is deferred. Headless: web 59/59, tsc/eslint/`vite build` clean.
+**Done when:** 500-node fixture interactive at 60fps-ish (no visible jank dragging) — perf measures in place + scale test green; the fps eyeball is on EC2. Golden journey green — ✅ runs green against the deployed stack (CI stack-up deferred). Headless: web 59/59, tsc/eslint/`vite build` clean.
 
 > Day 20 notes: LOD uses a boolean `useStore((s) => s.transform[2] < 0.4)` selector so a node only
 > re-renders when it crosses the threshold, not on every zoom tick; `minZoom` lowered to 0.1 so you
-> can actually reach the chip zoom. The Playwright build step drives real HTML5 drag-and-drop
-> (palette → `.react-flow__pane`), which React Flow + native DnD can make timing-sensitive — the
-> spec waits for each node before the next drop. I can't run a browser e2e in this environment, so
-> it's authored-not-executed; honest status above. The create flow was a genuine dogfooding gap —
-> the seeded list had no "new" affordance at all. **Stage C feature work complete (Days 12–20).**
+> can actually reach the chip zoom. Running the e2e for real surfaced two genuine bugs the unit tests
+> couldn't: overlapping drops intercepting clicks (test drives the topmost/last node) and — the real
+> one — a **stale history list** (`useCommits` cached at editor mount, so a freshly-built model's
+> commit never appeared in the panel; gated the query on panel-open + always-stale). The Playwright
+> build step drives real HTML5 drag-and-drop (palette → `.react-flow__pane`); the spec waits for each
+> node before the next drop. **Stage C complete (Days 12–20).**
 
 ---
 

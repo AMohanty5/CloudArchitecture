@@ -39,3 +39,8 @@ Thumbs.db
 # Local data
 docker-volumes/
 *.local.db
+
+# Playwright e2e artifacts
+test-results/
+playwright-report/
+.playwright/

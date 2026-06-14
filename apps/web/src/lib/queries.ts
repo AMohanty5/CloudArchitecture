@@ -170,10 +170,13 @@ export interface DiffResult {
   diff: ModelDiff;
 }
 
-export function useCommits(id: string): UseQueryResult<CommitMeta[]> {
+export function useCommits(id: string, enabled = true): UseQueryResult<CommitMeta[]> {
   return useQuery({
     queryKey: ['commits', id],
-    enabled: id.length > 0,
+    // Gated on the history panel being open + always-stale, so each open refetches
+    // the latest commits (micro-commits made since editor load show up).
+    enabled: id.length > 0 && enabled,
+    staleTime: 0,
     queryFn: async (): Promise<CommitMeta[]> => {
       const { data, error } = await client.GET('/architectures/{id}/commits', { params: { path: { id } } });
       if (error || !data) throw new Error('failed to load history');

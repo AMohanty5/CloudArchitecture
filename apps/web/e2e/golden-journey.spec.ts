@@ -25,14 +25,17 @@ test('golden journey: create → build → edit → diff → reload', async ({ p
   const item = page.locator('[draggable="true"]').first();
   await expect(item).toBeVisible();
 
+  // 3 columns × 4 rows, spaced wider than the 190×64 node so they don't overlap
+  // (overlapping nodes would intercept pointer events on the node below).
   const TARGET = 12;
   for (let i = 0; i < TARGET; i++) {
-    await item.dragTo(pane, { targetPosition: { x: 120 + (i % 4) * 150, y: 100 + Math.floor(i / 4) * 110 } });
+    await item.dragTo(pane, { targetPosition: { x: 70 + (i % 3) * 220, y: 70 + Math.floor(i / 3) * 110 } });
     await expect(page.locator('.react-flow__node')).toHaveCount(i + 1);
   }
 
-  // --- Edit: select the first node and confirm the inspector opens ---
-  await page.locator('.react-flow__node').first().click();
+  // --- Edit: select a node and confirm the inspector opens. Click the last-added
+  // node — it's topmost in paint order, so an overlapping neighbour can't intercept. ---
+  await page.locator('.react-flow__node').last().click();
   await expect(page.getByText('Abstract type')).toBeVisible();
 
   // Let the debounced autosave land.
@@ -40,7 +43,7 @@ test('golden journey: create → build → edit → diff → reload', async ({ p
 
   // --- Diff: open history and compare the two most recent commits ---
   await page.getByRole('button', { name: /History/ }).click();
-  const commitRows = page.locator('aside >> text=/comp ·/');
+  const commitRows = page.locator('aside').getByText(/comp ·/);
   await expect(commitRows.first()).toBeVisible();
   await commitRows.nth(0).click();
   await commitRows.nth(1).click();
