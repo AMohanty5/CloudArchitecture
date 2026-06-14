@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 
 /** A component node: icon + name + binding badge (blueprint doc 06). */
-export function ServiceNode({ data }: NodeProps) {
+export function ServiceNode({ data, selected }: NodeProps) {
   const d = data as { name?: string; type?: string; service?: string };
   return (
     <div
@@ -11,10 +11,10 @@ export function ServiceNode({ data }: NodeProps) {
         height: 64,
         boxSizing: 'border-box',
         background: '#ffffff',
-        border: '1px solid #cbd5e1',
+        border: selected ? '1px solid #2563eb' : '1px solid #cbd5e1',
         borderRadius: 10,
         padding: '8px 10px',
-        boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
+        boxShadow: selected ? '0 0 0 2px rgba(37,99,235,0.35)' : '0 1px 2px rgba(15,23,42,0.06)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',

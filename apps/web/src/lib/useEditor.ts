@@ -5,11 +5,25 @@ import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
 
 export type SaveState = 'loading' | 'saving' | 'saved' | 'conflict' | 'error';
 
+/** A pass-1/pass-2 validation error from a rejected commit (problem+json `errors`). */
+export interface CommitError {
+  code: string;
+  path?: string;
+  element?: string;
+  message: string;
+}
+
 export interface EditorApi {
   model: EditableModel | undefined;
   layout: Record<string, { x: number; y: number }>;
   saveState: SaveState;
+  /** Validation errors from the last rejected (422) commit; cleared on the next success. */
+  errors: CommitError[];
+  selectedId: string | undefined;
+  select: (id: string | undefined) => void;
   addComponent: (service: ServiceLike, position: { x: number; y: number }) => void;
+  setProperty: (componentId: string, key: string, value: unknown) => void;
+  rename: (componentId: string, name: string) => void;
 }
 
 const DEBOUNCE_MS = 700;
@@ -25,6 +39,8 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
   const [model, setModel] = useState<EditableModel>();
   const [layout, setLayout] = useState<Record<string, { x: number; y: number }>>({});
   const [saveState, setSaveState] = useState<SaveState>('loading');
+  const [errors, setErrors] = useState<CommitError[]>([]);
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   const modelRef = useRef<EditableModel | undefined>(undefined);
   const committedRef = useRef<EditableModel | undefined>(undefined);
@@ -73,7 +89,10 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
         setSaveState('conflict');
         await load(); // rebase onto server head (discards the optimistic change)
       } else {
+        // 422 (invalid) or other: roll back to the last committed model and surface
+        // the catalog/structural messages so the inspector can show them inline.
         setSaveState('error');
+        setErrors((error as unknown as { errors?: CommitError[] } | undefined)?.errors ?? []);
         const restored = committedRef.current;
         if (restored) {
           modelRef.current = restored;
@@ -84,6 +103,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     }
     headRef.current = (data as { hash: string }).hash;
     committedRef.current = current;
+    setErrors([]);
     setSaveState('saved');
   }, [id, branch, load]);
 
@@ -114,7 +134,17 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [execute],
   );
 
+  const setProperty = useCallback(
+    (componentId: string, key: string, value: unknown) => execute({ type: 'SetProperty', componentId, key, value }),
+    [execute],
+  );
+
+  const rename = useCallback(
+    (componentId: string, name: string) => execute({ type: 'Rename', componentId, name }),
+    [execute],
+  );
+
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  return { model, layout, saveState, addComponent };
+  return { model, layout, saveState, errors, selectedId, select: setSelectedId, addComponent, setProperty, rename };
 }

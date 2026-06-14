@@ -17,15 +17,40 @@ export interface ServiceLike {
   groupKind?: string;
 }
 
-/** Semantic commands (blueprint doc 06). Day 13 ships AddComponent; more follow. */
-export type Command = { type: 'AddComponent'; component: CamlComponent };
+/** Semantic commands (blueprint doc 06). Day 13: AddComponent; Day 14: SetProperty, Rename. */
+export type Command =
+  | { type: 'AddComponent'; component: CamlComponent }
+  // value === undefined clears the property (back to its catalog default).
+  | { type: 'SetProperty'; componentId: string; key: string; value: unknown }
+  | { type: 'Rename'; componentId: string; name: string };
 
 /** Apply a command to the model, returning a new model (never mutates the input). */
 export function applyCommand(model: EditableModel, cmd: Command): EditableModel {
   switch (cmd.type) {
     case 'AddComponent':
       return { ...model, components: [...(model.components ?? []), cmd.component] };
+    case 'SetProperty':
+      return mapComponent(model, cmd.componentId, (c) => ({ ...c, properties: setKey(c.properties, cmd.key, cmd.value) }));
+    case 'Rename':
+      return mapComponent(model, cmd.componentId, (c) => ({ ...c, name: cmd.name }));
   }
+}
+
+/** Replace a component (by id) via `fn`, returning a new model; a no-op if absent. */
+function mapComponent(model: EditableModel, id: string, fn: (c: CamlComponent) => CamlComponent): EditableModel {
+  return { ...model, components: (model.components ?? []).map((c) => (c.id === id ? fn(c) : c)) };
+}
+
+/** Immutable property set; `undefined` deletes the key, dropping `properties` entirely when empty. */
+function setKey(
+  props: Record<string, unknown> | undefined,
+  key: string,
+  value: unknown,
+): Record<string, unknown> | undefined {
+  const next = { ...props };
+  if (value === undefined) delete next[key];
+  else next[key] = value;
+  return Object.keys(next).length > 0 ? next : undefined;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
+import { Inspector } from '../canvas/Inspector';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
 import type { ProjectableModel } from '../canvas/projector';
@@ -15,8 +16,9 @@ const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
 
 export function Editor() {
   const { id = '' } = useParams();
-  const { model, layout, saveState, addComponent } = useEditor(id);
+  const { model, layout, saveState, errors, selectedId, select, addComponent, setProperty, rename } = useEditor(id);
   const badge = SAVE_BADGE[saveState];
+  const selected = model?.components?.find((c) => c.id === selectedId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -44,9 +46,17 @@ export function Editor() {
               model={model as ProjectableModel}
               layout={{ positions: layout }}
               onDropService={addComponent}
+              selectedId={selectedId}
+              onSelect={select}
             />
           ) : null}
         </div>
+        <Inspector
+          component={selected}
+          errors={errors}
+          onRename={(name) => selectedId && rename(selectedId, name)}
+          onSetProperty={(key, value) => selectedId && setProperty(selectedId, key, value)}
+        />
       </div>
     </div>
   );

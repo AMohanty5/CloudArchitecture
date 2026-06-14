@@ -16,13 +16,18 @@ interface CanvasProps {
   layout?: LayoutSidecar;
   /** When provided, the canvas accepts palette drops and emits the dropped service + flow position. */
   onDropService?: (service: ServiceLike, position: { x: number; y: number }) => void;
+  /** Currently-selected node id; when `onSelect` is provided the canvas is selectable. */
+  selectedId?: string;
+  onSelect?: (id: string | undefined) => void;
 }
 
 /** Inner flow — lives inside ReactFlowProvider so it can use the instance for screen→flow coords. */
-function Flow({ model, layout, onDropService }: CanvasProps) {
+function Flow({ model, layout, onDropService, selectedId, onSelect }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
+  const selectedNodes = useMemo(() => nodes.map((n) => ({ ...n, selected: n.id === selectedId })), [nodes, selectedId]);
   const { screenToFlowPosition } = useReactFlow();
   const editable = Boolean(onDropService);
+  const selectable = Boolean(onSelect);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes(SERVICE_DRAG_MIME)) return;
@@ -51,13 +56,15 @@ function Flow({ model, layout, onDropService }: CanvasProps) {
   return (
     <div style={{ width: '100%', height: '100%' }} onDragOver={editable ? onDragOver : undefined} onDrop={editable ? onDrop : undefined}>
       <ReactFlow
-        nodes={nodes as unknown as Node[]}
+        nodes={selectedNodes as unknown as Node[]}
         edges={edges as unknown as Edge[]}
         nodeTypes={nodeTypes}
         fitView
         nodesDraggable={false}
         nodesConnectable={false}
-        elementsSelectable={false}
+        elementsSelectable={selectable}
+        onNodeClick={onSelect ? (_, node) => onSelect(node.id) : undefined}
+        onPaneClick={onSelect ? () => onSelect(undefined) : undefined}
         proOptions={{ hideAttribution: true }}
       >
         <Background />

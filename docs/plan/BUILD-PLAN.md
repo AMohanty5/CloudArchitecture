@@ -207,13 +207,22 @@ and a generated typed API client with contract tests — all running on the EC2 
 > commit but the model GET doesn't return it yet — reloaded nodes fall back to the
 > projector's auto-layout (sidecar read-back is a later layout-day concern, not Day 13).
 
-### Day 14 — Selection + property panel (the schema-driven form)
+### Day 14 — Selection + property panel (the schema-driven form) ✅ (2026-06-14)
 **Goal:** Edit any service's properties with zero per-service UI code (doc 06).
-- [ ] JSON-Schema-driven form generator: string/number/boolean/enum/object fields, defaults, validation messages from pass-2
-- [ ] `SetProperty` / `Rename` commands; inspector shows abstract type, binding, group
-- [ ] Multi-select basics (shared property editing deferred to Backlog)
+- [x] JSON-Schema-driven form generator (`canvas/PropertyForm.tsx`): one input per catalog property — string/text, integer/number, boolean (checkbox), enum (select), object (JSON textarea); defaults shown as placeholders; pass-2 messages rendered inline per field. Pure `parseFieldInput` extracted + unit-tested (empty → unset, numeric coercion, non-numeric passthrough)
+- [x] `SetProperty` / `Rename` commands (`canvas/commands.ts`, immutable; `SetProperty` with `undefined` clears the key and drops an empty `properties`); `useEditor` gains `setProperty`/`rename`/`select`/`selectedId` + surfaces the 422 `errors`. Inspector (`canvas/Inspector.tsx`) shows name (editable → Rename), abstract type, binding, group, then the form — schema from `useCatalogService(key)` (`GET /catalog/services/{key}`)
+- [x] Selection wired through the canvas (selectable + `onNodeClick`/`onPaneClick`, blue ring on the selected `ServiceNode`); errors anchored to the element (`element` + `path.endsWith('.properties.<key>')`). Multi-select shared editing stays in the Backlog
 
-**Done when:** changing `aws.rds → multiAz` via the form round-trips to a commit; an invalid value is rejected inline with the catalog message.
+**Done when:** changing `aws.rds → multiAz` via the form round-trips to a commit; an invalid value is rejected inline with the catalog message. Headless: web 20/20 (commands 8, PropertyForm 4, projector/api/App), tsc/eslint/`vite build` clean. Live form→commit→inline-422 eyeballed on EC2 via the SSH tunnel.
+
+> Day 14 notes: errors flow from the commit's problem+json (`CommitError` = `{code,path,element,message}`)
+> — on 422 `useEditor` rolls the optimistic edit back to the last committed model and stores the
+> messages; the inspector buckets them by `path` (`.properties.<key>` → field, else panel-level).
+> The form clears a property (rather than writing it) when emptied, so a value equal to the catalog
+> default isn't persisted needlessly. `noUncheckedIndexedAccess` bites array access too
+> (`components![0]!`) and object index access (`schema[key]!`). Object properties get a JSON
+> textarea with local parse-error state — unused by the 5 seed services (all scalar), present for
+> completeness.
 
 ### Day 15 — Connections
 **Goal:** Drawing edges that mean something.

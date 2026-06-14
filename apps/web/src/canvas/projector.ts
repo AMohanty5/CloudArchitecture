@@ -11,6 +11,7 @@ export interface CamlComponent {
   type: string;
   binding?: { provider: string; service: string };
   group?: string;
+  properties?: Record<string, unknown>;
 }
 export interface CamlConnection {
   id: string;

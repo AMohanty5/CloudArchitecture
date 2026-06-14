@@ -44,6 +44,40 @@ export function useCatalogSearch(q: string): UseQueryResult<ServiceSummary[]> {
   });
 }
 
+/** A single property's JSON-Schema fragment (catalog format, doc 14) the form consumes. */
+export interface PropertySchema {
+  type?: 'string' | 'integer' | 'number' | 'boolean' | 'object';
+  enum?: unknown[];
+  default?: unknown;
+  description?: string;
+  pattern?: string;
+  minimum?: number;
+  maximum?: number;
+}
+
+/** Full catalog service incl. the property JSON Schema (GET /catalog/services/{key}). */
+export interface CatalogServiceDetail {
+  key: string;
+  name: string;
+  provider: string;
+  abstractTypes?: string[];
+  groupKind?: string;
+  properties?: Record<string, PropertySchema>;
+  iconUrl: string;
+}
+
+export function useCatalogService(key: string | undefined): UseQueryResult<CatalogServiceDetail> {
+  return useQuery({
+    queryKey: ['catalog', 'service', key],
+    enabled: Boolean(key),
+    queryFn: async (): Promise<CatalogServiceDetail> => {
+      const { data, error } = await client.GET('/catalog/services/{key}', { params: { path: { key: key! } } });
+      if (error || !data) throw new Error('failed to load service');
+      return data as CatalogServiceDetail;
+    },
+  });
+}
+
 export function useModel(id: string, branch = 'main'): UseQueryResult<unknown> {
   return useQuery({
     queryKey: ['model', id, branch],
