@@ -20,8 +20,10 @@ export interface ConnectVerdict {
 interface CanvasProps {
   model: ProjectableModel;
   layout?: LayoutSidecar;
-  /** When provided, the canvas accepts palette drops and emits the dropped service + flow position. */
-  onDropService?: (service: ServiceLike, position: { x: number; y: number }) => void;
+  /** When provided, the canvas accepts palette drops and emits the dropped service, flow position, and the node dropped onto (if any). */
+  onDropService?: (service: ServiceLike, position: { x: number; y: number }, targetNodeId?: string) => void;
+  /** Group ids with a containment violation (rendered with a warning badge). */
+  invalidGroupIds?: Set<string>;
   /** Currently-selected node id; when `onSelect` is provided the canvas is selectable. */
   selectedId?: string;
   onSelect?: (id: string | undefined) => void;
@@ -34,9 +36,17 @@ interface CanvasProps {
 }
 
 /** Inner flow — lives inside ReactFlowProvider so it can use the instance for screen→flow coords. */
-function Flow({ model, layout, onDropService, selectedId, onSelect, selectedEdgeId, onSelectEdge, evaluate, onConnect }: CanvasProps) {
+function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSelect, selectedEdgeId, onSelectEdge, evaluate, onConnect }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
-  const selectedNodes = useMemo(() => nodes.map((n) => ({ ...n, selected: n.id === selectedId })), [nodes, selectedId]);
+  const selectedNodes = useMemo(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        selected: n.id === selectedId,
+        data: n.type === 'group' ? { ...n.data, invalid: invalidGroupIds?.has(n.id) ?? false } : n.data,
+      })),
+    [nodes, selectedId, invalidGroupIds],
+  );
   const styledEdges = useMemo(
     () =>
       edges.map((e) => ({
@@ -78,7 +88,9 @@ function Flow({ model, layout, onDropService, selectedId, onSelect, selectedEdge
         return;
       }
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      onDropService(service, position);
+      // The node dropped onto (component or group), if any — used to nest into containers.
+      const targetNodeId = (e.target as HTMLElement).closest('.react-flow__node')?.getAttribute('data-id') ?? undefined;
+      onDropService(service, position, targetNodeId);
     },
     [onDropService, screenToFlowPosition],
   );

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { client } from './client';
-import { applyCommand, componentFromService, makeComponentId } from '../canvas/commands';
+import { applyCommand, componentFromService, groupFromService, makeComponentId } from '../canvas/commands';
 import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
 import type { CamlConnection } from '../canvas/projector';
 
@@ -24,13 +24,20 @@ export interface EditorApi {
   selectedEdgeId: string | undefined;
   select: (id: string | undefined) => void;
   selectEdge: (id: string | undefined) => void;
-  addComponent: (service: ServiceLike, position: { x: number; y: number }) => void;
+  /** Add a component; `group` nests it (and skips the free-position sidecar entry). */
+  addComponent: (service: ServiceLike, position: { x: number; y: number }, group?: string) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
   rename: (componentId: string, name: string) => void;
   connect: (connection: CamlConnection) => void;
   disconnect: (connectionId: string) => void;
   setConnectionKind: (connectionId: string, kind: string) => void;
   setConnectionProperty: (connectionId: string, key: string, value: unknown) => void;
+  /** Add a group from a group-kind service; `parent` nests it. */
+  addGroup: (service: ServiceLike, position: { x: number; y: number }, parent?: string) => void;
+  moveToGroup: (componentId: string, group: string | undefined) => void;
+  moveGroup: (groupId: string, parent: string | undefined) => void;
+  renameGroup: (groupId: string, name: string) => void;
+  setGroupProperty: (groupId: string, key: string, value: unknown) => void;
 }
 
 const DEBOUNCE_MS = 700;
@@ -129,16 +136,48 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [commit],
   );
 
+  // Record a free (top-level) drop position in the layout sidecar. Nested elements are
+  // omitted — the projector auto-lays-them-out inside their parent container.
+  const remember = useCallback((nodeId: string, position: { x: number; y: number }) => {
+    const next = { ...layoutRef.current, [nodeId]: position };
+    layoutRef.current = next;
+    setLayout(next);
+  }, []);
+
   const addComponent = useCallback(
-    (service: ServiceLike, position: { x: number; y: number }) => {
+    (service: ServiceLike, position: { x: number; y: number }, group?: string) => {
       const componentId = makeComponentId(service.key);
       const component = componentFromService(service, componentId);
-      if (!component) return; // group-kind services land in Day 16
-      const nextLayout = { ...layoutRef.current, [componentId]: position };
-      layoutRef.current = nextLayout;
-      setLayout(nextLayout);
+      if (!component) return; // group-kind services become groups (addGroup)
+      if (group) component.group = group;
+      else remember(componentId, position);
       execute({ type: 'AddComponent', component });
     },
+    [execute, remember],
+  );
+
+  const addGroup = useCallback(
+    (service: ServiceLike, position: { x: number; y: number }, parent?: string) => {
+      const groupId = makeComponentId(service.key);
+      const group = groupFromService(service, groupId, parent);
+      if (!group) return; // component services become components (addComponent)
+      if (!parent) remember(groupId, position);
+      execute({ type: 'AddGroup', group });
+    },
+    [execute, remember],
+  );
+
+  const moveToGroup = useCallback(
+    (componentId: string, group: string | undefined) => execute({ type: 'MoveToGroup', componentId, group }),
+    [execute],
+  );
+  const moveGroup = useCallback(
+    (groupId: string, parent: string | undefined) => execute({ type: 'MoveGroup', groupId, parent }),
+    [execute],
+  );
+  const renameGroup = useCallback((groupId: string, name: string) => execute({ type: 'RenameGroup', groupId, name }), [execute]);
+  const setGroupProperty = useCallback(
+    (groupId: string, key: string, value: unknown) => execute({ type: 'SetGroupProperty', groupId, key, value }),
     [execute],
   );
 
@@ -191,5 +230,10 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     disconnect,
     setConnectionKind,
     setConnectionProperty,
+    addGroup,
+    moveToGroup,
+    moveGroup,
+    renameGroup,
+    setGroupProperty,
   };
 }

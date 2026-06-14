@@ -3,13 +3,16 @@ import { Link, useParams } from 'react-router-dom';
 import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
 import { Inspector } from '../canvas/Inspector';
+import { GroupInspector } from '../canvas/GroupInspector';
 import { EdgeInspector } from '../canvas/EdgeInspector';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
 import { useConnectionRules } from '../lib/queries';
 import { evaluateConnection, makeConnectionId } from '../canvas/connections';
+import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import type { ConnectVerdict } from '../canvas/Canvas';
-import type { CamlComponent, ProjectableModel } from '../canvas/projector';
+import type { CamlComponent, CamlGroup, ProjectableModel } from '../canvas/projector';
+import type { ServiceLike } from '../canvas/commands';
 
 const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
   loading: { label: 'Loading…', color: '#94a3b8' },
@@ -19,6 +22,28 @@ const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
   error: { label: '● Save failed — reverted', color: '#dc2626' },
 };
 
+/** Group ids reachable from `rootId` (its descendants) — invalid re-parent targets. */
+function descendantGroupIds(groups: CamlGroup[], rootId: string): Set<string> {
+  const childrenOf = new Map<string, CamlGroup[]>();
+  for (const g of groups) {
+    if (!g.parent) continue;
+    const siblings = childrenOf.get(g.parent) ?? [];
+    siblings.push(g);
+    childrenOf.set(g.parent, siblings);
+  }
+  const out = new Set<string>();
+  const stack = [rootId];
+  while (stack.length) {
+    for (const child of childrenOf.get(stack.pop()!) ?? []) {
+      if (!out.has(child.id)) {
+        out.add(child.id);
+        stack.push(child.id);
+      }
+    }
+  }
+  return out;
+}
+
 export function Editor() {
   const { id = '' } = useParams();
   const editor = useEditor(id);
@@ -26,28 +51,33 @@ export function Editor() {
   const badge = SAVE_BADGE[saveState];
 
   const components: CamlComponent[] = model?.components ?? [];
-  const byId = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
+  const groups: CamlGroup[] = model?.groups ?? [];
+  const componentsById = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
+  const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
+  const groupOptions = useMemo(() => groups.map((g) => ({ id: g.id, name: g.name, kind: g.kind })), [groups]);
+
   const serviceKeys = useMemo(
     () => [...new Set(components.map((c) => c.binding?.service).filter((s): s is string => Boolean(s)))],
     [components],
   );
   const rulesByService = useConnectionRules(serviceKeys);
+  const violations = useMemo(() => containmentViolations(model ?? {}), [model]);
+  const invalidGroupIds = useMemo(() => violatingGroupIds(model ?? {}), [model]);
 
   // Resolve a candidate edge (source→target node ids) to a catalog verdict.
   const verdict = useCallback(
     (sourceId: string, targetId: string) => {
       if (sourceId === targetId) return { allowed: false, kinds: [], protocols: [], reason: 'A node cannot connect to itself' };
-      const from = byId.get(sourceId);
-      const to = byId.get(targetId);
+      const from = componentsById.get(sourceId);
+      const to = componentsById.get(targetId);
       if (!from || !to) return { allowed: false, kinds: [], protocols: [], reason: 'Unknown endpoint' };
       return evaluateConnection(
         { type: from.type, rules: rulesByService.get(from.binding?.service ?? '') },
         { type: to.type, rules: rulesByService.get(to.binding?.service ?? '') },
       );
     },
-    [byId, rulesByService],
+    [componentsById, rulesByService],
   );
-
   const evaluate = useCallback((source: string, target: string): ConnectVerdict => verdict(source, target), [verdict]);
 
   const onConnect = useCallback(
@@ -59,8 +89,29 @@ export function Editor() {
     [verdict, editor],
   );
 
-  const selectedComponent = byId.get(selectedId ?? '');
+  // Drop onto a group nests inside it; drop onto a component nests in that component's group.
+  const onDropService = useCallback(
+    (service: ServiceLike, position: { x: number; y: number }, targetNodeId?: string) => {
+      const container = targetNodeId
+        ? groupsById.has(targetNodeId)
+          ? targetNodeId
+          : componentsById.get(targetNodeId)?.group
+        : undefined;
+      if (service.groupKind) editor.addGroup(service, position, container);
+      else editor.addComponent(service, position, container);
+    },
+    [groupsById, componentsById, editor],
+  );
+
+  const selectedComponent = componentsById.get(selectedId ?? '');
+  const selectedGroup = groupsById.get(selectedId ?? '');
   const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
+
+  const groupParentOptions = useMemo(() => {
+    if (!selectedGroup) return [];
+    const forbidden = descendantGroupIds(groups, selectedGroup.id);
+    return groups.filter((g) => g.id !== selectedGroup.id && !forbidden.has(g.id)).map((g) => ({ id: g.id, name: g.name, kind: g.kind }));
+  }, [groups, selectedGroup]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -87,7 +138,8 @@ export function Editor() {
             <Canvas
               model={model as ProjectableModel}
               layout={{ positions: layout }}
-              onDropService={editor.addComponent}
+              onDropService={onDropService}
+              invalidGroupIds={invalidGroupIds}
               selectedId={selectedId}
               onSelect={editor.select}
               selectedEdgeId={selectedEdgeId}
@@ -108,12 +160,24 @@ export function Editor() {
               editor.selectEdge(undefined);
             }}
           />
+        ) : selectedGroup ? (
+          <GroupInspector
+            group={selectedGroup}
+            parentOptions={groupParentOptions}
+            violation={violations.find((v) => v.groupId === selectedGroup.id)?.message}
+            errors={errors}
+            onRename={(name) => editor.renameGroup(selectedGroup.id, name)}
+            onReparent={(parent) => editor.moveGroup(selectedGroup.id, parent)}
+            onSetProperty={(key, value) => editor.setGroupProperty(selectedGroup.id, key, value)}
+          />
         ) : (
           <Inspector
             component={selectedComponent}
             errors={errors}
+            groups={groupOptions}
             onRename={(name) => selectedId && editor.rename(selectedId, name)}
             onSetProperty={(key, value) => selectedId && editor.setProperty(selectedId, key, value)}
+            onMoveToGroup={(group) => selectedId && editor.moveToGroup(selectedId, group)}
           />
         )}
       </div>

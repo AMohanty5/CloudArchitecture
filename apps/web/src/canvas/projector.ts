@@ -35,6 +35,8 @@ export interface CamlGroup {
   kind: string;
   name: string;
   parent?: string;
+  provider?: string;
+  properties?: Record<string, unknown>;
 }
 export interface ProjectableModel {
   components?: CamlComponent[];

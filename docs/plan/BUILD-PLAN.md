@@ -241,13 +241,23 @@ and a generated typed API client with contract tests — all running on the EC2 
 > port/encrypted + index signature), so the shared `setKey` helper's `Record` result casts through
 > it on `SetConnectionProperty`.
 
-### Day 16 — Groups & containment
+### Day 16 — Groups & containment ✅ (2026-06-14)
 **Goal:** VPC ⊃ subnet ⊃ instance nesting works.
-- [ ] `GroupNode` (React Flow parent nodes, `extent: 'parent'`, auto-size to children + padding, kind-styled headers)
-- [ ] Create group from palette (network/subnet/region/zone); drag component into/out of group → `MoveToGroup` command
-- [ ] Containment validation surfaced (subnet must live in network, etc.)
+- [x] `GroupNode` kind-styled headers (network/subnet/region/zone/tier tints) + a ⚠️ badge on containment violations; nesting/auto-size already handled by the Day-12 projector (parents precede children, `extent: 'parent'`, size-to-children)
+- [x] Create group from palette: group-kind services (`aws.vpc`→network, `aws.subnet`→subnet) are now draggable; `groupFromService` + `AddGroup`. Drop-into-container nests (drop onto a group, or onto a component → that component's group) — the primary build-from-scratch path. `MoveToGroup` (move a component in/out via the inspector's group picker) + `MoveGroup`/`RenameGroup`/`SetGroupProperty` for groups
+- [x] Containment validation surfaced: pure `containmentViolations` (subnet must live in a network) → ⚠️ node badge + a warning in the group inspector. Group inspector reuses the Day-14 schema-driven `PropertyForm` (cidr/zone/public) via `useGroupService` (provider+kind → catalog service)
 
-**Done when:** rebuild the doc 05 example from scratch by hand in < 10 minutes, visually correct nesting, persisted.
+**Done when:** rebuild the doc 05 example from scratch by hand in < 10 minutes, visually correct nesting, persisted. Headless: web 41/41 (commands 18, containment 4, connections 7, projector/PropertyForm/api/App), tsc/eslint/`vite build` clean. Live build-from-scratch eyeballed on EC2 via the SSH tunnel.
+
+> Day 16 notes: drop-target detection reads the nearest `.react-flow__node` `data-id` under the
+> cursor (React Flow node DOM are siblings, not nested, so a component drop resolves its container
+> via the model, not the DOM). Nested drops intentionally skip the layout sidecar so the projector
+> auto-lays-them-out inside the parent; only free top-level drops record a position. Group property
+> schemas resolve through the catalog group-kind index (empty-query search → match provider+kind →
+> service key → detail). Drag-to-reparent *existing* nodes (React Flow node dragging + intersection)
+> is deferred — group membership is edited via the inspector pickers, which is deterministic and
+> testable; the build-from-scratch acceptance is met by drop-into-container. Containment is
+> client-side surfacing only (pass-3 server rules remain future work).
 
 ### Day 17 — Undo/redo + keyboard + clipboard
 **Goal:** It feels like a real editor.

@@ -19,7 +19,8 @@ function groupByCategory(items: ServiceSummary[]): Array<[string, ServiceSummary
 }
 
 function PaletteItem({ service }: { service: ServiceSummary }): React.JSX.Element {
-  const draggable = (service.abstractTypes?.length ?? 0) > 0;
+  const isGroup = Boolean(service.groupKind);
+  const draggable = (service.abstractTypes?.length ?? 0) > 0 || isGroup;
   return (
     <div
       draggable={draggable}
@@ -27,7 +28,7 @@ function PaletteItem({ service }: { service: ServiceSummary }): React.JSX.Elemen
         e.dataTransfer.setData(SERVICE_DRAG_MIME, JSON.stringify(service));
         e.dataTransfer.effectAllowed = 'copy';
       }}
-      title={draggable ? 'Drag onto the canvas' : 'Group services arrive in Day 16'}
+      title={isGroup ? 'Drag onto the canvas — drop onto a container to nest' : 'Drag onto the canvas'}
       style={{
         display: 'flex',
         alignItems: 'center',

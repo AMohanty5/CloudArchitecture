@@ -94,6 +94,17 @@ export function useCatalogService(key: string | undefined): UseQueryResult<Catal
 }
 
 /**
+ * Resolve the catalog service backing a group of the given provider + kind (e.g.
+ * aws/network → aws.vpc) and return its detail, so the group inspector can render
+ * the same schema-driven property form as components.
+ */
+export function useGroupService(provider: string | undefined, kind: string | undefined): UseQueryResult<CatalogServiceDetail> {
+  const all = useCatalogSearch('');
+  const key = all.data?.find((s) => s.groupKind === kind && s.provider === provider)?.key;
+  return useQuery(serviceQuery(key));
+}
+
+/**
  * Connection rules for the given service keys, keyed by service key (cache-shared with
  * `useCatalogService`). Drives synchronous drag-time connection validation on the canvas.
  */
