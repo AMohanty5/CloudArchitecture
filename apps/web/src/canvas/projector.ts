@@ -44,9 +44,15 @@ export interface ProjectableModel {
   groups?: CamlGroup[];
 }
 
-/** Sidecar layout: absolute positions per node id (overrides auto-layout). */
+/**
+ * Sidecar layout (overrides the auto-layout): per-node positions, plus per-group
+ * sizes (so an ELK "tidy up" can size containers to their spread-out children).
+ * Positions are in the node's React Flow coordinate space (parent-relative for
+ * nested nodes), matching ELK's hierarchical output.
+ */
 export interface LayoutSidecar {
   positions?: Record<string, { x: number; y: number }>;
+  sizes?: Record<string, { width: number; height: number }>;
 }
 
 export interface ProjectedNode {
@@ -139,10 +145,12 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
 
   layoutContainer(undefined);
 
-  if (layout?.positions) {
+  if (layout?.positions || layout?.sizes) {
     for (const node of nodes) {
-      const pos = layout.positions[node.id];
+      const pos = layout.positions?.[node.id];
       if (pos) node.position = pos;
+      const size = layout.sizes?.[node.id];
+      if (size && node.type === 'group') node.style = size; // ELK-sized container
     }
   }
 

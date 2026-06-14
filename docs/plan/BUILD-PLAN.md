@@ -276,13 +276,23 @@ and a generated typed API client with contract tests — all running on the EC2 
 > because it's the OS clipboard. ⌘A select-all is deferred with multi-select (Backlog). Drag-to-
 > reparent existing nodes (from Day 16) remains deferred — not required by either day's acceptance.
 
-### Day 18 — ELK auto-layout
+### Day 18 — ELK auto-layout ✅ (2026-06-14)
 **Goal:** "Tidy up" + sane initial layout.
-- [ ] elkjs in a Web Worker; layered algorithm, `INCLUDE_CHILDREN`, orthogonal routing (doc 06 config)
-- [ ] "Tidy up" button → animated transition → layout saved to sidecar (undoable)
-- [ ] New-node placement heuristic (near neighbors, inside group, collision-avoided)
+- [x] elkjs (`elk.bundled.js`) in a Vite module Web Worker (`canvas/elk.worker.ts`, its own 1.4MB chunk off the main bundle); `toElkGraph` builds the hierarchical graph with `elk.algorithm=layered`, `direction=RIGHT`, `hierarchyHandling=INCLUDE_CHILDREN`, `edgeRouting=ORTHOGONAL` + group padding; `fromElkGraph` → layout sidecar (positions + group sizes). Pure build/extract unit-tested
+- [x] "✨ Tidy up" button → `autoLayout` → replaces the layout sidecar; CSS transform transition animates the move; recorded as **one undoable step** (layout now lives in the history `present` alongside the model, so ⌘Z reverts a tidy-up — and nudges)
+- [x] New-node placement: top-level drops keep their drop position; drops into a container auto-layout inside it; ELK then collision-avoids on the next tidy-up (the projector honours sidecar group **sizes** so containers fit their ELK-spread children). A bespoke incremental near-neighbour heuristic is parked in the Backlog
 
-**Done when:** scrambled 30-node fixture → one click → clean left-to-right layout with intact nesting.
+**Done when:** scrambled 30-node fixture → one click → clean left-to-right layout with intact nesting. Headless: web 57/57 (layout 3, history 5, clipboard 6, commands 20, …), tsc/eslint/`vite build` clean (worker emits a separate chunk). Live tidy-up on a scrambled fixture eyeballed on EC2 via the SSH tunnel.
+
+> Day 18 notes: refactored the undo history `present` from `model` to `{ model, layout }` so
+> layout changes (tidy-up, nudge, drop positions) are undoable in the same timeline. ELK's
+> hierarchical output is parent-relative, which is exactly React Flow's child coordinate space, so
+> positions map straight across; group sizes flow through the extended `LayoutSidecar.sizes` and the
+> projector applies them. Persistence caveat (unchanged from earlier days): commits are content-hash
+> addressed, so a layout-only change is a no-op commit server-side and rides the next model commit;
+> the model GET still doesn't return the sidecar, so tidy-up is a live-session view transform until
+> layout read-back is wired (a later day). `self.postMessage` collides with the DOM `Window`
+> signature under the web tsconfig — cast to the single-arg worker form in the worker.
 
 ### Day 19 — History & diff UI
 **Goal:** Versioning visible in-product (the differentiator, demo-critical).

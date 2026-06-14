@@ -116,6 +116,8 @@ function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSel
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }} onDragOver={editable ? onDragOver : undefined} onDrop={editable ? onDrop : undefined}>
+      {/* Animate position changes (e.g. ELK "Tidy up") with a short transform transition. */}
+      <style>{'.react-flow__node { transition: transform 0.28s ease; }'}</style>
       <ReactFlow
         nodes={selectedNodes as unknown as Node[]}
         edges={styledEdges as unknown as Edge[]}

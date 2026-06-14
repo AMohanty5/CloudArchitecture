@@ -13,6 +13,7 @@
     "@cac/api-client": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
     "@xyflow/react": "^12.3.0",
+    "elkjs": "^0.11.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.0"

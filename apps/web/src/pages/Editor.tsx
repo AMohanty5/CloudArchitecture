@@ -235,6 +235,23 @@ export function Editor() {
             ↷
           </button>
         </div>
+        <button
+          onClick={() => void editor.tidyUp()}
+          disabled={editor.tidying || !model}
+          title="Auto-layout (ELK)"
+          style={{
+            marginLeft: 4,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: '#fff',
+            color: editor.tidying ? '#cbd5e1' : '#334155',
+            cursor: editor.tidying ? 'default' : 'pointer',
+            fontSize: 13,
+          }}
+        >
+          {editor.tidying ? 'Tidying…' : '✨ Tidy up'}
+        </button>
         <span style={{ marginLeft: 'auto', fontSize: 13, color: badge.color }}>{badge.label}</span>
       </header>
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -243,7 +260,7 @@ export function Editor() {
           {model ? (
             <Canvas
               model={model as ProjectableModel}
-              layout={{ positions: layout }}
+              layout={layout}
               onDropService={onDropService}
               invalidGroupIds={invalidGroupIds}
               selectedId={selectedId}

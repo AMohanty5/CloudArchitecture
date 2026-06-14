@@ -3,7 +3,8 @@ import { client } from './client';
 import { applyCommand, componentFromService, groupFromService, makeComponentId } from '../canvas/commands';
 import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
 import { project } from '../canvas/projector';
-import type { CamlConnection } from '../canvas/projector';
+import type { CamlConnection, LayoutSidecar } from '../canvas/projector';
+import { autoLayout } from '../canvas/layout';
 import { canRedo as canRedoFn, canUndo as canUndoFn, initHistory, record, redo as redoFn, undo as undoFn } from '../canvas/history';
 import type { History } from '../canvas/history';
 import { remapFragment } from '../canvas/clipboard';
@@ -21,10 +22,17 @@ export interface CommitError {
 
 type Position = { x: number; y: number };
 
+/** Undoable editor state: the CAML model + its layout sidecar move together. */
+interface EditorState {
+  model: EditableModel;
+  layout: LayoutSidecar;
+}
+
 export interface EditorApi {
   model: EditableModel | undefined;
-  layout: Record<string, Position>;
+  layout: LayoutSidecar;
   saveState: SaveState;
+  tidying: boolean;
   /** Validation errors from the last rejected (422) commit; cleared on the next success. */
   errors: CommitError[];
   selectedId: string | undefined;
@@ -35,6 +43,7 @@ export interface EditorApi {
   selectEdge: (id: string | undefined) => void;
   undo: () => void;
   redo: () => void;
+  tidyUp: () => Promise<void>;
   /** Add a component; `group` nests it (and skips the free-position sidecar entry). */
   addComponent: (service: ServiceLike, position: Position, group?: string) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
@@ -57,6 +66,7 @@ export interface EditorApi {
 }
 
 const DEBOUNCE_MS = 700;
+const EMPTY_LAYOUT: LayoutSidecar = {};
 
 /** The undo/redo coalescing key for a command (rapid same-field edits → one entry). */
 function commandGroupKey(cmd: Command): string | undefined {
@@ -78,30 +88,35 @@ function commandGroupKey(cmd: Command): string | undefined {
     case 'MoveGroup':
       return `gmove:${cmd.groupId}`;
     default:
-      return undefined; // Add*/Remove*/Connect/Disconnect/paste = discrete entries
+      return undefined; // Add*/Remove*/Connect/Disconnect = discrete entries
   }
 }
 
+/** Immutable position set in a layout sidecar. */
+function withPosition(layout: LayoutSidecar, id: string, pos: Position): LayoutSidecar {
+  return { ...layout, positions: { ...layout.positions, [id]: pos } };
+}
+
 /**
- * Canvas editor state (CommandBus v1 + local undo/redo, blueprint doc 06). Commands
- * mutate a history-backed local CAML doc optimistically; a debounced micro-commit
- * persists the present via the write path. 409 (head moved) reloads from the server;
- * 422 (invalid) rolls back to the last committed model (history reset to that point).
- * Layout positions are client-side, sent as the commit's layout sidecar.
+ * Canvas editor state (CommandBus v1 + local undo/redo, blueprint doc 06). Model and
+ * layout move together through a history-backed present; a debounced micro-commit
+ * persists it. 409 reloads from the server; 422 rolls back to the committed model.
+ * "Tidy up" computes an ELK layout (Web Worker) and records it as one undoable step.
  */
 export function useEditor(id: string, branch = 'main'): EditorApi {
   const [model, setModel] = useState<EditableModel>();
-  const [layout, setLayout] = useState<Record<string, Position>>({});
+  const [layout, setLayout] = useState<LayoutSidecar>(EMPTY_LAYOUT);
   const [saveState, setSaveState] = useState<SaveState>('loading');
+  const [tidying, setTidying] = useState(false);
   const [errors, setErrors] = useState<CommitError[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(undefined);
 
-  const historyRef = useRef<History<EditableModel> | null>(null);
+  const historyRef = useRef<History<EditorState> | null>(null);
   const modelRef = useRef<EditableModel | undefined>(undefined);
+  const layoutRef = useRef<LayoutSidecar>(EMPTY_LAYOUT);
   const committedRef = useRef<EditableModel | undefined>(undefined);
   const headRef = useRef<string | undefined>(undefined);
-  const layoutRef = useRef<Record<string, Position>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const scheduleCommit = useCallback((commitFn: () => void) => {
@@ -110,11 +125,13 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     timer.current = setTimeout(commitFn, DEBOUNCE_MS);
   }, []);
 
-  // Reset the editing session to a known-good model (initial load, 409 rebase, 422 revert).
-  const reset = useCallback((m: EditableModel) => {
-    historyRef.current = initHistory(m);
+  // Reset the editing session to a known-good state (initial load, 409 rebase, 422 revert).
+  const reset = useCallback((m: EditableModel, l: LayoutSidecar) => {
+    historyRef.current = initHistory({ model: m, layout: l });
     modelRef.current = m;
+    layoutRef.current = l;
     setModel(m);
+    setLayout(l);
   }, []);
 
   const load = useCallback(async () => {
@@ -128,7 +145,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     const m = data as EditableModel;
     committedRef.current = m;
     headRef.current = response.headers.get('etag') ?? undefined;
-    reset(m);
+    reset(m, EMPTY_LAYOUT); // the model endpoint doesn't return the layout sidecar (yet)
     setSaveState('saved');
   }, [id, branch, reset]);
 
@@ -161,7 +178,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
         // the catalog/structural messages so the inspector can show them inline.
         setSaveState('error');
         setErrors((error as unknown as { errors?: CommitError[] } | undefined)?.errors ?? []);
-        if (committedRef.current) reset(committedRef.current);
+        if (committedRef.current) reset(committedRef.current, layoutRef.current);
       }
       return;
     }
@@ -171,15 +188,16 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     setSaveState('saved');
   }, [id, branch, load, reset]);
 
-  // Commit a new present model into history (coalescing on `key`) and schedule a save.
-  const commitPresent = useCallback(
-    (next: EditableModel, key: string | undefined) => {
+  // Commit a new present (model + layout) into history (coalescing on `key`) and schedule a save.
+  const apply = useCallback(
+    (nextModel: EditableModel, nextLayout: LayoutSidecar, key: string | undefined) => {
       const h = historyRef.current;
       if (!h) return;
-      const nh = record(h, next, key);
-      historyRef.current = nh;
-      modelRef.current = next;
-      setModel(next);
+      historyRef.current = record(h, { model: nextModel, layout: nextLayout }, key);
+      modelRef.current = nextModel;
+      layoutRef.current = nextLayout;
+      setModel(nextModel);
+      setLayout(nextLayout);
       scheduleCommit(() => void commit());
     },
     [commit, scheduleCommit],
@@ -189,48 +207,32 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     (cmd: Command) => {
       const base = modelRef.current;
       if (!base) return;
-      commitPresent(applyCommand(base, cmd), commandGroupKey(cmd));
+      apply(applyCommand(base, cmd), layoutRef.current, commandGroupKey(cmd));
     },
-    [commitPresent],
+    [apply],
   );
 
-  const executeBatch = useCallback(
-    (cmds: Command[], key: string) => {
-      const base = modelRef.current;
-      if (!base || cmds.length === 0) return;
-      const next = cmds.reduce((m, c) => applyCommand(m, c), base);
-      commitPresent(next, key);
+  const restore = useCallback(
+    (next: History<EditorState>) => {
+      historyRef.current = next;
+      modelRef.current = next.present.model;
+      layoutRef.current = next.present.layout;
+      setModel(next.present.model);
+      setLayout(next.present.layout);
+      scheduleCommit(() => void commit());
     },
-    [commitPresent],
+    [commit, scheduleCommit],
   );
 
   const undo = useCallback(() => {
     const h = historyRef.current;
-    if (!h || !canUndoFn(h)) return;
-    const nh = undoFn(h);
-    historyRef.current = nh;
-    modelRef.current = nh.present;
-    setModel(nh.present);
-    scheduleCommit(() => void commit());
-  }, [commit, scheduleCommit]);
+    if (h && canUndoFn(h)) restore(undoFn(h));
+  }, [restore]);
 
   const redo = useCallback(() => {
     const h = historyRef.current;
-    if (!h || !canRedoFn(h)) return;
-    const nh = redoFn(h);
-    historyRef.current = nh;
-    modelRef.current = nh.present;
-    setModel(nh.present);
-    scheduleCommit(() => void commit());
-  }, [commit, scheduleCommit]);
-
-  // Record a free (top-level) drop position in the layout sidecar. Nested elements are
-  // omitted — the projector auto-lays-them-out inside their parent container.
-  const remember = useCallback((nodeId: string, position: Position) => {
-    const next = { ...layoutRef.current, [nodeId]: position };
-    layoutRef.current = next;
-    setLayout(next);
-  }, []);
+    if (h && canRedoFn(h)) restore(redoFn(h));
+  }, [restore]);
 
   const addComponent = useCallback(
     (service: ServiceLike, position: Position, group?: string) => {
@@ -238,10 +240,11 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
       const component = componentFromService(service, componentId);
       if (!component) return; // group-kind services become groups (addGroup)
       if (group) component.group = group;
-      else remember(componentId, position);
-      execute({ type: 'AddComponent', component });
+      const nextModel = applyCommand(modelRef.current!, { type: 'AddComponent', component });
+      const nextLayout = group ? layoutRef.current : withPosition(layoutRef.current, componentId, position);
+      apply(nextModel, nextLayout, undefined);
     },
-    [execute, remember],
+    [apply],
   );
 
   const addGroup = useCallback(
@@ -249,10 +252,11 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
       const groupId = makeComponentId(service.key);
       const group = groupFromService(service, groupId, parent);
       if (!group) return; // component services become components (addComponent)
-      if (!parent) remember(groupId, position);
-      execute({ type: 'AddGroup', group });
+      const nextModel = applyCommand(modelRef.current!, { type: 'AddGroup', group });
+      const nextLayout = parent ? layoutRef.current : withPosition(layoutRef.current, groupId, position);
+      apply(nextModel, nextLayout, undefined);
     },
-    [execute, remember],
+    [apply],
   );
 
   const duplicate = useCallback(
@@ -260,16 +264,18 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
       const source = modelRef.current?.components?.find((c) => c.id === componentId);
       if (!source) return;
       const newId = makeComponentId(source.binding?.service ?? source.type);
-      const clone = { ...source, id: newId };
-      const pos = layoutRef.current[componentId];
-      if (pos) remember(newId, { x: pos.x + 32, y: pos.y + 32 });
-      execute({ type: 'AddComponent', component: clone });
+      const nextModel = applyCommand(modelRef.current!, { type: 'AddComponent', component: { ...source, id: newId } });
+      const pos = layoutRef.current.positions?.[componentId];
+      const nextLayout = pos ? withPosition(layoutRef.current, newId, { x: pos.x + 32, y: pos.y + 32 }) : layoutRef.current;
+      apply(nextModel, nextLayout, undefined);
     },
-    [execute, remember],
+    [apply],
   );
 
   const paste = useCallback(
     (fragment: CamlFragment) => {
+      const base = modelRef.current;
+      if (!base) return;
       const remapped = remapFragment(fragment);
       const cmds: Command[] = [
         ...remapped.groups.map((group): Command => ({ type: 'AddGroup', group })),
@@ -277,25 +283,42 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
         ...remapped.connections.map((connection): Command => ({ type: 'Connect', connection })),
       ];
       if (cmds.length === 0) return;
+      const nextModel = cmds.reduce((m, c) => applyCommand(m, c), base);
       // Cascade top-level pasted nodes so they don't all land on the origin.
+      let nextLayout = layoutRef.current;
       let i = 0;
-      for (const g of remapped.groups) if (!g.parent) remember(g.id, { x: 60 + i++ * 28, y: 60 + i * 28 });
-      for (const c of remapped.components) if (!c.group) remember(c.id, { x: 60 + i++ * 28, y: 60 + i * 28 });
-      executeBatch(cmds, `paste:${Math.random()}`);
+      for (const g of remapped.groups) if (!g.parent) nextLayout = withPosition(nextLayout, g.id, { x: 60 + i++ * 28, y: 60 + i * 28 });
+      for (const c of remapped.components) if (!c.group) nextLayout = withPosition(nextLayout, c.id, { x: 60 + i++ * 28, y: 60 + i * 28 });
+      apply(nextModel, nextLayout, `paste:${Math.random()}`);
     },
-    [executeBatch, remember],
+    [apply],
   );
 
-  const nudge = useCallback((nodeId: string, dx: number, dy: number) => {
-    // Base off the node's currently-projected position (correct space for nested nodes too).
-    const base =
-      layoutRef.current[nodeId] ??
-      project(modelRef.current ?? {}, { positions: layoutRef.current }).nodes.find((n) => n.id === nodeId)?.position;
-    if (!base) return;
-    const next = { ...layoutRef.current, [nodeId]: { x: base.x + dx, y: base.y + dy } };
-    layoutRef.current = next;
-    setLayout(next);
-  }, []);
+  const nudge = useCallback(
+    (nodeId: string, dx: number, dy: number) => {
+      const base =
+        layoutRef.current.positions?.[nodeId] ??
+        project(modelRef.current ?? {}, layoutRef.current).nodes.find((n) => n.id === nodeId)?.position;
+      if (!base) return;
+      apply(modelRef.current!, withPosition(layoutRef.current, nodeId, { x: base.x + dx, y: base.y + dy }), `nudge:${nodeId}`);
+    },
+    [apply],
+  );
+
+  const tidyUp = useCallback(async () => {
+    const current = modelRef.current;
+    if (!current) return;
+    setTidying(true);
+    try {
+      const { nodes, edges } = project(current, layoutRef.current);
+      const sidecar = await autoLayout(nodes, edges);
+      apply(modelRef.current!, sidecar, 'tidy'); // replace the whole layout in one undoable step
+    } catch {
+      /* layout failed — leave the current layout in place */
+    } finally {
+      setTidying(false);
+    }
+  }, [apply]);
 
   const moveToGroup = useCallback(
     (componentId: string, group: string | undefined) => execute({ type: 'MoveToGroup', componentId, group }),
@@ -346,6 +369,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     model,
     layout,
     saveState,
+    tidying,
     errors,
     selectedId,
     selectedEdgeId,
@@ -355,6 +379,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     selectEdge,
     undo,
     redo,
+    tidyUp,
     addComponent,
     setProperty,
     rename,
