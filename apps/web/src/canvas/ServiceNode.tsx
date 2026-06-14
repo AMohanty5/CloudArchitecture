@@ -1,9 +1,12 @@
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
+import { DIFF_COLOR } from './diffView';
+import type { DiffStatus } from './diffView';
 
 /** A component node: icon + name + binding badge (blueprint doc 06). */
 export function ServiceNode({ data, selected }: NodeProps) {
-  const d = data as { name?: string; type?: string; service?: string };
+  const d = data as { name?: string; type?: string; service?: string; diffStatus?: DiffStatus };
+  const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   return (
     <div
       style={{
@@ -11,7 +14,8 @@ export function ServiceNode({ data, selected }: NodeProps) {
         height: 64,
         boxSizing: 'border-box',
         background: '#ffffff',
-        border: selected ? '1px solid #2563eb' : '1px solid #cbd5e1',
+        border: diffColor ? `2px solid ${diffColor}` : selected ? '1px solid #2563eb' : '1px solid #cbd5e1',
+        opacity: d.diffStatus === 'removed' ? 0.55 : 1,
         borderRadius: 10,
         padding: '8px 10px',
         boxShadow: selected ? '0 0 0 2px rgba(37,99,235,0.35)' : '0 1px 2px rgba(15,23,42,0.06)',

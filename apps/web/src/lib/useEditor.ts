@@ -63,6 +63,8 @@ export interface EditorApi {
   duplicate: (componentId: string) => void;
   nudge: (nodeId: string, dx: number, dy: number) => void;
   paste: (fragment: CamlFragment) => void;
+  /** Restore an older commit's model as a new head commit (never a history rewrite). */
+  restore: (model: EditableModel) => void;
 }
 
 const DEBOUNCE_MS = 700;
@@ -336,6 +338,9 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
   const removeComponent = useCallback((componentId: string) => execute({ type: 'RemoveComponent', componentId }), [execute]);
   const removeGroup = useCallback((groupId: string) => execute({ type: 'RemoveGroup', groupId }), [execute]);
 
+  // Restore = commit the old model as a new head (content-addressed → new commit, old hash).
+  const restoreCommit = useCallback((restored: EditableModel) => apply(restored, layoutRef.current, undefined), [apply]);
+
   const setProperty = useCallback(
     (componentId: string, key: string, value: unknown) => execute({ type: 'SetProperty', componentId, key, value }),
     [execute],
@@ -397,5 +402,6 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     duplicate,
     nudge,
     paste,
+    restore: restoreCommit,
   };
 }

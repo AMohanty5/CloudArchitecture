@@ -294,13 +294,21 @@ and a generated typed API client with contract tests — all running on the EC2 
 > layout read-back is wired (a later day). `self.postMessage` collides with the DOM `Window`
 > signature under the web tsconfig — cast to the single-arg worker form in the worker.
 
-### Day 19 — History & diff UI
+### Day 19 — History & diff UI ✅ (2026-06-14)
 **Goal:** Versioning visible in-product (the differentiator, demo-critical).
-- [ ] History panel: commit list (message, origin badge, stats, time)
-- [ ] Select two commits → diff view: changed elements highlighted on canvas (green/red/amber) + change-list sidebar from typed diff
-- [ ] Restore-as-new-commit ("rollback" per the brief — never history rewrite)
+- [x] History panel (`canvas/HistoryPanel.tsx`, toggled from the header): commit list with origin badge, stats (comp/conn/grp + providers), message, time, short hash; `useCommits` over the Day-9 `GET /commits`
+- [x] Select two commits → diff view: `useDiff` (Day-9 `GET /diff`) + `useCommitModel` for the `to` model; pure `buildDiffView` re-injects removed elements as ghosts and yields a status map; canvas highlights added=green / removed=red(ghost) / modified=amber on nodes **and** edges; `DiffPanel` change-list sidebar renders the typed `ModelDiff` (per-collection +/−/~ with property `before → after`). Diff mode is read-only (keyboard/clipboard/edit handlers suppressed)
+- [x] Restore-as-new-commit: `useEditor.restore(model)` commits the fetched old model as a new head — content-addressed, so the new commit's hash equals the restored model's (never a history rewrite)
 
-**Done when:** make 5 edits, diff head vs 5-back, every change correctly highlighted on canvas; restore produces a new commit equal (by hash) to the old model.
+**Done when:** make 5 edits, diff head vs 5-back, every change correctly highlighted on canvas; restore produces a new commit equal (by hash) to the old model. Headless: web 58/58 (diffView 1, history 5, layout 3, commands 20, …), tsc/eslint/`vite build` clean. Live history→diff-highlight→restore eyeballed on EC2 via the SSH tunnel.
+
+> Day 19 notes: the diff canvas renders the fetched `to` commit's committed model (independent of the
+> live editor state / pending debounce) and auto-lays-it-out (the commit endpoint doesn't return a
+> layout sidecar), so highlight correctness — not position — is what's asserted. From/to ordering is
+> derived from the newest-first commit index (lower index = newer = `to`). Removed elements have no
+> place in the newer model, so they're injected as faded red ghosts to keep "every change on canvas"
+> literally true. Restore reuses the same commit path; if the restored model equals head it's a
+> server no-op (expected). Diff mode disables the Day-17 keyboard/clipboard handlers to stay read-only.
 
 ### Day 20 — Stage C hardening + perf pass
 **Goal:** Solid at realistic scale.

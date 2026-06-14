@@ -8,6 +8,8 @@ import { ServiceNode } from './ServiceNode';
 import { GroupNode } from './GroupNode';
 import { SERVICE_DRAG_MIME } from './commands';
 import type { ServiceLike } from './commands';
+import { DIFF_COLOR } from './diffView';
+import type { DiffStatus } from './diffView';
 
 const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
 
@@ -33,28 +35,41 @@ interface CanvasProps {
   /** Catalog verdict for a candidate edge; when provided, the canvas allows drawing connections. */
   evaluate?: (source: string, target: string) => ConnectVerdict;
   onConnect?: (source: string, target: string) => void;
+  /** Diff overlay: element/connection id → change status (added/removed/modified). */
+  diffStatus?: Record<string, DiffStatus>;
 }
 
 /** Inner flow — lives inside ReactFlowProvider so it can use the instance for screen→flow coords. */
-function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSelect, selectedEdgeId, onSelectEdge, evaluate, onConnect }: CanvasProps) {
+function Flow({ model, layout, onDropService, invalidGroupIds, selectedId, onSelect, selectedEdgeId, onSelectEdge, evaluate, onConnect, diffStatus }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
     () =>
       nodes.map((n) => ({
         ...n,
         selected: n.id === selectedId,
-        data: n.type === 'group' ? { ...n.data, invalid: invalidGroupIds?.has(n.id) ?? false } : n.data,
+        data: {
+          ...n.data,
+          ...(n.type === 'group' ? { invalid: invalidGroupIds?.has(n.id) ?? false } : {}),
+          diffStatus: diffStatus?.[n.id],
+        },
       })),
-    [nodes, selectedId, invalidGroupIds],
+    [nodes, selectedId, invalidGroupIds, diffStatus],
   );
   const styledEdges = useMemo(
     () =>
-      edges.map((e) => ({
-        ...e,
-        selected: e.id === selectedEdgeId,
-        style: { ...e.style, strokeWidth: e.id === selectedEdgeId ? 3 : 1.5 },
-      })),
-    [edges, selectedEdgeId],
+      edges.map((e) => {
+        const ds = diffStatus?.[e.id];
+        return {
+          ...e,
+          selected: e.id === selectedEdgeId,
+          style: {
+            ...e.style,
+            ...(ds ? { stroke: DIFF_COLOR[ds], strokeDasharray: ds === 'removed' ? '4 4' : undefined } : {}),
+            strokeWidth: e.id === selectedEdgeId || ds ? 3 : 1.5,
+          },
+        };
+      }),
+    [edges, selectedEdgeId, diffStatus],
   );
   const { screenToFlowPosition } = useReactFlow();
   const editable = Boolean(onDropService);

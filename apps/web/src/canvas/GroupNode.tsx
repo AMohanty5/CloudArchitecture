@@ -1,4 +1,6 @@
 import type { NodeProps } from '@xyflow/react';
+import { DIFF_COLOR } from './diffView';
+import type { DiffStatus } from './diffView';
 
 /** Header tint per group kind (blueprint doc 06: kind-styled containers). */
 const KIND_STYLE: Record<string, { bg: string; fg: string; border: string }> = {
@@ -12,15 +14,16 @@ const DEFAULT_STYLE = { bg: 'rgba(148,163,184,0.10)', fg: '#475569', border: '#e
 
 /** A containment box (region / VPC / subnet / tier) with a kind-styled, labelled header. */
 export function GroupNode({ data, selected }: NodeProps) {
-  const d = data as { label?: string; kind?: string; invalid?: boolean };
+  const d = data as { label?: string; kind?: string; invalid?: boolean; diffStatus?: DiffStatus };
   const k = KIND_STYLE[d.kind ?? ''] ?? DEFAULT_STYLE;
+  const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
-        border: selected ? '1px solid #2563eb' : `1px solid ${d.invalid ? '#fca5a5' : k.border}`,
+        border: diffColor ? `2px solid ${diffColor}` : selected ? '1px solid #2563eb' : `1px solid ${d.invalid ? '#fca5a5' : k.border}`,
         borderRadius: 12,
         background: k.bg,
         boxShadow: selected ? '0 0 0 2px rgba(37,99,235,0.30)' : undefined,

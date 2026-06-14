@@ -115,6 +115,96 @@ export function useConnectionRules(serviceKeys: string[]): Map<string, Connectio
   return map;
 }
 
+// ---- History & diff (Day 19) ----
+
+export interface CommitStats {
+  components: number;
+  connections: number;
+  groups: number;
+  providers: string[];
+}
+export interface CommitMeta {
+  hash: string;
+  parents: string[];
+  origin: string;
+  message: string;
+  stats: CommitStats;
+  authorId: string | null;
+  createdAt: string;
+}
+
+export interface PropertyChange {
+  path: string;
+  before?: unknown;
+  after?: unknown;
+}
+export interface ModifiedElement {
+  id: string;
+  changes: PropertyChange[];
+}
+export interface CollectionDiff<T> {
+  added: T[];
+  removed: T[];
+  modified: ModifiedElement[];
+}
+export interface ModelDiff {
+  components: CollectionDiff<{ id: string; name?: string }>;
+  connections: CollectionDiff<{ id: string; from: string; to: string; kind: string }>;
+  groups: CollectionDiff<{ id: string; name?: string }>;
+  policies: CollectionDiff<{ id: string }>;
+  requirements: CollectionDiff<{ id: string }>;
+  deployments: CollectionDiff<{ id: string }>;
+  document: PropertyChange[];
+}
+export interface DiffResult {
+  from: string;
+  to: string;
+  summary: string;
+  diff: ModelDiff;
+}
+
+export function useCommits(id: string): UseQueryResult<CommitMeta[]> {
+  return useQuery({
+    queryKey: ['commits', id],
+    enabled: id.length > 0,
+    queryFn: async (): Promise<CommitMeta[]> => {
+      const { data, error } = await client.GET('/architectures/{id}/commits', { params: { path: { id } } });
+      if (error || !data) throw new Error('failed to load history');
+      return (data as { commits: CommitMeta[] }).commits;
+    },
+  });
+}
+
+export function useDiff(id: string, from: string | undefined, to: string | undefined): UseQueryResult<DiffResult> {
+  return useQuery({
+    queryKey: ['diff', id, from, to],
+    enabled: id.length > 0 && Boolean(from) && Boolean(to),
+    queryFn: async (): Promise<DiffResult> => {
+      const { data, error } = await client.GET('/architectures/{id}/diff', {
+        params: { path: { id }, query: { from: from!, to: to! } },
+      });
+      if (error || !data) throw new Error('failed to load diff');
+      return data as DiffResult;
+    },
+  });
+}
+
+/** Fetch a commit's full model (imperative — used by restore). */
+export async function fetchCommitModel(id: string, hash: string): Promise<Record<string, unknown>> {
+  const { data, error } = await client.GET('/architectures/{id}/commits/{hash}', { params: { path: { id, hash } } });
+  if (error || !data) throw new Error('failed to load commit');
+  return (data as { model: Record<string, unknown> }).model;
+}
+
+/** A commit's full model (the diff view renders the `to` commit). */
+export function useCommitModel(id: string, hash: string | undefined): UseQueryResult<Record<string, unknown>> {
+  return useQuery({
+    queryKey: ['commitModel', id, hash],
+    enabled: id.length > 0 && Boolean(hash),
+    queryFn: () => fetchCommitModel(id, hash!),
+  });
+}
+
 export function useModel(id: string, branch = 'main'): UseQueryResult<unknown> {
   return useQuery({
     queryKey: ['model', id, branch],

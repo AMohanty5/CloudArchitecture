@@ -1,19 +1,22 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Canvas } from '../canvas/Canvas';
 import { Palette } from '../canvas/Palette';
 import { Inspector } from '../canvas/Inspector';
 import { GroupInspector } from '../canvas/GroupInspector';
 import { EdgeInspector } from '../canvas/EdgeInspector';
+import { HistoryPanel } from '../canvas/HistoryPanel';
+import { DiffPanel } from '../canvas/DiffPanel';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
-import { useConnectionRules } from '../lib/queries';
+import { useConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel } from '../lib/queries';
 import { evaluateConnection, makeConnectionId } from '../canvas/connections';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
+import { buildDiffView } from '../canvas/diffView';
 import type { ConnectVerdict } from '../canvas/Canvas';
 import type { CamlComponent, CamlGroup, ProjectableModel } from '../canvas/projector';
-import type { ServiceLike } from '../canvas/commands';
+import type { ServiceLike, EditableModel } from '../canvas/commands';
 
 const ARROW_DELTA: Record<string, [number, number]> = {
   ArrowUp: [0, -1],
@@ -76,6 +79,35 @@ export function Editor() {
   const editor = useEditor(id);
   const { model, layout, saveState, errors, selectedId, selectedEdgeId } = editor;
   const badge = SAVE_BADGE[saveState];
+
+  // ---- History & diff (Day 19) ----
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [compare, setCompare] = useState<string[]>([]); // up to two selected commit hashes
+  const commits = useCommits(id);
+  const indexOf = useCallback((hash: string) => (commits.data ?? []).findIndex((c) => c.hash === hash), [commits.data]);
+  // Commits are newest-first: the lower index is newer (→ `to`), the higher is older (→ `from`).
+  const [fromHash, toHash] = useMemo(() => {
+    if (compare.length !== 2) return [undefined, undefined] as const;
+    const [a, b] = [...compare].sort((x, y) => indexOf(y) - indexOf(x));
+    return [a, b] as const;
+  }, [compare, indexOf]);
+  const diffActive = Boolean(fromHash && toHash);
+  const diffQuery = useDiff(id, fromHash, toHash);
+  const toModelQuery = useCommitModel(id, toHash);
+  const diffView = useMemo(
+    () => (diffQuery.data && toModelQuery.data ? buildDiffView(toModelQuery.data, diffQuery.data.diff) : undefined),
+    [diffQuery.data, toModelQuery.data],
+  );
+
+  const toggleCompare = useCallback((hash: string) => {
+    setCompare((prev) => (prev.includes(hash) ? prev.filter((h) => h !== hash) : [...prev, hash].slice(-2)));
+  }, []);
+  const onRestore = useCallback(
+    (hash: string) => {
+      void fetchCommitModel(id, hash).then((m) => editor.restore(m as EditableModel));
+    },
+    [id, editor],
+  );
 
   const components: CamlComponent[] = model?.components ?? [];
   const groups: CamlGroup[] = model?.groups ?? [];
@@ -143,6 +175,7 @@ export function Editor() {
 
   // Keyboard map (blueprint doc 06): undo/redo, delete, duplicate, nudge, escape.
   useEffect(() => {
+    if (diffActive) return; // diff mode is read-only
     const onKey = (e: KeyboardEvent) => {
       if (inFormField(e.target)) return; // let inspector fields keep native editing/undo
       const mod = e.metaKey || e.ctrlKey;
@@ -172,10 +205,11 @@ export function Editor() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [editor, selectedId, componentsById, deleteSelection]);
+  }, [editor, selectedId, componentsById, deleteSelection, diffActive]);
 
   // Copy/paste as an application/x-caml+json fragment with id re-mapping on paste.
   useEffect(() => {
+    if (diffActive) return; // diff mode is read-only
     const onCopy = (e: ClipboardEvent) => {
       if (inFormField(document.activeElement) || !model || !selectedId) return;
       const fragment = buildFragment(model, selectedId);
@@ -199,7 +233,7 @@ export function Editor() {
       document.removeEventListener('copy', onCopy);
       document.removeEventListener('paste', onPaste);
     };
-  }, [editor, model, selectedId]);
+  }, [editor, model, selectedId, diffActive]);
 
   const selectedComponent = componentsById.get(selectedId ?? '');
   const selectedGroup = groupsById.get(selectedId ?? '');
@@ -252,12 +286,40 @@ export function Editor() {
         >
           {editor.tidying ? 'Tidying…' : '✨ Tidy up'}
         </button>
+        <button
+          onClick={() => setHistoryOpen((v) => !v)}
+          title="History & diff"
+          style={{
+            marginLeft: 4,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: historyOpen ? '#eff6ff' : '#fff',
+            color: historyOpen ? '#2563eb' : '#334155',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          🕑 History
+        </button>
         <span style={{ marginLeft: 'auto', fontSize: 13, color: badge.color }}>{badge.label}</span>
       </header>
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Palette />
+        {historyOpen ? (
+          <HistoryPanel
+            commits={commits.data ?? []}
+            loading={commits.isLoading}
+            selected={compare}
+            onToggleSelect={toggleCompare}
+            onRestore={onRestore}
+          />
+        ) : (
+          <Palette />
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {model ? (
+          {diffActive && diffView ? (
+            <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} />
+          ) : model ? (
             <Canvas
               model={model as ProjectableModel}
               layout={layout}
@@ -272,7 +334,15 @@ export function Editor() {
             />
           ) : null}
         </div>
-        {selectedEdge ? (
+        {diffActive ? (
+          diffQuery.data ? (
+            <DiffPanel diff={diffQuery.data} loading={diffQuery.isLoading || toModelQuery.isLoading} onExit={() => setCompare([])} />
+          ) : (
+            <aside style={{ width: 300, flexShrink: 0, borderLeft: '1px solid #e2e8f0', padding: 14, fontFamily: 'system-ui, sans-serif', fontSize: 13, color: '#94a3b8' }}>
+              Loading diff…
+            </aside>
+          )
+        ) : selectedEdge ? (
           <EdgeInspector
             connection={selectedEdge}
             kindOptions={verdict(selectedEdge.from, selectedEdge.to).kinds}
