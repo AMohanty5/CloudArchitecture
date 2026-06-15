@@ -215,6 +215,47 @@ export function useCommitModel(id: string, hash: string | undefined): UseQueryRe
   });
 }
 
+// ---- Validation (Day 25) ----
+
+export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+export interface Finding {
+  ruleId: string;
+  title: string;
+  category: 'reliability' | 'security' | 'performance' | 'cost' | 'operations';
+  severity: Severity;
+  targetId: string;
+  message: string;
+  remediation?: string;
+  autoFixable?: boolean;
+}
+export interface ValidationReport {
+  commit: string;
+  packVersion: string;
+  findings: Finding[];
+  summary: { total: number; bySeverity: Record<Severity, number> };
+}
+
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
+
+/**
+ * Advisory validation findings (doc 16) for the branch head. Gated on the panel
+ * being open + always-stale, so each open re-runs the pack against the latest
+ * committed model. Uses a raw fetch — the endpoint post-dates the generated client.
+ */
+export function useValidation(id: string, branch = 'main', enabled = true): UseQueryResult<ValidationReport> {
+  return useQuery({
+    queryKey: ['validation', id, branch],
+    enabled: id.length > 0 && enabled,
+    staleTime: 0,
+    queryFn: async (): Promise<ValidationReport> => {
+      const res = await fetch(`${API_BASE}/architectures/${id}/branches/${branch}/validate`);
+      if (!res.ok) throw new Error('validation failed');
+      return (await res.json()) as ValidationReport;
+    },
+  });
+}
+
 export function useModel(id: string, branch = 'main'): UseQueryResult<unknown> {
   return useQuery({
     queryKey: ['model', id, branch],

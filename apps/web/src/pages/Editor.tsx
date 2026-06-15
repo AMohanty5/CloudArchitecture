@@ -7,9 +7,10 @@ import { GroupInspector } from '../canvas/GroupInspector';
 import { EdgeInspector } from '../canvas/EdgeInspector';
 import { HistoryPanel } from '../canvas/HistoryPanel';
 import { DiffPanel } from '../canvas/DiffPanel';
+import { ValidationPanel } from '../canvas/ValidationPanel';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
-import { useConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel } from '../lib/queries';
+import { useConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
 import { evaluateConnection, makeConnectionId } from '../canvas/connections';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
@@ -136,6 +137,16 @@ export function Editor() {
     },
     [id, editor],
   );
+
+  // ---- Validation (Day 25): advisory rule-pack findings ----
+  const [validationOpen, setValidationOpen] = useState(false);
+  const validation = useValidation(id, 'main', validationOpen);
+  const refetchValidation = validation.refetch;
+  useEffect(() => {
+    if (validationOpen) void refetchValidation();
+  }, [validationOpen, refetchValidation]);
+  const findingCount = validation.data?.summary.total ?? 0;
+  const hasSevere = (validation.data?.summary.bySeverity.critical ?? 0) + (validation.data?.summary.bySeverity.high ?? 0) > 0;
 
   // ---- Export (Day 21): client PNG (html-to-image) + server SVG ----
   const [exportOpen, setExportOpen] = useState(false);
@@ -371,6 +382,37 @@ export function Editor() {
         >
           🕑 History
         </button>
+        <button
+          onClick={() => setValidationOpen((v) => !v)}
+          disabled={diffActive || !model}
+          title="Validate (rule pack)"
+          style={{
+            marginLeft: 4,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: validationOpen ? '#eff6ff' : '#fff',
+            color: diffActive || !model ? '#cbd5e1' : validationOpen ? '#2563eb' : '#334155',
+            cursor: diffActive || !model ? 'default' : 'pointer',
+            fontSize: 13,
+          }}
+        >
+          ✓ Validate
+          {findingCount > 0 ? (
+            <span
+              style={{
+                marginLeft: 6,
+                fontSize: 11,
+                color: '#fff',
+                background: hasSevere ? '#dc2626' : '#d97706',
+                borderRadius: 10,
+                padding: '0 6px',
+              }}
+            >
+              {findingCount}
+            </span>
+          ) : null}
+        </button>
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setExportOpen((v) => !v)}
@@ -478,6 +520,14 @@ export function Editor() {
               Loading diff…
             </aside>
           )
+        ) : validationOpen ? (
+          <ValidationPanel
+            report={validation.data}
+            loading={validation.isFetching}
+            selectedId={selectedId}
+            onSelectTarget={(targetId) => editor.select(targetId)}
+            onRefresh={() => void refetchValidation()}
+          />
         ) : selectedEdge ? (
           <EdgeInspector
             connection={selectedEdge}
