@@ -1,0 +1,21 @@
+key: aws.dynamodb
+provider: aws
+name: Amazon DynamoDB
+description: Managed key-value and document store.
+status: ga
+icon: aws/database/dynamodb.svg
+docs: https://docs.aws.amazon.com/dynamodb/
+abstractTypes: [database.keyvalue]
+capabilities:
+  ha: { supported: true, mechanism: regional-replication }
+  backup: { supported: true }
+properties:
+  billingMode: { type: string, enum: [on-demand, provisioned], default: on-demand }
+  hashKey: { type: string, default: id }
+  storageEncrypted: { type: boolean, default: true, securityRelevant: true }
+  pointInTimeRecovery: { type: boolean, default: false }
+connectionRules:
+  inbound:
+    - { kinds: [data], from: [compute.serverless.function, compute.vm.autoscaling_group] }
+  outbound:
+    - { kinds: [replication], to: [database.keyvalue] }

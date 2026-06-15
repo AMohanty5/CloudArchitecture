@@ -1,0 +1,14 @@
+key: aws.kms
+provider: aws
+name: AWS KMS
+description: Managed encryption keys.
+status: ga
+icon: aws/security/kms.svg
+docs: https://docs.aws.amazon.com/kms/
+abstractTypes: [security.keys]
+properties:
+  keyRotation: { type: boolean, default: true, securityRelevant: true }
+  deletionWindowDays: { type: integer, minimum: 7, maximum: 30, default: 30 }
+connectionRules:
+  inbound:
+    - { kinds: [dependency], from: [database.relational, database.keyvalue, storage.object] }

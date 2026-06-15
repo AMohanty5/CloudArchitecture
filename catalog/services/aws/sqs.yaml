@@ -1,0 +1,21 @@
+key: aws.sqs
+provider: aws
+name: Amazon SQS
+description: Managed message queue.
+status: ga
+icon: aws/messaging/sqs.svg
+docs: https://docs.aws.amazon.com/sqs/
+abstractTypes: [messaging.queue]
+capabilities:
+  fifo: { supported: true }
+  dlq: { supported: true }
+properties:
+  fifo: { type: boolean, default: false }
+  visibilityTimeoutSeconds: { type: integer, minimum: 0, maximum: 43200, default: 30 }
+  messageRetentionSeconds: { type: integer, minimum: 60, maximum: 1209600, default: 345600 }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [compute.serverless.function, compute.vm.autoscaling_group, messaging.topic] }
+  outbound:
+    - { kinds: [async], to: [compute.serverless.function] }

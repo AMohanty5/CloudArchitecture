@@ -50,13 +50,17 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '1.9.8'
+      # Golden TF harness: every shipped service is exercised by the coverage
+      # fixture (one component per service); both fixtures must validate clean.
       - name: Terraform validate (generated HCL)
         run: |
-          pnpm --filter @cac/core exec tsx src/modules/iac/emit.cli.ts \
-            "$GITHUB_WORKSPACE/packages/catalog/fixtures/web-3tier.example.json" \
-            "$GITHUB_WORKSPACE/tf-out"
-          terraform -chdir="$GITHUB_WORKSPACE/tf-out" init -backend=false -input=false
-          terraform -chdir="$GITHUB_WORKSPACE/tf-out" validate -no-color
+          for fixture in web-3tier catalog-coverage; do
+            out="$GITHUB_WORKSPACE/tf-out/$fixture"
+            pnpm --filter @cac/core exec tsx src/modules/iac/emit.cli.ts \
+              "$GITHUB_WORKSPACE/packages/catalog/fixtures/$fixture.example.json" "$out"
+            terraform -chdir="$out" init -backend=false -input=false
+            terraform -chdir="$out" validate -no-color
+          done
 
       # Smoke the full export bundle (diagram + HLD + Terraform) so the SVG and
       # HLD renderers stay green end-to-end alongside the deep Terraform validate.

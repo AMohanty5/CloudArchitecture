@@ -1,0 +1,22 @@
+key: aws.elasticache_redis
+provider: aws
+name: Amazon ElastiCache for Redis
+description: Managed in-memory Redis cache.
+status: ga
+icon: aws/database/elasticache.svg
+docs: https://docs.aws.amazon.com/elasticache/
+abstractTypes: [database.cache]
+capabilities:
+  ha: { supported: true, mechanism: replication-group }
+properties:
+  nodeType:
+    type: string
+    pattern: "^cache\\.[a-z0-9]+\\.[a-z0-9]+$"
+    default: cache.t3.micro
+    costDimension: node_hours
+  engineVersion: { type: string, default: "7.1" }
+  numCacheNodes: { type: integer, minimum: 1, maximum: 6, default: 1 }
+  transitEncryption: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [redis], from: [compute.vm.autoscaling_group, compute.serverless.function] }

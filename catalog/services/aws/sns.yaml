@@ -1,0 +1,18 @@
+key: aws.sns
+provider: aws
+name: Amazon SNS
+description: Pub/sub notification topic.
+status: ga
+icon: aws/messaging/sns.svg
+docs: https://docs.aws.amazon.com/sns/
+abstractTypes: [messaging.topic]
+capabilities:
+  fanout: { supported: true }
+properties:
+  fifo: { type: boolean, default: false }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [compute.serverless.function, compute.vm.autoscaling_group] }
+  outbound:
+    - { kinds: [async], to: [messaging.queue, compute.serverless.function] }

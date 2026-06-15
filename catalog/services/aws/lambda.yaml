@@ -1,0 +1,25 @@
+key: aws.lambda
+provider: aws
+name: AWS Lambda
+description: Serverless function.
+status: ga
+icon: aws/compute/lambda.svg
+docs: https://docs.aws.amazon.com/lambda/
+abstractTypes: [compute.serverless.function]
+capabilities:
+  scaleToZero: { supported: true }
+properties:
+  runtime:
+    type: string
+    enum: [nodejs20.x, python3.12, java21, go1.x]
+    default: nodejs20.x
+  handler: { type: string, default: index.handler }
+  memoryMb: { type: integer, minimum: 128, maximum: 10240, default: 256, costDimension: gb_seconds }
+  timeoutSeconds: { type: integer, minimum: 1, maximum: 900, default: 30 }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], protocols: [https], from: [network.gateway.api, network.loadbalancer.l7] }
+    - { kinds: [async], from: [messaging.queue, messaging.topic] }
+  outbound:
+    - { kinds: [data], to: [database.relational, database.keyvalue, database.cache, storage.object] }
+    - { kinds: [async], to: [messaging.queue, messaging.topic] }

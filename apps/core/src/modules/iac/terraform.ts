@@ -98,16 +98,49 @@ export function generateTerraform(model: CamlDocument): TerraformBundle {
     }
   }
 
-  // --- Components → service resources (the Day-6 five) ---
+  // --- Components → service resources ---
   for (const c of components) {
     const root = rootGroupId(c.group);
-    const service = c.binding?.service;
-    if (service === 'aws.alb') push(root, ...albBlocks(c, subnetRefs));
-    else if (service === 'aws.ec2_asg') push(root, ...asgBlocks(c, subnetRefs));
-    else if (service === 'aws.rds') push(root, dbBlocks(c));
+    const blocks = serviceBlocks(c, subnetRefs);
+    if (blocks.length > 0) push(root, ...blocks);
   }
 
   return { files: assembleFiles(model, built, groupById) };
+}
+
+/** Dispatch a bound component to its resource blocks; unbound/unknown services emit nothing. */
+function serviceBlocks(c: Component, subnetRefs: ReturnType<typeof ref>[]): HclBlock[] {
+  switch (c.binding?.service) {
+    case 'aws.alb':
+      return albBlocks(c, subnetRefs);
+    case 'aws.ec2_asg':
+      return asgBlocks(c, subnetRefs);
+    case 'aws.rds':
+      return [dbBlocks(c)];
+    case 'aws.s3':
+      return [s3Blocks(c)];
+    case 'aws.sqs':
+      return [sqsBlocks(c)];
+    case 'aws.sns':
+      return [snsBlocks(c)];
+    case 'aws.dynamodb':
+      return [dynamoBlocks(c)];
+    case 'aws.elasticache_redis':
+      return [cacheBlocks(c)];
+    case 'aws.kms':
+      return [kmsBlocks(c)];
+    case 'aws.secrets_manager':
+      return [secretBlocks(c)];
+    case 'aws.lambda':
+      return lambdaBlocks(c);
+    default:
+      return [];
+  }
+}
+
+/** `{ Name = "<component name>" }` tag literal, shared by the resource builders. */
+function nameTag(c: Component): ReturnType<typeof ref> {
+  return ref(`{ Name = ${JSON.stringify(c.name)} }`);
 }
 
 function albBlocks(c: Component, subnetRefs: ReturnType<typeof ref>[]): HclBlock[] {
@@ -175,6 +208,115 @@ function dbBlocks(c: Component): HclBlock {
       tags: ref(`{ Name = ${JSON.stringify(c.name)} }`),
     },
   };
+}
+
+function s3Blocks(c: Component): HclBlock {
+  return {
+    type: 'resource',
+    labels: ['aws_s3_bucket', tf(c.id)],
+    attrs: { bucket: c.id.slice(0, 63), tags: nameTag(c) },
+  };
+}
+
+function sqsBlocks(c: Component): HclBlock {
+  const fifo = c.properties?.fifo === true;
+  return {
+    type: 'resource',
+    labels: ['aws_sqs_queue', tf(c.id)],
+    attrs: {
+      name: fifo ? `${c.id}.fifo` : c.id,
+      fifo_queue: fifo || undefined,
+      message_retention_seconds: c.properties?.messageRetentionSeconds !== undefined ? num(c.properties.messageRetentionSeconds, 345600) : undefined,
+      tags: nameTag(c),
+    },
+  };
+}
+
+function snsBlocks(c: Component): HclBlock {
+  const fifo = c.properties?.fifo === true;
+  return {
+    type: 'resource',
+    labels: ['aws_sns_topic', tf(c.id)],
+    attrs: { name: fifo ? `${c.id}.fifo` : c.id, fifo_topic: fifo || undefined, tags: nameTag(c) },
+  };
+}
+
+function dynamoBlocks(c: Component): HclBlock {
+  const hashKey = str(c.properties?.hashKey, 'id');
+  return {
+    type: 'resource',
+    labels: ['aws_dynamodb_table', tf(c.id)],
+    attrs: { name: c.id, billing_mode: 'PAY_PER_REQUEST', hash_key: hashKey, tags: nameTag(c) },
+    blocks: [{ type: 'attribute', attrs: { name: hashKey, type: 'S' } }],
+  };
+}
+
+function cacheBlocks(c: Component): HclBlock {
+  return {
+    type: 'resource',
+    labels: ['aws_elasticache_cluster', tf(c.id)],
+    attrs: {
+      cluster_id: c.id.slice(0, 50),
+      engine: 'redis',
+      node_type: str(c.properties?.nodeType, 'cache.t3.micro'),
+      num_cache_nodes: num(c.properties?.numCacheNodes, 1),
+      tags: nameTag(c),
+    },
+  };
+}
+
+function kmsBlocks(c: Component): HclBlock {
+  return {
+    type: 'resource',
+    labels: ['aws_kms_key', tf(c.id)],
+    attrs: {
+      description: c.name,
+      deletion_window_in_days: num(c.properties?.deletionWindowDays, 30),
+      enable_key_rotation: typeof c.properties?.keyRotation === 'boolean' ? c.properties.keyRotation : true,
+      tags: nameTag(c),
+    },
+  };
+}
+
+function secretBlocks(c: Component): HclBlock {
+  return {
+    type: 'resource',
+    labels: ['aws_secretsmanager_secret', tf(c.id)],
+    attrs: {
+      name: c.id,
+      recovery_window_in_days: c.properties?.recoveryWindowDays !== undefined ? num(c.properties.recoveryWindowDays, 30) : undefined,
+      tags: nameTag(c),
+    },
+  };
+}
+
+// Lambda needs an execution role; emit a minimal companion role so the function
+// validates standalone. `filename` is referenced (not bundled) — fine for `validate`.
+function lambdaBlocks(c: Component): HclBlock[] {
+  const roleName = `${tf(c.id)}_role`;
+  const assumeRole =
+    'jsonencode({ Version = "2012-10-17", Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" } }] })';
+  return [
+    {
+      type: 'resource',
+      labels: ['aws_iam_role', roleName],
+      attrs: { name: `${c.id.slice(0, 58)}-role`, assume_role_policy: ref(assumeRole) },
+    },
+    {
+      type: 'resource',
+      labels: ['aws_lambda_function', tf(c.id)],
+      attrs: {
+        function_name: c.id.slice(0, 64),
+        role: ref(`aws_iam_role.${roleName}.arn`),
+        runtime: str(c.properties?.runtime, 'nodejs20.x'),
+        handler: str(c.properties?.handler, 'index.handler'),
+        filename: `${c.id}.zip`,
+        memory_size: c.properties?.memoryMb !== undefined ? num(c.properties.memoryMb, 256) : undefined,
+        timeout: c.properties?.timeoutSeconds !== undefined ? num(c.properties.timeoutSeconds, 30) : undefined,
+        tags: nameTag(c),
+      },
+    },
+  ];
 }
 
 const VERSIONS_TF = `terraform {

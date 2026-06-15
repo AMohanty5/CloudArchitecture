@@ -12,6 +12,8 @@ const catalog = loadCatalog(catalogRoot);
 
 const example = (): CamlDocument =>
   JSON.parse(readFileSync(new URL('../fixtures/web-3tier.example.json', import.meta.url), 'utf8'));
+const coverage = (): CamlDocument =>
+  JSON.parse(readFileSync(new URL('../fixtures/catalog-coverage.example.json', import.meta.url), 'utf8'));
 
 describe('validateAgainstCatalog (pass 2)', () => {
   it('the doc-05-style example passes pass-1 (structural) and pass-2 (catalog)', () => {
@@ -20,6 +22,16 @@ describe('validateAgainstCatalog (pass 2)', () => {
     const result = validateAgainstCatalog(doc, catalog);
     expect(result.errors).toEqual([]);
     expect(result.valid).toBe(true);
+  });
+
+  it('the catalog-coverage fixture (one component per service) passes pass-1 and pass-2', () => {
+    const doc = coverage();
+    expect(validateStructure(doc).valid).toBe(true);
+    expect(validateAgainstCatalog(doc, catalog)).toEqual({ valid: true, errors: [] });
+    // Every bound service in the fixture exists in the catalog.
+    for (const c of doc.components) {
+      if (c.binding) expect(catalog.servicesByKey.has(c.binding.service)).toBe(true);
+    }
   });
 
   it('rejects a bogus instanceClass with a catalog-sourced message', () => {

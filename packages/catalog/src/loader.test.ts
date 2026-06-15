@@ -8,12 +8,20 @@ import { CatalogError, groupServiceKey, loadCatalog } from './loader.js';
 const catalogRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../catalog');
 
 describe('loadCatalog', () => {
-  it('loads the seed catalog with the five expected service keys', () => {
+  it('loads the seed catalog with the expected service keys', () => {
     const catalog = loadCatalog(catalogRoot);
     expect([...catalog.servicesByKey.keys()].sort()).toEqual([
       'aws.alb',
+      'aws.dynamodb',
       'aws.ec2_asg',
+      'aws.elasticache_redis',
+      'aws.kms',
+      'aws.lambda',
       'aws.rds',
+      'aws.s3',
+      'aws.secrets_manager',
+      'aws.sns',
+      'aws.sqs',
       'aws.subnet',
       'aws.vpc',
     ]);

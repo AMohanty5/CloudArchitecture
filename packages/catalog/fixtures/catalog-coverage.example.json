@@ -1,0 +1,33 @@
+{
+  "camlVersion": "1.0",
+  "id": "arch_COVERAGE0",
+  "name": "Catalog coverage (every component service)",
+  "metadata": { "owner": "platform", "catalogVersion": "dev" },
+  "groups": [
+    { "id": "region-use1", "kind": "region", "name": "us-east-1", "provider": "aws" },
+    { "id": "vpc-main", "kind": "network", "name": "Main VPC", "parent": "region-use1", "properties": { "cidr": "10.0.0.0/16" } },
+    { "id": "subnet-public", "kind": "subnet", "name": "Public", "parent": "vpc-main", "properties": { "cidr": "10.0.1.0/24", "zone": "us-east-1a", "public": true } },
+    { "id": "subnet-app", "kind": "subnet", "name": "App", "parent": "vpc-main", "properties": { "cidr": "10.0.10.0/24", "zone": "us-east-1a", "public": false } }
+  ],
+  "components": [
+    { "id": "web-lb", "type": "network.loadbalancer.l7", "name": "Web LB", "group": "subnet-public", "binding": { "provider": "aws", "service": "aws.alb" }, "properties": { "scheme": "internet-facing" } },
+    { "id": "app-asg", "type": "compute.vm.autoscaling_group", "name": "App tier", "group": "subnet-app", "binding": { "provider": "aws", "service": "aws.ec2_asg" } },
+    { "id": "orders-db", "type": "database.relational", "name": "Orders DB", "group": "subnet-app", "binding": { "provider": "aws", "service": "aws.rds" }, "properties": { "engine": "postgres", "instanceClass": "db.t3.micro", "multiAz": true, "storageEncrypted": true } },
+    { "id": "session-cache", "type": "database.cache", "name": "Session cache", "group": "subnet-app", "binding": { "provider": "aws", "service": "aws.elasticache_redis" }, "properties": { "nodeType": "cache.t3.micro" } },
+    { "id": "events-fn", "type": "compute.serverless.function", "name": "Events fn", "binding": { "provider": "aws", "service": "aws.lambda" }, "properties": { "runtime": "nodejs20.x", "memoryMb": 512 } },
+    { "id": "catalog-table", "type": "database.keyvalue", "name": "Catalog table", "binding": { "provider": "aws", "service": "aws.dynamodb" }, "properties": { "hashKey": "sku" } },
+    { "id": "assets", "type": "storage.object", "name": "Assets bucket", "binding": { "provider": "aws", "service": "aws.s3" }, "properties": { "versioning": true, "storageEncrypted": true } },
+    { "id": "jobs-queue", "type": "messaging.queue", "name": "Jobs queue", "binding": { "provider": "aws", "service": "aws.sqs" } },
+    { "id": "events-topic", "type": "messaging.topic", "name": "Events topic", "binding": { "provider": "aws", "service": "aws.sns" } },
+    { "id": "data-key", "type": "security.keys", "name": "Data key", "binding": { "provider": "aws", "service": "aws.kms" } },
+    { "id": "db-secret", "type": "security.secrets", "name": "DB secret", "binding": { "provider": "aws", "service": "aws.secrets_manager" } }
+  ],
+  "connections": [
+    { "id": "lb-app", "from": "web-lb", "to": "app-asg", "kind": "traffic", "properties": { "protocol": "https", "port": 443 } },
+    { "id": "app-db", "from": "app-asg", "to": "orders-db", "kind": "data", "properties": { "protocol": "postgres", "port": 5432 } },
+    { "id": "app-cache", "from": "app-asg", "to": "session-cache", "kind": "data", "properties": { "protocol": "redis", "port": 6379 } },
+    { "id": "fn-table", "from": "events-fn", "to": "catalog-table", "kind": "data" },
+    { "id": "fn-queue", "from": "events-fn", "to": "jobs-queue", "kind": "async" },
+    { "id": "topic-queue", "from": "events-topic", "to": "jobs-queue", "kind": "async" }
+  ]
+}

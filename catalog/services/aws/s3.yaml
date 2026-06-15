@@ -1,0 +1,22 @@
+key: aws.s3
+provider: aws
+name: Amazon S3
+description: Object storage bucket.
+status: ga
+icon: aws/storage/s3.svg
+docs: https://docs.aws.amazon.com/s3/
+abstractTypes: [storage.object]
+capabilities:
+  durability: { supported: true, mechanism: eleven-nines }
+  versioning: { supported: true }
+properties:
+  versioning: { type: boolean, default: false }
+  storageEncrypted: { type: boolean, default: true, securityRelevant: true }
+  storageClass:
+    type: string
+    enum: [standard, intelligent-tiering, standard-ia, glacier]
+    default: standard
+  publicAccessBlocked: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [https], from: [compute.serverless.function, compute.vm.autoscaling_group, network.cdn] }
