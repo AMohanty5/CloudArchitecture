@@ -11,5 +11,6 @@ import { ArchitectureRepository } from './architecture.repository';
 @Module({
   controllers: [ArchitectureController],
   providers: [ArchitectureService, ArchitectureRepository],
+  exports: [ArchitectureService], // the AI composer commits generated models through the write path (doc 12 invariant 3)
 })
 export class ArchitectureModule {}

@@ -24,12 +24,14 @@ interface DoneEvent {
   type: 'done';
   branch: string;
   message: string;
+  architectureId?: string;
 }
 type AiEvent = StageEvent | UsageEvent | DoneEvent | { type: 'error'; message: string };
 
 interface LogLine {
   text: string;
   tone: 'stage' | 'detail' | 'usage' | 'done' | 'error';
+  href?: string;
 }
 
 const TONE_COLOR: Record<LogLine['tone'], string> = {
@@ -76,6 +78,7 @@ export function AiConsole() {
           });
         } else if (event.type === 'done') {
           append({ text: `✓ ${event.message} (${event.branch})`, tone: 'done' });
+          if (event.architectureId) append({ text: '→ open generated architecture', tone: 'done', href: `/architectures/${event.architectureId}` });
           source.close();
           setRunning(false);
         } else if (event.type === 'error') {
@@ -147,7 +150,13 @@ export function AiConsole() {
         >
           {log.map((line, i) => (
             <div key={i} style={{ color: TONE_COLOR[line.tone] === '#1e293b' ? '#e2e8f0' : TONE_COLOR[line.tone] }}>
-              {line.text}
+              {line.href ? (
+                <a href={line.href} style={{ color: '#60a5fa' }}>
+                  {line.text}
+                </a>
+              ) : (
+                line.text
+              )}
             </div>
           ))}
         </pre>

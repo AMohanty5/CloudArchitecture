@@ -22,6 +22,8 @@ export interface DoneEvent {
   type: 'done';
   branch: string;
   message: string;
+  /** The architecture the generated model was committed to (when generation ran live). */
+  architectureId?: string;
 }
 export interface ErrorEvent {
   type: 'error';

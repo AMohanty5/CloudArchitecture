@@ -1,15 +1,21 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ReplaySubject } from 'rxjs';
 import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import type { CamlDocument } from '@cac/caml';
+import type { Catalog } from '@cac/catalog';
 import { loadConfig } from '../../config/config';
+import { CATALOG } from '../catalog/api';
+import { ArchitectureService } from '../architecture/api';
 import { loadPromptRegistry } from './prompt-registry';
 import type { ModelTier, PromptRegistry } from './prompt-registry';
 import { anthropic, estimateCostUsd, hasApiKey, resolveModel } from './anthropic.provider';
 import { runRequirements } from './requirements.agent';
 import type { RequirementsResult } from './requirements.agent';
 import { runPlanner, unmappedRequirementIds } from './planner.agent';
+import type { PlannerResult } from './planner.agent';
+import { runComposer } from './composer.agent';
 import { loadPatterns } from './pattern-store';
 import type { PatternStore } from './pattern-store';
 import type { AiEvent, AiStage, GenerateInput } from './types';
@@ -55,7 +61,10 @@ export class GenerationService {
   private readonly patterns: PatternStore;
   private readonly jobs = new Map<string, Job>();
 
-  constructor() {
+  constructor(
+    @Optional() @Inject(CATALOG) private readonly catalog?: Catalog,
+    @Optional() private readonly architecture?: ArchitectureService,
+  ) {
     const config = loadConfig();
     let registry: PromptRegistry = { byId: new Map() };
     try {
@@ -99,6 +108,8 @@ export class GenerationService {
       let inputTokens = 0;
       let outputTokens = 0;
       let requirements: RequirementsResult | undefined;
+      let plan: PlannerResult | undefined;
+      let composed: CamlDocument | undefined;
       const keyed = hasApiKey();
       for (const step of PIPELINE) {
         const tier = this.registry.byId.get(step.promptId ?? '')?.modelTier ?? step.tier;
@@ -125,7 +136,7 @@ export class GenerationService {
           }
         } else if (step.stage === 'planner' && keyed && requirements) {
           try {
-            const plan = await runPlanner(
+            plan = await runPlanner(
               { requirements: requirements.requirements, provider: input.provider },
               { client: anthropic(), model, system: this.systemFor('planner'), patterns: this.patterns },
             );
@@ -137,6 +148,21 @@ export class GenerationService {
             stepOut = plan.usage.outputTokens;
           } catch (err) {
             detail = `${step.detail} (live model unavailable: ${(err as Error).message})`;
+          }
+        } else if (step.stage === 'composer' && keyed && this.catalog && plan && requirements) {
+          try {
+            const result = await runComposer(
+              { plan, requirements: requirements.requirements, name: `AI: ${input.prompt.slice(0, 48)}`, provider: input.provider },
+              { client: anthropic(), model, system: this.systemFor('composer'), catalog: this.catalog },
+            );
+            composed = result.model;
+            detail =
+              `composed ${result.model.components?.length ?? 0} components, ${result.model.connections?.length ?? 0} connections ` +
+              `(pass-1+2 valid; ${result.repairs} repair${result.repairs === 1 ? '' : 's'})`;
+            stepIn = result.usage.inputTokens;
+            stepOut = result.usage.outputTokens;
+          } catch (err) {
+            detail = `${step.detail} (compose failed: ${(err as Error).message})`;
           }
         } else {
           await sleep(step.delayMs);
@@ -162,10 +188,31 @@ export class GenerationService {
         outputTokens,
         estCostUsd: estimateCostUsd(resolveModel('frontier'), inputTokens, outputTokens),
       });
+
+      // Land the generated model as a commit through the sacred write path (doc 12
+      // invariant 3) — composer already validated it, so the commit's pass-1+2 succeeds.
+      let architectureId: string | undefined;
+      if (composed && this.architecture) {
+        try {
+          const created = await this.architecture.create({ name: composed.name });
+          await this.architecture.commit(created.id, 'main', {
+            expectedParent: created.head,
+            message: `AI generation: ${input.prompt.slice(0, 60)}`,
+            model: composed,
+          });
+          architectureId = created.id;
+        } catch (err) {
+          this.log.warn(`AI model commit failed: ${(err as Error).message}`);
+        }
+      }
+
       events.next({
         type: 'done',
         branch: `ai/gen-${randomUUID().slice(0, 8)}`,
-        message: `Proposal ready for "${input.prompt.slice(0, 60)}" — review the diff and merge.`,
+        message: architectureId
+          ? `Generated architecture ready — open it in the editor.`
+          : `Proposal ready for "${input.prompt.slice(0, 60)}" — review the diff and merge.`,
+        architectureId,
       });
     } catch (err) {
       events.next({ type: 'error', message: (err as Error).message });

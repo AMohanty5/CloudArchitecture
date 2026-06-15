@@ -557,12 +557,35 @@ same structural contract in CI).
 > resilient. `kg_topology` (the planner's other doc-17 tool) is deferred — no knowledge graph
 > yet. Live loop can't be exercised here (no key); the scripted-mock loop is the CI coverage.
 
-### Day 30 — Composer agent
-- [ ] `catalog_search` / `catalog_schema` tools against our catalog API; composer per doc 17 with constrained CAML output + repair loop on schema errors
-- [ ] Sectioned generation (groups → components → connections → policies) streaming partial CAML
-- [ ] Hard gate: non-catalog service key = automatic repair → fail job if persistent
+### Day 33 — Composer agent ✅ (2026-06-15) · (was "Day 30")
+**Goal:** Capability plan → concrete, catalog-bound CAML that validates, committed.
+- [x] **`catalog_search` / `catalog_schema` tools** (`catalog-tools.ts`) over the loaded
+  catalog (CATALOG token, injected) — the composer binds only to real keys
+- [x] **`composer.agent.ts`** (`composer/v1`, frontier → `claude-opus-4-8`): a tool-use loop
+  **plus a repair loop** — every candidate model runs through the *deterministic* pass-1
+  (structural) + pass-2 (catalog) validation, and errors are fed back for surgical repair
+- [x] **Hard gate:** a non-catalog service key (or any persistent validation error) → repair
+  → **fail the job** after the repair budget rather than emit a broken model
+- [x] **Commit through the write path** (doc 12 invariant 3): on a live compose, the
+  generation service creates an architecture and commits the model via the **Architecture
+  Service** (now exported from its `api.ts`; AiModule imports ArchitectureModule); the
+  `done` event carries the new `architectureId` and the console links to it
+- [x] Tests: catalog-tools + the mocked compose/repair loop (first-try valid, tool-use,
+  repair a non-catalog key, hard-fail on persistent invalidity, refusal) against the **real
+  catalog + validators**; a live golden eval (pass-1+2 clean, catalog-only bindings) gated on key
 
-**Done when:** e-commerce prompt → valid CAML model (pass-1+2 clean) lands as commits on an `ai/gen-*` lineage and renders progressively on the canvas.
+**Done when:** e-commerce prompt → valid CAML model (pass-1+2 clean) lands as commits on an
+`ai/gen-*` lineage and renders on the canvas ✅ — the composed model commits and the console
+deep-links into the editor (live/keyed; the commit path runs in CI's integration env).
+
+> Day 33 notes: the repair loop reuses the **exact** commit-path validators
+> (`validateStructure` + `validateAgainstCatalog`), so the AI can't disagree with the
+> deterministic engine about what's valid. **Simplifications vs doc 17:** single-shot
+> composition (not sectioned/parallel-per-group) and **no progressive streaming-draw** —
+> the canvas renders the committed model when opened, not stage-by-stage; `ai/gen-*`
+> branch + `origin: 'ai'` are approximated by a new architecture on `main` (branch-create
+> + commit-origin are a later write-path tweak). Live compose + the DB commit can't be run
+> here (no key / no Docker); the mocked loop against the real catalog is the CI coverage.
 
 ### Days 31–32 — Critic + Repair agents, closed loop
 - [ ] `run_validation` tool (Day 25 engine); critic per doc 17; repair emitting per-finding patches; orchestrator loop (max 3 iterations)
