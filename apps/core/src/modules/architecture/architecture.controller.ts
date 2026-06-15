@@ -4,6 +4,7 @@ import { ArchitectureService } from './architecture.service';
 import { CommitDto, CreateArchitectureDto } from './dto';
 import { renderSvg } from '../diagram/api';
 import { generateTerraform, zipFiles } from '../iac/api';
+import { renderHld } from '../artifact/api';
 
 interface HttpReq {
   headers: Record<string, string | string[] | undefined>;
@@ -81,6 +82,19 @@ export class ArchitectureController {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename="terraform.zip"');
     return zipFiles(files);
+  }
+
+  @Get(':id/branches/:branch/export.hld.md')
+  @ApiOkResponse({ description: 'High-Level Design document (markdown) for the branch head model (doc 03).' })
+  async exportHld(
+    @Param('id') id: string,
+    @Param('branch') branch: string,
+    @Res({ passthrough: true }) res: HttpRes,
+  ): Promise<string> {
+    const { model } = await this.service.getModel(id, branch);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="hld.md"');
+    return renderHld(model);
   }
 
   @Get(':id/commits')
