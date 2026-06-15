@@ -1,0 +1,17 @@
+{
+  "id": "batch-pipeline",
+  "name": "Batch data pipeline + warehouse",
+  "tags": ["batch", "etl", "analytics", "data", "warehouse", "object-storage", "throughput"],
+  "applicability": "Periodic or high-volume data processing that lands raw data in object storage, transforms it in batch compute, and serves analytics from a warehouse.",
+  "capabilities": [
+    { "abstract_type": "storage.object", "purpose": "Raw + staged data landing zone" },
+    { "abstract_type": "compute.batch", "purpose": "Scheduled/large-scale transform jobs" },
+    { "abstract_type": "database.warehouse", "purpose": "Analytical query layer" }
+  ],
+  "groups": ["region"],
+  "connections": [
+    { "from": "storage.object", "to": "compute.batch", "kind": "data" },
+    { "from": "compute.batch", "to": "database.warehouse", "kind": "data" }
+  ],
+  "citations": ["AWS Well-Architected — Analytics Lens: batch ingestion"]
+}

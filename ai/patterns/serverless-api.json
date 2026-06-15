@@ -1,0 +1,18 @@
+{
+  "id": "serverless-api",
+  "name": "Serverless HTTP API",
+  "tags": ["serverless", "api", "low-ops", "scale-to-zero", "keyvalue", "event"],
+  "applicability": "Spiky or low-baseline HTTP APIs that benefit from pay-per-use compute and a managed key-value store; minimal operations.",
+  "capabilities": [
+    { "abstract_type": "network.gateway.api", "purpose": "Managed HTTP entry + throttling" },
+    { "abstract_type": "compute.serverless.function", "purpose": "Request handlers, scale-to-zero" },
+    { "abstract_type": "database.keyvalue", "purpose": "Low-latency primary store" },
+    { "abstract_type": "security.secrets", "purpose": "Credentials for downstream calls" }
+  ],
+  "groups": ["region", "network"],
+  "connections": [
+    { "from": "network.gateway.api", "to": "compute.serverless.function", "kind": "traffic" },
+    { "from": "compute.serverless.function", "to": "database.keyvalue", "kind": "data" }
+  ],
+  "citations": ["AWS Well-Architected — Serverless Application Lens"]
+}

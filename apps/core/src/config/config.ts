@@ -9,6 +9,8 @@ export interface CoreConfig {
   catalogDir: string;
   /** Prompts-as-code registry dir (repo `ai/prompts/`, doc 17). */
   aiPromptsDir: string;
+  /** Reference-pattern corpus dir (repo `ai/patterns/`, doc 07). */
+  aiPatternsDir: string;
 }
 
 export function loadConfig(): CoreConfig {
@@ -19,6 +21,7 @@ export function loadConfig(): CoreConfig {
     // From apps/core (cwd at runtime + during tests) the repo catalog/ is two up.
     catalogDir: process.env.CATALOG_DIR ?? path.resolve(process.cwd(), '../../catalog'),
     aiPromptsDir: process.env.AI_PROMPTS_DIR ?? path.resolve(process.cwd(), '../../ai/prompts'),
+    aiPatternsDir: process.env.AI_PATTERNS_DIR ?? path.resolve(process.cwd(), '../../ai/patterns'),
   };
 }
 

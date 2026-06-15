@@ -8,6 +8,10 @@ import { loadPromptRegistry } from './prompt-registry';
 import type { ModelTier, PromptRegistry } from './prompt-registry';
 import { anthropic, estimateCostUsd, hasApiKey, resolveModel } from './anthropic.provider';
 import { runRequirements } from './requirements.agent';
+import type { RequirementsResult } from './requirements.agent';
+import { runPlanner, unmappedRequirementIds } from './planner.agent';
+import { loadPatterns } from './pattern-store';
+import type { PatternStore } from './pattern-store';
 import type { AiEvent, AiStage, GenerateInput } from './types';
 
 interface Job {
@@ -48,16 +52,25 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 export class GenerationService {
   private readonly log = new Logger(GenerationService.name);
   private readonly registry: PromptRegistry;
+  private readonly patterns: PatternStore;
   private readonly jobs = new Map<string, Job>();
 
   constructor() {
+    const config = loadConfig();
     let registry: PromptRegistry = { byId: new Map() };
     try {
-      registry = loadPromptRegistry(loadConfig().aiPromptsDir);
+      registry = loadPromptRegistry(config.aiPromptsDir);
     } catch (err) {
       this.log.warn(`prompt registry not loaded: ${(err as Error).message}`);
     }
     this.registry = registry;
+    let patterns: PatternStore = [];
+    try {
+      patterns = loadPatterns(config.aiPatternsDir);
+    } catch (err) {
+      this.log.warn(`pattern corpus not loaded: ${(err as Error).message}`);
+    }
+    this.patterns = patterns;
   }
 
   /** Start a (stubbed) generation job; returns its id. The run streams asynchronously. */
@@ -85,6 +98,8 @@ export class GenerationService {
     try {
       let inputTokens = 0;
       let outputTokens = 0;
+      let requirements: RequirementsResult | undefined;
+      const keyed = hasApiKey();
       for (const step of PIPELINE) {
         const tier = this.registry.byId.get(step.promptId ?? '')?.modelTier ?? step.tier;
         const model = resolveModel(tier);
@@ -93,21 +108,33 @@ export class GenerationService {
         let detail = step.detail;
         let stepIn = step.inputTokens;
         let stepOut = step.outputTokens;
-        // The requirements stage is real (Day 31) when an API key is configured; every
-        // other stage is still stubbed. Failures degrade to the stubbed detail.
-        const live = step.stage === 'requirements' && hasApiKey();
-        if (live) {
+        // Real stages when an API key is configured: requirements (Day 31) feeds the
+        // planner (Day 32); every other stage is still stubbed. Failures degrade to the stub.
+        if (step.stage === 'requirements' && keyed) {
           try {
-            const result = await runRequirements(
-              { prompt: input.prompt },
-              { client: anthropic(), model, system: this.systemFor('requirements') },
-            );
+            const result = await runRequirements({ prompt: input.prompt }, { client: anthropic(), model, system: this.systemFor('requirements') });
+            requirements = result;
             const inferred = result.requirements.filter((r) => r.source === 'inferred').length;
             detail =
               `extracted ${result.requirements.length} requirements (${inferred} inferred)` +
               (result.ambiguities.length ? `; ${result.ambiguities.length} to confirm` : '');
             stepIn = result.usage.inputTokens;
             stepOut = result.usage.outputTokens;
+          } catch (err) {
+            detail = `${step.detail} (live model unavailable: ${(err as Error).message})`;
+          }
+        } else if (step.stage === 'planner' && keyed && requirements) {
+          try {
+            const plan = await runPlanner(
+              { requirements: requirements.requirements, provider: input.provider },
+              { client: anthropic(), model, system: this.systemFor('planner'), patterns: this.patterns },
+            );
+            const unmapped = unmappedRequirementIds(plan, requirements.requirements).length;
+            detail =
+              `planned ${plan.capabilityNeeds.length} capabilities from ${plan.patternCitations.length} pattern(s)` +
+              (unmapped ? `; ${unmapped} requirement(s) unmapped` : '; every requirement mapped');
+            stepIn = plan.usage.inputTokens;
+            stepOut = plan.usage.outputTokens;
           } catch (err) {
             detail = `${step.detail} (live model unavailable: ${(err as Error).message})`;
           }

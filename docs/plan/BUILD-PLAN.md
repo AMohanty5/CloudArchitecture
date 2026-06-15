@@ -528,12 +528,34 @@ streams all six stages, a usage line, and an `ai/gen-*` branch).
 > Live evals + the in-pipeline call can't be run here (no key); the mocked path is the
 > CI-verified coverage.
 
-### Day 29 — Planner agent + pattern seed
-- [ ] Author 5 reference patterns as partial CAML (`web-3tier-ha`, `serverless-api`, `event-driven-core`, `static-site-cdn`, `batch-pipeline`)
-- [ ] `pattern_fetch` tool (simple embedding or keyword search over patterns to start); planner per doc 17
-- [ ] Eval: every requirement mapped; no service bindings in output (hard check)
+### Day 32 — Planner agent + pattern seed ✅ (2026-06-15) · (was "Day 29")
+**Goal:** Requirements → a capability plan (abstract skeleton), grounded in patterns.
+- [x] **5 reference patterns** as partial CAML (`ai/patterns/*.json`, abstract types only,
+  no bindings): `web-3tier-ha`, `serverless-api`, `event-driven-core`, `static-site-cdn`,
+  `batch-pipeline` — each with tags, applicability, capabilities, connections, citations
+- [x] **`pattern_fetch`** tool: keyword-rank search over the corpus (v0, no embeddings yet);
+  `planner.agent.ts` implements `planner/v1` (doc 17) — **frontier tier → `claude-opus-4-8`**,
+  a **tool-using** manual agentic loop (calls `pattern_fetch`, then emits the plan JSON),
+  adaptive thinking, summed token accounting
+- [x] **Eval (hard checks):** `unmappedRequirementIds` (every requirement mapped) +
+  `hasServiceBindings` (no `aws.*`/`azure.*`/`gcp.*` keys leak). 5 mocked unit tests
+  (tool-use loop, parse, coverage, binding-leak detection, refusal, non-convergence) +
+  pattern-store tests + a live golden case, gated on `ANTHROPIC_API_KEY`
+- [x] Wired into the pipeline: when keyed, the `planner` stage consumes the live
+  requirements output and streams "planned N capabilities from M pattern(s); every
+  requirement mapped"
 
-**Done when:** planner output for the e-commerce prompt cites ≥2 patterns and maps every requirement.
+**Done when:** planner output for the e-commerce prompt cites ≥2 patterns and maps every
+requirement ✅ (asserted by the live golden eval when keyed; the mocked loop verifies the
+same structural contract in CI).
+
+> Day 32 notes: a real **tool-use loop** (not a single call) — the model calls `pattern_fetch`,
+> the loop executes it against the corpus and feeds results back until the model emits the plan
+> (assistant turns echoed back verbatim incl. thinking blocks, per the multi-turn rule). The
+> "no service bindings" hard check is a helper (`hasServiceBindings`) asserted by the eval
+> rather than a parse-time throw, so a leak surfaces as a clean failure and the pipeline stays
+> resilient. `kg_topology` (the planner's other doc-17 tool) is deferred — no knowledge graph
+> yet. Live loop can't be exercised here (no key); the scripted-mock loop is the CI coverage.
 
 ### Day 30 — Composer agent
 - [ ] `catalog_search` / `catalog_schema` tools against our catalog API; composer per doc 17 with constrained CAML output + repair loop on schema errors

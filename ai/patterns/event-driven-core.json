@@ -1,0 +1,17 @@
+{
+  "id": "event-driven-core",
+  "name": "Event-driven processing core",
+  "tags": ["event-driven", "async", "decoupling", "queue", "topic", "throughput", "fan-out"],
+  "applicability": "Workloads that decouple producers from consumers for throughput, resilience, or fan-out; absorbs spikes via a queue with serverless consumers.",
+  "capabilities": [
+    { "abstract_type": "messaging.topic", "purpose": "Fan-out events to subscribers" },
+    { "abstract_type": "messaging.queue", "purpose": "Buffer + smooth load to consumers (with DLQ)" },
+    { "abstract_type": "compute.serverless.function", "purpose": "Event consumers, scaled by queue depth" }
+  ],
+  "groups": ["region"],
+  "connections": [
+    { "from": "messaging.topic", "to": "messaging.queue", "kind": "async" },
+    { "from": "messaging.queue", "to": "compute.serverless.function", "kind": "async" }
+  ],
+  "citations": ["AWS Well-Architected — Reliability Pillar: queue-based load levelling"]
+}

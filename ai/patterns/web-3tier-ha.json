@@ -1,0 +1,18 @@
+{
+  "id": "web-3tier-ha",
+  "name": "Highly available 3-tier web application",
+  "tags": ["web", "3-tier", "high-availability", "multi-az", "relational", "stateful", "ecommerce"],
+  "applicability": "Stateful web/commerce apps needing HA across availability zones with a relational datastore behind a load balancer.",
+  "capabilities": [
+    { "abstract_type": "network.loadbalancer.l7", "purpose": "Internet entry + TLS termination" },
+    { "abstract_type": "compute.vm.autoscaling_group", "purpose": "Stateless app tier, scaled horizontally" },
+    { "abstract_type": "database.relational", "purpose": "Primary datastore (multi-AZ)" },
+    { "abstract_type": "database.cache", "purpose": "Session/read cache (optional)" }
+  ],
+  "groups": ["region", "network", "subnet"],
+  "connections": [
+    { "from": "network.loadbalancer.l7", "to": "compute.vm.autoscaling_group", "kind": "traffic" },
+    { "from": "compute.vm.autoscaling_group", "to": "database.relational", "kind": "data" }
+  ],
+  "citations": ["AWS Well-Architected — Reliability Pillar: multi-AZ deployment"]
+}

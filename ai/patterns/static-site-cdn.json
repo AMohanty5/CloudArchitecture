@@ -1,0 +1,15 @@
+{
+  "id": "static-site-cdn",
+  "name": "Static site / asset delivery via CDN",
+  "tags": ["static", "cdn", "edge", "object-storage", "low-latency", "global", "content"],
+  "applicability": "Static sites or user-facing asset/content delivery needing global low latency and cache offload in front of object storage.",
+  "capabilities": [
+    { "abstract_type": "network.cdn", "purpose": "Edge caching + global low latency" },
+    { "abstract_type": "storage.object", "purpose": "Origin for static assets/content" }
+  ],
+  "groups": ["region"],
+  "connections": [
+    { "from": "network.cdn", "to": "storage.object", "kind": "traffic" }
+  ],
+  "citations": ["AWS Well-Architected — Performance Efficiency: edge caching"]
+}
