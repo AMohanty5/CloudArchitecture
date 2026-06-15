@@ -44,3 +44,16 @@ jobs:
         run: pnpm --filter @cac/core test:int
         env:
           TESTCONTAINERS_RYUK_DISABLED: 'true'
+
+      # Generate Terraform for the 3-tier fixture and prove it validates against the
+      # real AWS provider (doc 03 §3.9). `init -backend=false` installs the provider.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.8'
+      - name: Terraform validate (generated HCL)
+        run: |
+          pnpm --filter @cac/core exec tsx src/modules/iac/emit.cli.ts \
+            "$GITHUB_WORKSPACE/packages/catalog/fixtures/web-3tier.example.json" \
+            "$GITHUB_WORKSPACE/tf-out"
+          terraform -chdir="$GITHUB_WORKSPACE/tf-out" init -backend=false -input=false
+          terraform -chdir="$GITHUB_WORKSPACE/tf-out" validate -no-color

@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ArchitectureService } from './architecture.service';
 import { CommitDto, CreateArchitectureDto } from './dto';
 import { renderSvg } from '../diagram/api';
+import { generateTerraform, zipFiles } from '../iac/api';
 
 interface HttpReq {
   headers: Record<string, string | string[] | undefined>;
@@ -66,6 +67,20 @@ export class ArchitectureController {
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Content-Disposition', 'inline; filename="architecture.svg"');
     return renderSvg(model, { theme: theme === 'dark' ? 'dark' : 'light' });
+  }
+
+  @Get(':id/branches/:branch/export.tf.zip')
+  @ApiOkResponse({ description: 'Terraform bundle for the branch head model, packaged as a .zip (doc 03 §3.9).' })
+  async exportTerraform(
+    @Param('id') id: string,
+    @Param('branch') branch: string,
+    @Res({ passthrough: true }) res: HttpRes,
+  ): Promise<Buffer> {
+    const { model } = await this.service.getModel(id, branch);
+    const { files } = generateTerraform(model);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="terraform.zip"');
+    return zipFiles(files);
   }
 
   @Get(':id/commits')

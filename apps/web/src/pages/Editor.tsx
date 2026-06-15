@@ -157,6 +157,13 @@ export function Editor() {
     setExportOpen(false);
   }, [id, exportTheme, archName]);
 
+  const exportTerraform = useCallback(async () => {
+    const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
+    const res = await fetch(`${base}/architectures/${id}/branches/main/export.tf.zip`);
+    downloadBlob(await res.blob(), safeFilename(`${archName}-terraform`, 'zip'));
+    setExportOpen(false);
+  }, [id, archName]);
+
   const components: CamlComponent[] = model?.components ?? [];
   const groups: CamlGroup[] = model?.groups ?? [];
   const componentsById = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
@@ -354,7 +361,7 @@ export function Editor() {
           <button
             onClick={() => setExportOpen((v) => !v)}
             disabled={diffActive || !model}
-            title="Export PNG / SVG"
+            title="Export PNG / SVG / Terraform"
             style={{
               marginLeft: 4,
               padding: '4px 10px',
@@ -398,8 +405,11 @@ export function Editor() {
               <button onClick={() => void exportPng()} style={exportActionStyle}>
                 Download PNG
               </button>
-              <button onClick={() => void exportSvg()} style={{ ...exportActionStyle, marginBottom: 0 }}>
+              <button onClick={() => void exportSvg()} style={exportActionStyle}>
                 Download SVG
+              </button>
+              <button onClick={() => void exportTerraform()} style={{ ...exportActionStyle, marginBottom: 0 }}>
+                Download Terraform
               </button>
             </div>
           ) : null}
