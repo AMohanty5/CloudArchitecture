@@ -461,16 +461,22 @@ the Stage E AI work below; **the Stage E day numbers shift accordingly** (the in
 
 > Day 28 notes (**move B**): the deeper half of the fix was the persistence gap, not the read-back — content-addressed commits made a layout-only change a server no-op that dropped the sidecar (flagged in the Day 18 notes). Layout is a non-hashed sidecar, so updating it on the existing head commit is legitimate. Kept the model `GET` body a bare CamlDocument (ETag = model hash) and added a separate `layout` sub-resource rather than reshaping the model response. Client regen still deferred (raw fetch, as with validate/export).
 
-### Day 29 — DEMO.md + timing pass (move C) — *pending*
+### Day 29 — DEMO.md + timing pass ✅ (2026-06-15) · move C
 **Goal:** Prove the slice end-to-end (the doc-15 "never cut" item).
-- [ ] `docs/plan/DEMO.md`: blank → manual 3-tier build → validated props → validation finding → one-click fix → export bundle (SVG+HLD+Terraform) → `terraform validate`/`plan` clean — rehearsed and timed
-- [ ] Record and fix whatever blocks a clean sub-5-minute run
+- [x] `docs/plan/DEMO.md`: the full script — blank → manual 3-tier build → schema-validated props (incl. a deliberate `storageEncrypted=false` weakness) → **validate** (SEC-001 + SEC-002 findings) → **one-click fix** → tidy-up that survives reload (Day 28) → **export bundle** (SVG+HLD+Terraform) → `terraform validate` clean. Accurate prerequisites (built core, real ports :5173/:3001), a per-beat **timing budget (~5:00)**, and an honest "known rough edges" section
+- [ ] **Live timed rehearsal** — to be run once on a live stack; record real wall-clock + any blocker (the project's "eyeball on the live stack" convention)
 
-**Done when:** the demo runs clean, timed, without a workaround.
+**Done when:** the script is written and runnable ✅; a clean sub-5-minute live run is **pending** the user's session (the timing column is a budget, not yet a measurement).
+
+> Day 29 notes (**move C**): authored the rehearsal artifact, not a measured run — I can't drive a browser + full stack from here, so the timing is a target (consistent with every prior day's "Live X eyeballed on EC2"). The script deliberately ships a `storageEncrypted=false` weakness so the one-click SEC-001 fix is the demo's magic moment, and frames SEC-002 (no auto-fix) as the "severity-humility, real-risk" beat. Chose `terraform validate` (credential-free) over `plan` as the honest IaC proof.
 
 ---
 
-## Stage E — AI generation v0 (Days 27–34 → renumbered after the re-sequence)
+## Stage E — AI generation v0 (Days 30–37 — the re-sequence consumed Days 27–29)
+
+> The inner day labels below still read 27–34 from the original plan; add **+3** to
+> each (AI service scaffold = Day 30, …, demo v2 = Day 37). Left un-renumbered to
+> avoid churn; will be normalized when Stage E starts.
 
 ### Day 27 — AI service scaffold + provider wiring
 - [ ] `ai/` Python FastAPI app (or TS module if we decide to defer Python — decide today, record in DECISIONS.md): Anthropic SDK, prompt registry loader (doc 17 format), AgentTrace logging to disk/S3-compatible store
