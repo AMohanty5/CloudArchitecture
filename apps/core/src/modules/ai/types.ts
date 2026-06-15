@@ -22,8 +22,8 @@ export interface DoneEvent {
   type: 'done';
   branch: string;
   message: string;
-  /** The architecture the generated model was committed to (when generation ran live). */
-  architectureId?: string;
+  /** True when a generated model is held for review (accept/reject via /ai/jobs/{id}/...). */
+  proposalReady?: boolean;
 }
 export interface ErrorEvent {
   type: 'error';

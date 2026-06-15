@@ -24,7 +24,7 @@ interface DoneEvent {
   type: 'done';
   branch: string;
   message: string;
-  architectureId?: string;
+  proposalReady?: boolean;
 }
 type AiEvent = StageEvent | UsageEvent | DoneEvent | { type: 'error'; message: string };
 
@@ -78,7 +78,7 @@ export function AiConsole() {
           });
         } else if (event.type === 'done') {
           append({ text: `✓ ${event.message} (${event.branch})`, tone: 'done' });
-          if (event.architectureId) append({ text: '→ open generated architecture', tone: 'done', href: `/architectures/${event.architectureId}` });
+          if (event.proposalReady) append({ text: '→ review proposal (accept / reject)', tone: 'done', href: `/ai/proposal/${jobId}` });
           source.close();
           setRunning(false);
         } else if (event.type === 'error') {

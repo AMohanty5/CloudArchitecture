@@ -616,12 +616,33 @@ golden case proves the catch+repair when keyed).
 > "accept merges into history" half of the Done-when) — today the repaired model is committed
 > directly. Live loop can't be run here (no key); the mocked loop is the CI coverage.
 
-### Day 35 — Proposal UX (diff accept/reject) — *pending* · (was part of "Days 31–32")
-- [ ] AI proposal shown as a **diff against the current model** (reuse the Day-19 diff UI) with accept/reject
-- [ ] Accept merges the proposal into history; reject discards the `ai/gen-*` lineage
-- [ ] Round out the seeded-defect eval into a small catch-rate suite (mutation set)
+### Day 35 — Proposal UX (diff accept/reject) ✅ (2026-06-15) · (was part of "Days 31–32")
+**Goal:** AI proposes; humans review and merge — the model never auto-merges to main.
+- [x] The pipeline no longer auto-commits: the composed+reviewed model is **held as a
+  proposal** on the job; `done` carries `proposalReady`. New endpoints: `GET
+  …/ai/jobs/{id}/proposal`, `POST …/accept` (commits via the write path → `architectureId`),
+  `POST …/reject` (discards)
+- [x] **Proposal review page** (`/ai/proposal/:jobId`): renders the generated model as an
+  **all-"added" diff** (reuses the Day-19 `DiffStatus` overlay on a read-only Canvas) with a
+  summary + remaining-findings count and **Accept & merge / Reject** buttons; the console
+  deep-links to it
+- [x] **Accept merges into history** via `commitGeneratedModel` → the Architecture Service
+  (doc 12 invariant 3), then opens the new architecture in the editor; reject drops the lineage
+- [x] Unit test for the commit helper (mock Architecture Service: create+commit, returns id)
+  + proposal-lifecycle error paths
 
-**Done when:** an AI proposal lands as a reviewable diff; accept merges it into history.
+**Done when:** an AI proposal lands as a reviewable diff; accept merges it into history ✅
+(the commit helper + endpoints verified in CI; the full keyed accept-flow runs live / in CI's
+integration env).
+
+> Day 35 notes: a fresh generation has no prior model to diff against, so the "diff" is the
+> whole proposal rendered **added** (green) — the spirit of the Day-19 review UI without a
+> baseline commit. **Carried forward** (the third bullet of the old block): rounding the
+> seeded-defect eval into a multi-mutation **catch-rate** suite. The accept path commits to a
+> new architecture on `main` (the `ai/gen-*` branch/merge proper waits on branch endpoints).
+> The proposal page + keyed accept can't be run here (no key / no Docker); the commit helper
+> is the CI-verified core. **Stage E generation pipeline (Days 30–35) is complete:** prompt →
+> requirements → plan → catalog-bound CAML → critic/repair → reviewable proposal → merge.
 
 ### Days 33–34 — Generation hardening + demo v2
 - [ ] 30-case golden suite across workload classes; fix the worst failure modes

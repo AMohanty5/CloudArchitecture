@@ -24,6 +24,19 @@ import type { AiEvent, AiStage, GenerateInput } from './types';
 
 interface Job {
   events: ReplaySubject<AiEvent>;
+  /** A composed+reviewed model held for human accept/reject (doc 07: AI proposes, humans merge). */
+  proposal?: { model: CamlDocument; remaining: number };
+}
+
+/** Commit a generated model through the Architecture Service write path (doc 12 invariant 3). */
+export async function commitGeneratedModel(architecture: ArchitectureService, model: CamlDocument, prompt: string): Promise<string> {
+  const created = await architecture.create({ name: model.name });
+  await architecture.commit(created.id, 'main', {
+    expectedParent: created.head,
+    message: `AI generation: ${prompt.slice(0, 60)}`,
+    model,
+  });
+  return created.id;
 }
 
 /** One scripted pipeline step (doc 07 topology). `promptId` ties it to a registry spec. */
@@ -89,8 +102,32 @@ export class GenerationService {
     const jobId = randomUUID();
     const events = new ReplaySubject<AiEvent>();
     this.jobs.set(jobId, { events });
-    void this.run(input, events);
+    void this.run(jobId, input, events);
     return { jobId };
+  }
+
+  /** The held proposal (composed + reviewed model) for a job, for the diff/accept UI. */
+  getProposal(jobId: string): { model: CamlDocument; remaining: number } {
+    const proposal = this.jobs.get(jobId)?.proposal;
+    if (!proposal) throw new NotFoundException(`no proposal for job ${jobId}`);
+    return proposal;
+  }
+
+  /** Accept a proposal: commit it through the write path and discard the held copy. */
+  async acceptProposal(jobId: string, prompt: string): Promise<{ architectureId: string }> {
+    const job = this.jobs.get(jobId);
+    if (!job?.proposal) throw new NotFoundException(`no proposal for job ${jobId}`);
+    if (!this.architecture) throw new Error('architecture service unavailable — cannot commit the proposal');
+    const architectureId = await commitGeneratedModel(this.architecture, job.proposal.model, prompt);
+    job.proposal = undefined;
+    return { architectureId };
+  }
+
+  /** Reject a proposal: discard the held copy (the ai/gen-* lineage is dropped). */
+  rejectProposal(jobId: string): { ok: true } {
+    const job = this.jobs.get(jobId);
+    if (job) job.proposal = undefined;
+    return { ok: true };
   }
 
   /** The production system prompt for an agent, or '' if the registry didn't load. */
@@ -105,7 +142,7 @@ export class GenerationService {
     return job.events.asObservable().pipe(map((event) => ({ data: event })));
   }
 
-  private async run(input: GenerateInput, events: ReplaySubject<AiEvent>): Promise<void> {
+  private async run(jobId: string, input: GenerateInput, events: ReplaySubject<AiEvent>): Promise<void> {
     try {
       let inputTokens = 0;
       let outputTokens = 0;
@@ -214,30 +251,24 @@ export class GenerationService {
         estCostUsd: estimateCostUsd(resolveModel('frontier'), inputTokens, outputTokens),
       });
 
-      // Land the generated model as a commit through the sacred write path (doc 12
-      // invariant 3) — composer already validated it, so the commit's pass-1+2 succeeds.
-      let architectureId: string | undefined;
-      if (composed && this.architecture) {
-        try {
-          const created = await this.architecture.create({ name: composed.name });
-          await this.architecture.commit(created.id, 'main', {
-            expectedParent: created.head,
-            message: `AI generation: ${input.prompt.slice(0, 60)}`,
-            model: composed,
-          });
-          architectureId = created.id;
-        } catch (err) {
-          this.log.warn(`AI model commit failed: ${(err as Error).message}`);
+      // Hold the composed+reviewed model as a proposal for human accept/reject (doc 07:
+      // "everything is a proposal on a branch" — AI never merges to main itself).
+      let proposalReady = false;
+      if (composed) {
+        const job = this.jobs.get(jobId);
+        if (job) {
+          job.proposal = { model: composed, remaining: review?.remainingFindings.length ?? 0 };
+          proposalReady = true;
         }
       }
 
       events.next({
         type: 'done',
         branch: `ai/gen-${randomUUID().slice(0, 8)}`,
-        message: architectureId
-          ? `Generated architecture ready — open it in the editor.`
+        message: proposalReady
+          ? `Proposal ready — review the diff and accept to merge into history.`
           : `Proposal ready for "${input.prompt.slice(0, 60)}" — review the diff and merge.`,
-        architectureId,
+        proposalReady,
       });
     } catch (err) {
       events.next({ type: 'error', message: (err as Error).message });
