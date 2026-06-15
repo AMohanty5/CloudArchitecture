@@ -4,7 +4,7 @@ import { ArchitectureService } from './architecture.service';
 import { CommitDto, CreateArchitectureDto } from './dto';
 import { renderSvg } from '../diagram/api';
 import { generateTerraform, zipFiles } from '../iac/api';
-import { renderHld } from '../artifact/api';
+import { renderHld, buildArtifacts } from '../artifact/api';
 
 interface HttpReq {
   headers: Record<string, string | string[] | undefined>;
@@ -95,6 +95,22 @@ export class ArchitectureController {
     res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="hld.md"');
     return renderHld(model);
+  }
+
+  @Get(':id/branches/:branch/export.bundle.zip')
+  @ApiQuery({ name: 'theme', required: false, description: 'light (default) | dark — applied to the diagram' })
+  @ApiOkResponse({ description: 'Everything for the branch head model — diagram + HLD + Terraform — as a single .zip.' })
+  async exportBundle(
+    @Param('id') id: string,
+    @Param('branch') branch: string,
+    @Query('theme') theme: string | undefined,
+    @Res({ passthrough: true }) res: HttpRes,
+  ): Promise<Buffer> {
+    const { model } = await this.service.getModel(id, branch);
+    const { files } = buildArtifacts(model, { theme: theme === 'dark' ? 'dark' : 'light' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="architecture-bundle.zip"');
+    return zipFiles(files);
   }
 
   @Get(':id/commits')

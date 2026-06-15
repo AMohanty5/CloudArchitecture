@@ -171,6 +171,13 @@ export function Editor() {
     setExportOpen(false);
   }, [id, archName]);
 
+  const exportBundle = useCallback(async () => {
+    const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
+    const res = await fetch(`${base}/architectures/${id}/branches/main/export.bundle.zip?theme=${exportTheme}`);
+    downloadBlob(await res.blob(), safeFilename(`${archName}-bundle`, 'zip'));
+    setExportOpen(false);
+  }, [id, exportTheme, archName]);
+
   const components: CamlComponent[] = model?.components ?? [];
   const groups: CamlGroup[] = model?.groups ?? [];
   const componentsById = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
@@ -418,8 +425,14 @@ export function Editor() {
               <button onClick={() => void exportTerraform()} style={exportActionStyle}>
                 Download Terraform
               </button>
-              <button onClick={() => void exportHld()} style={{ ...exportActionStyle, marginBottom: 0 }}>
+              <button onClick={() => void exportHld()} style={exportActionStyle}>
                 Download HLD (.md)
+              </button>
+              <button
+                onClick={() => void exportBundle()}
+                style={{ ...exportActionStyle, marginBottom: 0, background: '#1e293b' }}
+              >
+                Download all (.zip)
               </button>
             </div>
           ) : null}

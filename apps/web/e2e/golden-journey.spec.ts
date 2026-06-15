@@ -41,6 +41,14 @@ test('golden journey: create → build → edit → diff → reload', async ({ p
   // Let the debounced autosave land.
   await expect(page.getByText('● Saved')).toBeVisible({ timeout: 10_000 });
 
+  // --- Export (Stage D): the bundle endpoint streams diagram + HLD + Terraform
+  // as a single zip; assert the download fires with the expected filename. ---
+  await page.getByRole('button', { name: /Export/ }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download all (.zip)' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/bundle\.zip$/);
+
   // --- Diff: open history and compare the two most recent commits ---
   await page.getByRole('button', { name: /History/ }).click();
   const commitRows = page.locator('aside').getByText(/comp ·/);

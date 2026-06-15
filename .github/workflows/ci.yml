@@ -57,3 +57,14 @@ jobs:
             "$GITHUB_WORKSPACE/tf-out"
           terraform -chdir="$GITHUB_WORKSPACE/tf-out" init -backend=false -input=false
           terraform -chdir="$GITHUB_WORKSPACE/tf-out" validate -no-color
+
+      # Smoke the full export bundle (diagram + HLD + Terraform) so the SVG and
+      # HLD renderers stay green end-to-end alongside the deep Terraform validate.
+      - name: Export bundle smoke
+        run: |
+          pnpm --filter @cac/core exec tsx src/modules/artifact/export.cli.ts \
+            "$GITHUB_WORKSPACE/packages/catalog/fixtures/web-3tier.example.json" \
+            "$GITHUB_WORKSPACE/export-out"
+          test -s "$GITHUB_WORKSPACE/export-out/diagram.svg"
+          test -s "$GITHUB_WORKSPACE/export-out/hld.md"
+          test -s "$GITHUB_WORKSPACE/export-out/terraform/versions.tf"
