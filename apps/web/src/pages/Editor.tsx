@@ -15,6 +15,7 @@ import { evaluateConnection, makeConnectionId } from '../canvas/connections';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
 import { buildDiffView } from '../canvas/diffView';
+import { findingSeverityByTarget } from '../canvas/validationView';
 import { downloadDataUrl, downloadBlob, safeFilename } from '../lib/download';
 import type { ConnectVerdict, CanvasExporter } from '../canvas/Canvas';
 import type { CamlComponent, CamlGroup, ProjectableModel } from '../canvas/projector';
@@ -147,6 +148,29 @@ export function Editor() {
   }, [validationOpen, refetchValidation]);
   const findingCount = validation.data?.summary.total ?? 0;
   const hasSevere = (validation.data?.summary.bySeverity.critical ?? 0) + (validation.data?.summary.bySeverity.high ?? 0) > 0;
+  // Highlight flagged nodes on the canvas only while the validation panel is open.
+  const findingSeverityById = useMemo(
+    () => (validationOpen && validation.data ? findingSeverityByTarget(validation.data.findings) : undefined),
+    [validationOpen, validation.data],
+  );
+
+  // One-click fix: apply the finding's domain patch through the CommandBus, then
+  // re-run the rule pack once the autosave commit lands (validation reads head).
+  const pendingRevalidate = useRef(false);
+  const onFixFinding = useCallback(
+    (finding: { targetId: string; fix?: { kind: 'setProperty'; key: string; value: unknown } }) => {
+      if (finding.fix?.kind !== 'setProperty') return;
+      editor.setProperty(finding.targetId, finding.fix.key, finding.fix.value);
+      pendingRevalidate.current = true;
+    },
+    [editor],
+  );
+  useEffect(() => {
+    if (saveState === 'saved' && pendingRevalidate.current) {
+      pendingRevalidate.current = false;
+      void refetchValidation();
+    }
+  }, [saveState, refetchValidation]);
 
   // ---- Export (Day 21): client PNG (html-to-image) + server SVG ----
   const [exportOpen, setExportOpen] = useState(false);
@@ -508,6 +532,7 @@ export function Editor() {
               onSelectEdge={editor.selectEdge}
               evaluate={evaluate}
               onConnect={onConnect}
+              findingSeverityById={findingSeverityById}
               registerExporter={(api) => (exporterRef.current = api)}
             />
           ) : null}
@@ -526,6 +551,7 @@ export function Editor() {
             loading={validation.isFetching}
             selectedId={selectedId}
             onSelectTarget={(targetId) => editor.select(targetId)}
+            onFix={onFixFinding}
             onRefresh={() => void refetchValidation()}
           />
         ) : selectedEdge ? (

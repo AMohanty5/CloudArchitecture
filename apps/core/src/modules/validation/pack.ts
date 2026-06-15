@@ -28,7 +28,7 @@ const finding = (
   severity: Finding['severity'],
   targetId: string,
   message: string,
-  extra: Partial<Pick<Finding, 'remediation' | 'autoFixable'>> = {},
+  extra: Partial<Pick<Finding, 'remediation' | 'autoFixable' | 'fix'>> = {},
 ): Finding => ({ ruleId: rule.id, title: rule.title, category: rule.category, severity, targetId, message, ...extra });
 
 const SEC_001: Rule = {
@@ -42,6 +42,7 @@ const SEC_001: Rule = {
         finding(SEC_001, 'critical', c.id, `${c.name} stores data with encryption at rest disabled.`, {
           remediation: 'Set properties.storageEncrypted to true.',
           autoFixable: true,
+          fix: { kind: 'setProperty', key: 'storageEncrypted', value: true },
         }),
       );
   },

@@ -20,6 +20,7 @@ import { SERVICE_DRAG_MIME } from './commands';
 import type { ServiceLike } from './commands';
 import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
+import type { Severity } from '../lib/queries';
 
 const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
 
@@ -52,6 +53,8 @@ interface CanvasProps {
   onConnect?: (source: string, target: string) => void;
   /** Diff overlay: element/connection id → change status (added/removed/modified). */
   diffStatus?: Record<string, DiffStatus>;
+  /** Validation overlay: element id → worst finding severity (Day 26). */
+  findingSeverityById?: Record<string, Severity>;
   /** Receives an export handle once the flow is mounted (PNG of the whole diagram). */
   registerExporter?: (exporter: CanvasExporter) => void;
 }
@@ -69,6 +72,7 @@ function Flow({
   evaluate,
   onConnect,
   diffStatus,
+  findingSeverityById,
   registerExporter,
 }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
@@ -81,9 +85,10 @@ function Flow({
           ...n.data,
           ...(n.type === 'group' ? { invalid: invalidGroupIds?.has(n.id) ?? false } : {}),
           diffStatus: diffStatus?.[n.id],
+          findingSeverity: findingSeverityById?.[n.id],
         },
       })),
-    [nodes, selectedId, invalidGroupIds, diffStatus],
+    [nodes, selectedId, invalidGroupIds, diffStatus, findingSeverityById],
   );
   const styledEdges = useMemo(
     () =>

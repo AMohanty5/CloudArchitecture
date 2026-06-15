@@ -17,8 +17,12 @@ const db = (over: Partial<Component> = {}): Component => ({
 });
 
 describe('validateModel — SEC-001 unencrypted datastore', () => {
-  it('fires when storageEncrypted is explicitly false', () => {
-    expect(ids(doc({ components: [db({ properties: { storageEncrypted: false } })] }))).toContain('SEC-001:db');
+  it('fires when storageEncrypted is explicitly false, with a one-click fix', () => {
+    const findings = validateModel(doc({ components: [db({ properties: { storageEncrypted: false } })] })).findings;
+    const sec001 = findings.find((f) => f.ruleId === 'SEC-001');
+    expect(sec001).toBeDefined();
+    expect(sec001!.autoFixable).toBe(true);
+    expect(sec001!.fix).toEqual({ kind: 'setProperty', key: 'storageEncrypted', value: true });
   });
   it('does not fire when encrypted, or when the flag is absent (no guessing)', () => {
     expect(ids(doc({ components: [db({ properties: { storageEncrypted: true } })] }))).not.toContain('SEC-001:db');

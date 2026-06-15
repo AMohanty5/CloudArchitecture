@@ -228,6 +228,7 @@ export interface Finding {
   message: string;
   remediation?: string;
   autoFixable?: boolean;
+  fix?: { kind: 'setProperty'; key: string; value: unknown };
 }
 export interface ValidationReport {
   commit: string;

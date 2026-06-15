@@ -19,6 +19,17 @@ export type Category = 'reliability' | 'security' | 'performance' | 'cost' | 'op
 
 const SEVERITY_RANK: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
+/**
+ * A mechanically-safe one-click remediation (doc 16 SEC-001 pattern). Kept as a
+ * domain intent (set a property on the target component) rather than a raw JSON
+ * patch so the canvas applies it through the existing CommandBus + commit path.
+ */
+export interface AutoFix {
+  kind: 'setProperty';
+  key: string;
+  value: unknown;
+}
+
 export interface Finding {
   ruleId: string;
   title: string;
@@ -28,8 +39,10 @@ export interface Finding {
   targetId: string;
   message: string;
   remediation?: string;
-  /** True when a mechanically-safe one-click CAML patch exists (doc 16 SEC-001 pattern). */
+  /** True when a mechanically-safe one-click fix exists (doc 16 SEC-001 pattern). */
   autoFixable?: boolean;
+  /** The fix to apply when `autoFixable`; anchored to `targetId`. */
+  fix?: AutoFix;
 }
 
 export interface Rule {
