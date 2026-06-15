@@ -451,12 +451,15 @@ the Stage E AI work below; **the Stage E day numbers shift accordingly** (the in
 
 > Day 27 notes (**move A of the re-sequence**): chose 8 services with clean, standalone Terraform (`terraform validate`-friendly) over the original plan's `aws.ec2`/`aws.cloudfront`/`aws.nat_gateway`, which need extra wiring (AMI / distribution config / EIP+subnet) — those stay on the catalog backlog. The generator is still hand-mapped per service (no catalog-template-driven emission yet — see backlog). This also unblocks richer validation findings (S3 versioning/encryption, KMS/secrets presence) on later rule-pack days.
 
-### Day 28 — Layout sidecar read-back (move B) — *pending*
+### Day 28 — Layout sidecar read-back ✅ (2026-06-15) · move B
 **Goal:** Kill the reload regression: tidy-up/positions survive a refresh.
-- [ ] Return the layout sidecar from `GET …/branches/{branch}/model` (it's already persisted on commit); web `useEditor.load` hydrates `layout` from it instead of the empty sidecar
-- [ ] Projector prefers the stored sidecar; falls back to auto-layout when absent
+- [x] `GET …/branches/{branch}/layout` returns the head commit's sidecar (`{ commit, layout }`, ETag = head hash); web `useEditor.load` hydrates `layout` from it instead of the empty sidecar (raw fetch — endpoint post-dates the generated client)
+- [x] **Layout-only changes now persist:** a tidy-up/nudge produces a model-unchanged (no-op) commit, which previously discarded the new layout. `commit` now writes the layout onto the head commit (it's excluded from the content hash, so this is not a commit-identity mutation) — `repo.updateCommitLayout`
+- [x] Integration test: layout round-trips, **including** the layout-only no-op-commit path
 
-**Done when:** tidy up → reload → positions are preserved.
+**Done when:** tidy up → reload → positions are preserved ✅ (integration test, runs in CI). The projector already prefers the sidecar (Day 18) and falls back to auto-layout when absent.
+
+> Day 28 notes (**move B**): the deeper half of the fix was the persistence gap, not the read-back — content-addressed commits made a layout-only change a server no-op that dropped the sidecar (flagged in the Day 18 notes). Layout is a non-hashed sidecar, so updating it on the existing head commit is legitimate. Kept the model `GET` body a bare CamlDocument (ETag = model hash) and added a separate `layout` sub-resource rather than reshaping the model response. Client regen still deferred (raw fetch, as with validate/export).
 
 ### Day 29 — DEMO.md + timing pass (move C) — *pending*
 **Goal:** Prove the slice end-to-end (the doc-15 "never cut" item).

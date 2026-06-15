@@ -56,6 +56,19 @@ export class ArchitectureController {
     return model;
   }
 
+  @Get(':id/branches/:branch/layout')
+  @ApiOkResponse({ description: 'Layout sidecar (positions/sizes) for the branch head model. ETag = head commit hash.' })
+  async getLayout(
+    @Param('id') id: string,
+    @Param('branch') branch: string,
+    @Res({ passthrough: true }) res: HttpRes,
+  ): Promise<unknown> {
+    const { commit, layout } = await this.service.getLayout(id, branch);
+    res.setHeader('ETag', commit);
+    res.setHeader('Cache-Control', 'no-cache'); // head moves — revalidate every read
+    return { commit, layout };
+  }
+
   @Get(':id/branches/:branch/export.svg')
   @ApiQuery({ name: 'theme', required: false, description: 'light (default) | dark' })
   @ApiOkResponse({ description: 'Presentation-ready SVG of the branch head model (true vectors).' })

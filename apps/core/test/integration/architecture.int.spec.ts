@@ -95,6 +95,31 @@ describe('Architecture write path (integration)', () => {
     expect(errors.some((e) => e.message.includes('instanceClass'))).toBe(true);
   });
 
+  it('persists the layout sidecar and serves it back — including layout-only no-op commits', async () => {
+    const { id, head } = await service.create({ name: 'Layout' });
+    const model = example();
+    const r1 = await service.commit(id, 'main', {
+      expectedParent: head,
+      message: 'add 3-tier',
+      model,
+      layout: { positions: { 'web-lb': { x: 10, y: 20 } } },
+    });
+    const l1 = await service.getLayout(id, 'main');
+    expect(l1.commit).toBe(r1.hash);
+    expect((l1.layout as { positions: Record<string, { x: number; y: number }> }).positions['web-lb']).toEqual({ x: 10, y: 20 });
+
+    // Same model, new layout (a tidy-up): a no-op commit that still updates the head layout.
+    const r2 = await service.commit(id, 'main', {
+      expectedParent: r1.hash,
+      message: 'tidy up',
+      model,
+      layout: { positions: { 'web-lb': { x: 99, y: 99 } } },
+    });
+    expect(r2.unchanged).toBe(true);
+    const l2 = await service.getLayout(id, 'main');
+    expect((l2.layout as { positions: Record<string, { x: number; y: number }> }).positions['web-lb']).toEqual({ x: 99, y: 99 });
+  });
+
   it('the same model commits to a stable hash across independent architectures', async () => {
     const a = await service.create({ name: 'StableA' });
     const ra = await service.commit(a.id, 'main', { expectedParent: a.head, message: 'm', model: example() });

@@ -109,7 +109,13 @@ export class ArchitectureService {
     }
 
     const hash = hashModel(model);
-    if (hash === head) return { hash, parents: [head], unchanged: true };
+    if (hash === head) {
+      // Model unchanged (e.g. a tidy-up / nudge): the commit is a no-op, but the
+      // layout sidecar isn't content-addressed — persist it onto the head commit
+      // so positions survive a reload.
+      if (body.layout !== undefined) await this.repo.updateCommitLayout(architectureId, head, body.layout);
+      return { hash, parents: [head], unchanged: true };
+    }
 
     const moved = await this.repo.withTransaction(async (client) => {
       await this.repo.insertCommit(client, {
@@ -155,6 +161,15 @@ export class ArchitectureService {
     const commit = await this.repo.getCommit(architectureId, head);
     if (!commit) throw new NotFoundException('head commit not found');
     return { model: commit.model, hash: head };
+  }
+
+  /** The layout sidecar (positions/sizes) stored on the branch head commit. */
+  async getLayout(architectureId: string, branch: string): Promise<{ commit: string; layout: unknown }> {
+    const head = await this.repo.getBranchHead(architectureId, branch);
+    if (head === null) throw new NotFoundException('architecture or branch not found');
+    const commit = await this.repo.getCommit(architectureId, head);
+    if (!commit) throw new NotFoundException('head commit not found');
+    return { commit: head, layout: commit.layout ?? null };
   }
 
   async getCommit(architectureId: string, hash: string) {

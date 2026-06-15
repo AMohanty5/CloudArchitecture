@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { client } from './client';
+import { client, apiBase } from './client';
 import { applyCommand, componentFromService, groupFromService, makeComponentId } from '../canvas/commands';
 import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
 import { project } from '../canvas/projector';
@@ -69,6 +69,18 @@ export interface EditorApi {
 
 const DEBOUNCE_MS = 700;
 const EMPTY_LAYOUT: LayoutSidecar = {};
+
+/** Fetch the persisted layout sidecar for a branch head (raw — endpoint post-dates the generated client). */
+async function fetchLayout(id: string, branch: string): Promise<LayoutSidecar> {
+  try {
+    const res = await fetch(`${apiBase}/architectures/${id}/branches/${branch}/layout`);
+    if (!res.ok) return EMPTY_LAYOUT;
+    const body = (await res.json()) as { layout?: LayoutSidecar | null };
+    return body.layout ?? EMPTY_LAYOUT;
+  } catch {
+    return EMPTY_LAYOUT;
+  }
+}
 
 /** The undo/redo coalescing key for a command (rapid same-field edits → one entry). */
 function commandGroupKey(cmd: Command): string | undefined {
@@ -147,7 +159,8 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     const m = data as EditableModel;
     committedRef.current = m;
     headRef.current = response.headers.get('etag') ?? undefined;
-    reset(m, EMPTY_LAYOUT); // the model endpoint doesn't return the layout sidecar (yet)
+    const layout = await fetchLayout(id, branch); // hydrate persisted positions/sizes (Day 28)
+    reset(m, layout);
     setSaveState('saved');
   }, [id, branch, reset]);
 

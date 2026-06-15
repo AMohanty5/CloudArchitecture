@@ -121,6 +121,15 @@ export class ArchitectureRepository {
     return res.rows[0]?.head_hash ?? null;
   }
 
+  /** Update a commit's layout sidecar in place — layout is excluded from the content hash, so this is not a mutation of commit identity. */
+  async updateCommitLayout(architectureId: string, hash: string, layout: unknown): Promise<void> {
+    await this.pool.query('UPDATE model_commits SET layout = $3 WHERE architecture_id = $1 AND hash = $2', [
+      architectureId,
+      hash,
+      layout,
+    ]);
+  }
+
   async getCommit(architectureId: string, hash: string): Promise<CommitRow | null> {
     const res = await this.pool.query<CommitRow>(
       'SELECT * FROM model_commits WHERE architecture_id = $1 AND hash = $2',
