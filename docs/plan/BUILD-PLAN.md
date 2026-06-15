@@ -329,7 +329,7 @@ and a generated typed API client with contract tests — all running on the EC2 
 
 ---
 
-## Stage D — Projections: export + IaC (Days 21–26)
+## Stage D — Projections: export, IaC, validation v0 (Days 21–26)
 
 ### Day 21 — PNG/SVG export ✅ (2026-06-14)
 - [x] Client PNG via `html-to-image`: the canvas registers a `CanvasExporter` handle (`registerExporter`) that fits all nodes (`getNodesBounds` + `getViewportForBounds`) and rasterises the React Flow viewport at a chosen pixel ratio (1×/2×/3×)
@@ -345,45 +345,129 @@ and a generated typed API client with contract tests — all running on the EC2 
 > the SVG URL directly (it returns image/svg+xml, not JSON), so no API-client regen was needed. Icons are
 > inline coloured tiles (the placeholder pack) — real provider icon packs remain a Backlog/licensing item.
 
-### Day 22 — Terraform IR + generator skeleton
-- [ ] Typed IR: CAML → resource graph with provider blocks, refs, dependencies (doc 03 §3.9)
-- [ ] Module layout strategy (per-group), variables file, backend stub, README generation
-- [ ] Templates for Day 6's 5 services
+### Day 22 — Terraform export ✅ (2026-06-15)
+**Goal:** CAML → Terraform that `terraform validate` passes, downloadable.
+- [x] Typed resource graph (CAML → `aws_vpc`/`aws_subnet`/`aws_lb`/`aws_launch_template`+`aws_autoscaling_group`/`aws_db_instance`) with ref wiring (subnet→vpc, asg/alb→subnets); per-top-level-group `.tf` layout + `versions`/`providers`/`variables`/`backend`/`README` skeleton; purpose-built deterministic HCL writer (`iac/hcl.ts`)
+- [x] Dependency-free, deterministic **store-only ZIP writer** (`iac/zip.ts`, CRC32 + fixed timestamps → byte-stable) so the bundle is one download; `GET …/branches/{branch}/export.tf.zip` (`application/zip`); `emit.cli.ts` for CI
+- [x] "Download Terraform" in the export popover; CI emits the 3-tier fixture and runs `terraform validate` against the real AWS provider (`hashicorp/setup-terraform`)
 
-**Done when:** e-commerce subset generates HCL that `terraform validate` passes (local terraform in CI via setup action).
+**Done when:** the 3-tier subset generates HCL that `terraform validate` passes ✅ (CI). Core 13 tests (terraform 4, zip 4); the seed emits 6 files.
 
-### Day 23 — Terraform coverage for the working catalog
-- [ ] Templates for every catalog service shipped so far (target ≈ 12 by now: + `aws.ec2`, `aws.lambda`, `aws.sqs`, `aws.s3`, `aws.cloudfront`, `aws.elasticache_redis`, `aws.nat_gateway`)
-- [ ] Golden test harness: every service × minimal model → `terraform validate` in CI
-- [ ] Cross-resource references (ALB→ASG target group, SG wiring from connections)
+> Day 22 notes: met/exceeded the planned "IR + skeleton" in one day. **Known fidelity gap:** the ASG block reads `properties.scaling.{min,max}`, but the 3-tier fixture uses `minSize/maxSize`, so it falls back to defaults — there's no catalog-driven property→HCL mapping yet (each service is hand-mapped in `terraform.ts`).
 
-**Done when:** golden suite green for all shipped services; connection-driven security group rules appear in output.
+### Day 23 — HLD markdown export ✅ (2026-06-15) · *substituted for the planned "Terraform coverage" day*
+**Goal:** A third derived artifact — a reviewer-facing High-Level Design document.
+- [x] Activated the **artifact** module: pure `renderHld(model)` → markdown (overview + counts; requirements with machine-checkable targets; the region/network/subnet topology as a nested tree; component + connection tables with resolved endpoint names), stamped with the content hash; reuses `indexModel`/`hashModel`
+- [x] `GET …/branches/{branch}/export.hld.md` (`text/markdown`) + "Download HLD (.md)" in the export popover
 
-### Day 24 — Export polish + the 5-minute demo
-- [ ] "Export Terraform" UI: bundle preview (file tree + code view), zip download
-- [ ] Demo script (`docs/plan/DEMO.md`): blank → prompt-less manual build → validated props → Terraform → `terraform plan` clean — rehearsed and timed
-- [ ] Record the gaps the rehearsal exposes; fix blockers
+**Done when:** the 3-tier fixture renders a clean HLD ✅ (6 unit tests, deterministic).
 
-**Done when:** you can run the 5-minute demo flow without touching a workaround.
+> Day 23 notes (**reality vs plan — diverged**): the planned Day 23 was "Terraform templates for ~12 services". That is **blocked on catalog breadth** (still only 5 services), so broad TF coverage moved to the catalog-expansion backlog, and HLD was pulled forward from the Stage-F docs day (pure, self-contained, rounds out the export trio). **Net: broad Terraform template coverage remains undone.**
 
-### Day 25 — Validation engine v0
-**Goal:** First deterministic findings (pulled forward from Phase 3 because it demos brilliantly).
-- [ ] CEL evaluator (cel-js) over flattened model; rule format per doc 16
-- [ ] Implement 10 rules: SEC-001, SEC-004, SEC-005, SEC-013, REL-001, REL-003, REL-004, REL-007, OPS-001, OPS-002 (all `cel`-engine, no graph DB needed yet)
-- [ ] `POST /v1/validate` + report caching by (hash, ruleset)
+### Day 24 — Unified export bundle ✅ (2026-06-15) · *demo rehearsal deferred*
+**Goal:** Tie the exports together; one "download everything".
+- [x] **artifact module as the aggregator**: `buildArtifacts(model)` composes SVG + HLD + Terraform into one file map via each module's public `api.ts` (boundary-clean); `GET …/branches/{branch}/export.bundle.zip` + "Download all (.zip)"
+- [x] `artifact/export.cli.ts` writes the full bundle (seed of a future `cac export`); wired into CI as an SVG/HLD smoke; golden-journey e2e now exercises an export download
 
-**Done when:** fixture suite per rule (3 pos / 3 neg) green; intentionally-broken model returns the expected findings.
+**Done when:** one action yields SVG + HLD + Terraform as a single zip ✅; CI smoke green.
 
-### Day 26 — Findings in the canvas
-- [ ] Validation badges on nodes (severity color), findings panel with remediation text
-- [ ] SEC-001's one-click `camlPatch` fix wired through CommandBus (undoable, audited as a commit)
-- [ ] Re-validate on commit (debounced), live badge updates
+> Day 24 notes (**reality vs plan — partial**): export polish met; the **rehearsed, timed 5-minute demo + `docs/plan/DEMO.md` was NOT done** — a doc-15 "never cut" item, carried forward (see Critical evaluation). CI runs `terraform validate` only — no LocalStack `terraform plan` yet.
 
-**Done when:** unencrypted RDS shows a red badge; one click fixes it; badge clears; history shows the fix commit.
+### Day 25 — Validation engine + rule pack v0 ✅ (2026-06-15)
+**Goal:** First deterministic *semantic* findings (doc 16), separate from the commit-gating structural/catalog errors. Read-only — never blocks a write.
+- [x] Pure in-process engine (`validation/engine.ts`): `Rule`/`Finding` IR per doc 16 + a small graph helper (BFS reachability with allowed intermediaries); deterministic, severity-sorted report
+- [x] Baseline pack v1 — **6 rules**: SEC-001 (unencrypted datastore, auto-fixable), SEC-002 (internet-reachable DB without a WAF — graph), SEC-004 (datastore in a public subnet), REL-001 (stateful single-AZ under an availability requirement), REL-007 (pinned ASG), OPS-001 (monitoring gap, criticality-modulated). Positive + negative fixtures each
+- [x] `GET …/branches/{branch}/validate` returns the report
+- [x] Web: a "✓ Validate" header button with a finding-count badge + `ValidationPanel` (severity cards, remediation, click-to-select)
+
+**Done when:** per-rule pos/neg fixtures green (15 tests); the seed 3-tier surfaces one genuine **critical** finding (Orders DB reachable from the internet-facing LB with no WAF) ✅.
+
+> Day 25 notes (**reality vs plan — diverged in shape**): hand-written predicate engine, **not `cel-js`**; **6 rules, not 10** (dropped SEC-005/SEC-013/REL-003/REL-004/OPS-002; *added* the graph rule SEC-002 the plan deferred); **`GET` not `POST`**; **no report caching** by (hash, ruleset). The Day-25 commit message mislabeled this "Stage E" — per this plan, validation v0 is the **tail of Stage D**; Stage E remains AI generation.
+
+### Day 26 — Findings on the canvas + one-click fix ✅ (2026-06-15)
+**Goal:** Validation visible in the design surface; mechanical fixes one click away.
+- [x] Severity overlay: flagged nodes get a colored border + corner dot (groups: header dot) via a shared palette (`canvas/validationView.ts`); shown while the panel is open; click a finding → selects its node
+- [x] Structured `AutoFix` on findings (a set-property intent) → "⚡ Fix automatically" applies it **through the existing CommandBus + commit path**, then re-runs the pack once the autosave lands, so the finding self-clears. SEC-001 ships the fix (`storageEncrypted → true`)
+
+**Done when:** an unencrypted-RDS finding shows a red dot; one click fixes it; the badge clears; the fix is a normal commit in history ✅.
+
+> Day 26 notes (**reality vs plan — met**). Caveats: the fix is a domain set-property intent, not a raw RFC-6902 `camlPatch`; "audited as a commit" = it's an ordinary commit (no audit module yet); not exercised by e2e (the golden journey builds finding-free abstract nodes).
 
 ---
 
-## Stage E — AI generation v0 (Days 27–34)
+## Critical evaluation (Days 1–26)
+
+**Verdict.** The load-bearing core is genuinely strong and the thin vertical slice (CAML → API → canvas → three projections → validation) is real and largely demoable. But the slice has thinned at the edges through Days 22–26: a few planned deliverables were substituted or deferred, and a pile of "later" work (auth, events, layout persistence, catalog breadth) is now the difference between a great local prototype and something you can put in front of strangers.
+
+**Genuinely solid**
+- **CAML engine (Days 1–6)** — types, validator, canonicalizer/hash, typed diff, patch with the proven round-trip invariant; property-tested (fast-check), ~92% branch coverage. The most trustworthy part of the system.
+- **Write path (Days 7–11)** — content-addressed commits, optimistic concurrency (409), pass-1+2 validation (422 with element paths), history/diff, keyset pagination, catalog endpoints + Redis, generated typed client + contract tests. **RLS is enabled from migration 0001.**
+- **Canvas (Days 12–20)** — a real editor: palette/drop, schema-driven property forms, catalog-validated connections, groups/containment, undo/redo/clipboard, ELK tidy-up, history/diff UI, a 500-node perf pass, a green golden-journey e2e.
+- **Projections + validation (Days 21–26)** — three deterministic artifacts (SVG, Terraform, HLD) and a rule engine that finds a *real* defect in the seed model.
+- **Discipline intact** — module boundaries (eslint-boundaries), pure/deterministic derivations, the commit model never bypassed. The blueprint's load-bearing rules hold.
+
+**Divergences from the plan (Days 22–26)**
+- **Day 23:** HLD substituted for broad Terraform coverage → **broad TF templates undone** (blocked on catalog breadth).
+- **Day 24:** export bundle shipped; **the rehearsed 5-minute demo + `DEMO.md` did not** — a "never cut" item.
+- **Day 25:** 6 in-process predicate rules, not 10 CEL rules; `GET` not `POST`; no report caching. Commit mislabeled the stage.
+
+**Technical debt (carried, with evidence)**
+1. **Layout never persists across reload** — the sidecar is committed but the model `GET` doesn't return it, so tidy-up/positions are live-session-only and the projector re-derives on reload (Days 13/16/18 notes). The one item with a *user-visible* regression today.
+2. **No auth / tenancy in practice** — single `DEFAULT_TENANT_ID`; RLS is enabled but trivially satisfied; every endpoint is unauthenticated. (Planned for Stage F.)
+3. **No outbox / events** — `events` is a stub; `architecture.commit.created` is never emitted (blueprint Day-8 DoD item, re-sequenced away).
+4. **Catalog stuck at 5 services** (vs 60 target / 45 cut-line) — the single biggest content gap; it throttles Terraform breadth, validation realism, and demo richness.
+5. **CI gaps vs blueprint** — no Playwright in CI (e2e runs by hand against EC2), no k6/perf-budget gate (the "60fps" claim is eyeballed), `terraform validate` only (no LocalStack `plan`).
+6. **Validation** — no caching, 6 rules, no POL-* (policy→rule) compilation, no false-positive corpus.
+7. **Inert modules** — identity/workspace/billing/audit are empty; artifact/iac/diagram are 4-line NestJS stubs whose pure code is imported through `api.ts` (works, but they aren't DI-wired modules).
+8. **`tsx` can't run Nest DI** (decorator metadata) — dev/openapi/contract all run the *built* server (Day 11). Friction, not a blocker.
+
+**Top risks**
+- **Catalog breadth** gates a convincing demo and the realism of both Terraform and validation. Fix this before polishing anything downstream.
+- **The deferred pile** (auth, events, layout read-back) is coherent but growing; layout read-back is the cheapest to clear and the most visible.
+- **The 5-minute demo — the project's whole proof — is unrehearsed.**
+
+**Recommended next moves (re-sequencing suggestion, before Stage E)**
+- **A — Catalog-expansion day:** +7–10 networking/compute services (doc 14 order) with TF templates + 2 evals each. Unblocks TF coverage, richer validation, and a better demo. (Folds in the old Day-23 intent.)
+- **B — Layout read-back:** return the sidecar from the model `GET`. Kills the reload regression cheaply.
+- **C — `DEMO.md` + timing pass:** the deferred Day-24 acceptance — the actual proof the slice works end to end.
+- Then resume **Stage E (AI generation)** as planned.
+
+---
+
+## Re-sequence — Stage D closeout (before Stage E)
+
+Acting on the Critical evaluation's recommended moves (A/B/C). These run **before**
+the Stage E AI work below; **the Stage E day numbers shift accordingly** (the inner
+"Day 27 — AI service scaffold" etc. will be renumbered when this re-sequence closes).
+
+### Day 27 — Catalog expansion + Terraform coverage ✅ (2026-06-15) · move A
+**Goal:** Break the 5-service ceiling and realize the deferred golden TF harness.
+- [x] **+8 AWS services → 13 total** (doc 14 order): `aws.s3` (storage.object), `aws.sqs` (messaging.queue), `aws.sns` (messaging.topic), `aws.dynamodb` (database.keyvalue), `aws.elasticache_redis` (database.cache), `aws.lambda` (compute.serverless.function), `aws.kms` (security.keys), `aws.secrets_manager` (security.secrets) — schema + capabilities + connection rules + icon refs; all pass the catalog lint gate
+- [x] **Terraform emission** for each new service (`terraform.ts` dispatch refactored to a `switch`; Lambda emits a companion `aws_iam_role` so it validates standalone; FIFO queues get the `.fifo` suffix); deterministic HCL
+- [x] **Golden TF harness:** a `catalog-coverage.example.json` fixture (one component per service) + CI now emits and runs `terraform validate` over **both** fixtures; a catalog-package test proves the coverage fixture passes pass-1 + pass-2
+- [x] New emission asserted by unit tests (`terraform.test.ts`); `loader.test.ts` key list updated
+
+**Done when:** the coverage fixture validates pass-1+2 ✅ (catalog 13 tests) and emits HCL that `terraform validate` accepts ✅ (CI, both fixtures). Core iac 11 tests green.
+
+> Day 27 notes (**move A of the re-sequence**): chose 8 services with clean, standalone Terraform (`terraform validate`-friendly) over the original plan's `aws.ec2`/`aws.cloudfront`/`aws.nat_gateway`, which need extra wiring (AMI / distribution config / EIP+subnet) — those stay on the catalog backlog. The generator is still hand-mapped per service (no catalog-template-driven emission yet — see backlog). This also unblocks richer validation findings (S3 versioning/encryption, KMS/secrets presence) on later rule-pack days.
+
+### Day 28 — Layout sidecar read-back (move B) — *pending*
+**Goal:** Kill the reload regression: tidy-up/positions survive a refresh.
+- [ ] Return the layout sidecar from `GET …/branches/{branch}/model` (it's already persisted on commit); web `useEditor.load` hydrates `layout` from it instead of the empty sidecar
+- [ ] Projector prefers the stored sidecar; falls back to auto-layout when absent
+
+**Done when:** tidy up → reload → positions are preserved.
+
+### Day 29 — DEMO.md + timing pass (move C) — *pending*
+**Goal:** Prove the slice end-to-end (the doc-15 "never cut" item).
+- [ ] `docs/plan/DEMO.md`: blank → manual 3-tier build → validated props → validation finding → one-click fix → export bundle (SVG+HLD+Terraform) → `terraform validate`/`plan` clean — rehearsed and timed
+- [ ] Record and fix whatever blocks a clean sub-5-minute run
+
+**Done when:** the demo runs clean, timed, without a workaround.
+
+---
+
+## Stage E — AI generation v0 (Days 27–34 → renumbered after the re-sequence)
 
 ### Day 27 — AI service scaffold + provider wiring
 - [ ] `ai/` Python FastAPI app (or TS module if we decide to defer Python — decide today, record in DECISIONS.md): Anthropic SDK, prompt registry loader (doc 17 format), AgentTrace logging to disk/S3-compatible store
@@ -455,5 +539,13 @@ entry with rationale.
 - Multi-select shared property editing
 - PDF export (after SVG is solid)
 - Layers UI, presentation mode
-- `cac` CLI (validate/diff/export) — natural after Day 25
+- `cac` CLI (validate/diff/export) — **seeded**: `emit.cli.ts` + `artifact/export.cli.ts` exist; promote to a real `cac` binary
 - Watermarking/export policy (matters only at hosted alpha)
+
+### Carried forward from Days 22–26 (see Critical evaluation)
+- **Broad Terraform template coverage** — ✅ *golden harness realized* (Day 27): every shipped service × the coverage fixture → `terraform validate` in CI. Still open: cross-resource refs (ALB→target group, SG wiring from connections); the remaining doc-14 services (`aws.ec2`/`aws.cloudfront`/`aws.nat_gateway`/…) toward 60.
+- **`docs/plan/DEMO.md` + a rehearsed, timed 5-minute demo** (blank → manual build → validated props → Terraform → `terraform plan` clean). The deferred Day-24 acceptance; doc-15 "never cut".
+- **Layout sidecar read-back** — return the sidecar from the model `GET` so tidy-up/positions survive reload.
+- **Validation v0 closeout** — report caching by (hash, ruleset); the 4 deferred CEL rules (SEC-005, SEC-013, REL-003/004, OPS-002); POL-* policy→rule compilation; per-rule false-positive corpus; consider `POST` + a catalog-default lookup (`catalog.defaultOf`).
+- **Catalog-driven Terraform property mapping** — replace the hand-mapped `terraform.ts` (e.g. ASG `scaling` vs fixture `minSize/maxSize`) with catalog-template-driven emission.
+- **CI hardening** — Playwright in CI (stand the stack up in the runner), k6 commit-endpoint perf gate, LocalStack `terraform plan`.
