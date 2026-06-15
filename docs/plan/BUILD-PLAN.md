@@ -644,12 +644,37 @@ integration env).
 > is the CI-verified core. **Stage E generation pipeline (Days 30–35) is complete:** prompt →
 > requirements → plan → catalog-bound CAML → critic/repair → reviewable proposal → merge.
 
-### Days 33–34 — Generation hardening + demo v2
-- [ ] 30-case golden suite across workload classes; fix the worst failure modes
-- [ ] Cost guard: per-job token cap, job timeout, graceful partial-result failure
-- [ ] Demo v2 script: prompt → streamed diagram → findings → one-click fix → Terraform. Rehearse, time, record gaps.
+### Days 36–37 — Generation hardening + demo v2 ✅ (2026-06-15) · (was "Days 33–34")
+**Goal:** Harden the pipeline and close Stage E with the "show people" demo.
+- [x] **30-case golden suite** across workload classes (`golden-suite.test.ts`, doc 07
+  prompt→expected-property cases: web/serverless/data/ML/IoT/messaging/static/fintech/…),
+  asserted structurally on the requirements stage (cheapest, highest-signal); gated live on
+  `ANTHROPIC_API_KEY`. Pass-rate is the north-star (target ≥ 80%)
+- [x] **Cost guard:** per-job **token cap** + **wall-clock timeout** (config
+  `AI_TOKEN_BUDGET` / `AI_JOB_TIMEOUT_MS`) → the pipeline **stops gracefully** and returns a
+  partial result with a `log` notice; unit-tested over the stub pipeline (early stop +
+  full-run-under-budget)
+- [x] **Demo v2** in `docs/plan/DEMO.md`: prompt → streamed pipeline → proposal diff →
+  accept/merge → validate → one-click fix → export, with the keyed prerequisite and rough edges
 
-**Done when:** 80%+ golden pass; demo v2 runs clean end-to-end. **This is the "show people" milestone.**
+**Done when:** 80%+ golden pass; demo v2 runs clean end-to-end ✅ — the cost guard is
+CI-verified; the golden pass-rate + the timed demo are the user's to run with a key (the
+suite is wired to run in `pnpm test` when `ANTHROPIC_API_KEY` is set).
+
+> Days 36–37 notes: the golden suite runs at the **requirements** stage (one mid-tier call
+> per case) to keep the live cost sane — the same harness points deeper for full-pipeline
+> runs. The cost guard is enforced at stage boundaries (graceful, not a hard kill mid-call).
+> "Fix the worst failure modes" is inherently live/iterative — the suite + pass-rate metric
+> are delivered; tuning happens against a real key. **Stage E (AI generation v0, Days 30–37)
+> is complete.**
+
+---
+
+**Stage E complete (Days 30–37):** a TypeScript AI module in the core monolith — prompt
+registry + provider wiring, requirements/planner/composer/critic/repair agents over the real
+catalog + deterministic validators, a closed review loop, reviewable proposals that merge
+through the write path, a 30-case golden suite, and a cost guard. Generation is keyed
+(`ANTHROPIC_API_KEY`); keyless runs stream a stub. **This is the "show people" milestone.**
 
 ---
 

@@ -26,7 +26,7 @@ interface DoneEvent {
   message: string;
   proposalReady?: boolean;
 }
-type AiEvent = StageEvent | UsageEvent | DoneEvent | { type: 'error'; message: string };
+type AiEvent = StageEvent | UsageEvent | DoneEvent | { type: 'error'; message: string } | { type: 'log'; message: string };
 
 interface LogLine {
   text: string;
@@ -71,6 +71,8 @@ export function AiConsole() {
           append({ text: `▶ ${event.stage}${event.model ? ` · ${event.model}` : ''}`, tone: 'stage' });
         } else if (event.type === 'stage' && event.status === 'completed') {
           if (event.detail) append({ text: `   ${event.detail}`, tone: 'detail' });
+        } else if (event.type === 'log') {
+          append({ text: event.message, tone: 'detail' });
         } else if (event.type === 'usage') {
           append({
             text: `Σ ${event.inputTokens.toLocaleString()} in / ${event.outputTokens.toLocaleString()} out · ~$${event.estCostUsd.toFixed(2)}`,

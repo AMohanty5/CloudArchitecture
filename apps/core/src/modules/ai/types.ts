@@ -29,8 +29,12 @@ export interface ErrorEvent {
   type: 'error';
   message: string;
 }
+export interface LogEvent {
+  type: 'log';
+  message: string;
+}
 
-export type AiEvent = StageEvent | UsageEvent | DoneEvent | ErrorEvent;
+export type AiEvent = StageEvent | UsageEvent | DoneEvent | ErrorEvent | LogEvent;
 
 export interface GenerateInput {
   prompt: string;

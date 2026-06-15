@@ -96,3 +96,58 @@ architectures you create by hand persist; delete them via the DB or just ignore 
 > Status: this script is the rehearsal artifact (re-sequence move C). Run it once on a
 > live stack and record the real wall-clock + any blocker before showing it to anyone —
 > the timing column is a budget, not a measurement.
+
+---
+
+# Demo v2 — generate with AI (Stage E)
+
+The "show people" milestone: **a prompt becomes a validated architecture you can review and
+merge.** Everything from Demo v1 still applies; this adds the generation pipeline on top.
+
+## What it proves
+
+1. **NL → architecture** — a sentence yields a typed, catalog-bound CAML model, streamed
+   stage by stage (requirements → plan → compose → critic/repair).
+2. **Deterministic validation is the spine** — the critic calls the *same* engine the canvas
+   uses; a seeded weakness is caught and repaired before you ever see it.
+3. **AI proposes, you merge** — the result lands as a reviewable diff with accept/reject; it
+   never auto-merges to `main`.
+
+## Extra prerequisite
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # the pipeline calls Claude (Sonnet for requirements,
+                                      # Opus for plan/compose/critic/repair). Without it the
+                                      # console streams a stubbed run (no model, no proposal).
+```
+
+Optional cost guard (per job): `AI_TOKEN_BUDGET` (default 250k tokens) and
+`AI_JOB_TIMEOUT_MS` (default 180s) — the pipeline stops gracefully and returns a partial
+result when either is exceeded.
+
+## The script (timed)
+
+| # | Beat | Action | ~time |
+|---|------|--------|------:|
+| 1 | **Prompt** | On the list page, in **✨ Generate with AI** type *"A highly available 3-tier e-commerce platform on AWS for ~30k RPS, PCI compliant"* → **Generate** | 0:10 |
+| 2 | **Watch the pipeline stream** | The console streams stages live: `requirements` (extracted + inferred, incl. PCI), `planner` (patterns cited, every requirement mapped), `composer` (N components, pass-1+2 valid, repairs), `critic` (findings), `repair`, then a **Σ usage + ~$cost** line | 0:30 |
+| 3 | **Review the proposal** | Click **→ review proposal** → the generated model renders as an all-**added** (green) diff with a summary + remaining-findings count | 0:25 |
+| 4 | **Decide** | **Accept & merge** → it commits through the write path and opens in the editor (or **Reject** to discard) | 0:15 |
+| 5 | **Validate** | In the editor, **✓ Validate** — confirm findings are clean (or use the **⚡ one-click fix** on any SEC-001) | 0:20 |
+| 6 | **Export** | **⬇ Export → Download all (.zip)** → SVG + HLD + Terraform; `terraform validate` clean (as Demo v1) | 0:20 |
+
+**Total: ~2:00** on top of a warm stack.
+
+## Known rough edges (say them)
+
+- **Generation is keyed** — no `ANTHROPIC_API_KEY` ⇒ a stubbed stream (fake stages), no proposal.
+- **Single-shot composition** — not sectioned/parallel; **no progressive canvas draw** (the model
+  appears once, at review).
+- **`ai/gen-*` lineage is approximated** — accept commits a new architecture on `main`; a real
+  AI branch + merge waits on branch endpoints.
+- **Latency is real** — a full generation is several model calls (tens of seconds); the cost
+  guard caps runaway jobs.
+
+> Status: like Demo v1, this is the rehearsal artifact — run it once with a key on a live
+> stack, record the wall-clock + the golden-suite pass rate (`ANTHROPIC_API_KEY=… pnpm
+> --filter @cac/core test` runs the live evals), and fix the worst failure modes before showing it.

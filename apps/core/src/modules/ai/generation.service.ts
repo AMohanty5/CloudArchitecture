@@ -74,6 +74,8 @@ export class GenerationService {
   private readonly log = new Logger(GenerationService.name);
   private readonly registry: PromptRegistry;
   private readonly patterns: PatternStore;
+  private readonly tokenBudget: number;
+  private readonly jobTimeoutMs: number;
   private readonly jobs = new Map<string, Job>();
 
   constructor(
@@ -81,6 +83,8 @@ export class GenerationService {
     @Optional() private readonly architecture?: ArchitectureService,
   ) {
     const config = loadConfig();
+    this.tokenBudget = config.aiTokenBudget;
+    this.jobTimeoutMs = config.aiJobTimeoutMs;
     let registry: PromptRegistry = { byId: new Map() };
     try {
       registry = loadPromptRegistry(config.aiPromptsDir);
@@ -150,6 +154,8 @@ export class GenerationService {
       let plan: PlannerResult | undefined;
       let composed: CamlDocument | undefined;
       let review: ReviewResult | undefined;
+      let stopped: string | undefined; // graceful early-stop reason (cost guard)
+      const startedAt = Date.now();
       const keyed = hasApiKey();
       for (const step of PIPELINE) {
         const tier = this.registry.byId.get(step.promptId ?? '')?.modelTier ?? step.tier;
@@ -242,6 +248,18 @@ export class GenerationService {
           inputTokens: stepIn,
           outputTokens: stepOut,
         });
+
+        // Cost guard (doc 07): stop gracefully on a token or wall-clock budget overrun,
+        // keeping whatever was produced (graceful partial result).
+        if (inputTokens + outputTokens > this.tokenBudget) {
+          stopped = `token budget (${this.tokenBudget.toLocaleString()}) exceeded`;
+        } else if (Date.now() - startedAt > this.jobTimeoutMs) {
+          stopped = `time budget (${this.jobTimeoutMs}ms) exceeded`;
+        }
+        if (stopped) {
+          events.next({ type: 'log', message: `⏹ stopped early — ${stopped}; returning the partial result` });
+          break;
+        }
       }
       // Frontier pricing drives the headline cost (the composer/critic/repair dominate).
       events.next({
@@ -265,9 +283,11 @@ export class GenerationService {
       events.next({
         type: 'done',
         branch: `ai/gen-${randomUUID().slice(0, 8)}`,
-        message: proposalReady
-          ? `Proposal ready — review the diff and accept to merge into history.`
-          : `Proposal ready for "${input.prompt.slice(0, 60)}" — review the diff and merge.`,
+        message: stopped
+          ? `Stopped early (${stopped}). ${proposalReady ? 'A partial proposal is available to review.' : 'No model was produced.'}`
+          : proposalReady
+            ? `Proposal ready — review the diff and accept to merge into history.`
+            : `Proposal ready for "${input.prompt.slice(0, 60)}" — review the diff and merge.`,
         proposalReady,
       });
     } catch (err) {

@@ -11,6 +11,10 @@ export interface CoreConfig {
   aiPromptsDir: string;
   /** Reference-pattern corpus dir (repo `ai/patterns/`, doc 07). */
   aiPatternsDir: string;
+  /** Per-job cumulative token cap; the pipeline stops gracefully when exceeded (doc 07 cost guard). */
+  aiTokenBudget: number;
+  /** Per-job wall-clock cap in ms; the pipeline stops gracefully when exceeded. */
+  aiJobTimeoutMs: number;
 }
 
 export function loadConfig(): CoreConfig {
@@ -22,6 +26,8 @@ export function loadConfig(): CoreConfig {
     catalogDir: process.env.CATALOG_DIR ?? path.resolve(process.cwd(), '../../catalog'),
     aiPromptsDir: process.env.AI_PROMPTS_DIR ?? path.resolve(process.cwd(), '../../ai/prompts'),
     aiPatternsDir: process.env.AI_PATTERNS_DIR ?? path.resolve(process.cwd(), '../../ai/patterns'),
+    aiTokenBudget: Number(process.env.AI_TOKEN_BUDGET ?? 250_000),
+    aiJobTimeoutMs: Number(process.env.AI_JOB_TIMEOUT_MS ?? 180_000),
   };
 }
 
