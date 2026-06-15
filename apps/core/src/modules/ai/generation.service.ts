@@ -6,7 +6,8 @@ import { map } from 'rxjs/operators';
 import { loadConfig } from '../../config/config';
 import { loadPromptRegistry } from './prompt-registry';
 import type { ModelTier, PromptRegistry } from './prompt-registry';
-import { estimateCostUsd, resolveModel } from './anthropic.provider';
+import { anthropic, estimateCostUsd, hasApiKey, resolveModel } from './anthropic.provider';
+import { runRequirements } from './requirements.agent';
 import type { AiEvent, AiStage, GenerateInput } from './types';
 
 interface Job {
@@ -68,6 +69,11 @@ export class GenerationService {
     return { jobId };
   }
 
+  /** The production system prompt for an agent, or '' if the registry didn't load. */
+  private systemFor(id: string): string {
+    return this.registry.byId.get(id)?.system ?? '';
+  }
+
   /** SSE stream of a job's events (replays from the start for late subscribers). */
   stream(jobId: string): Observable<{ data: AiEvent }> {
     const job = this.jobs.get(jobId);
@@ -83,18 +89,43 @@ export class GenerationService {
         const tier = this.registry.byId.get(step.promptId ?? '')?.modelTier ?? step.tier;
         const model = resolveModel(tier);
         events.next({ type: 'stage', stage: step.stage, status: 'started', promptId: step.promptId, model });
-        await sleep(step.delayMs);
-        inputTokens += step.inputTokens;
-        outputTokens += step.outputTokens;
+
+        let detail = step.detail;
+        let stepIn = step.inputTokens;
+        let stepOut = step.outputTokens;
+        // The requirements stage is real (Day 31) when an API key is configured; every
+        // other stage is still stubbed. Failures degrade to the stubbed detail.
+        const live = step.stage === 'requirements' && hasApiKey();
+        if (live) {
+          try {
+            const result = await runRequirements(
+              { prompt: input.prompt },
+              { client: anthropic(), model, system: this.systemFor('requirements') },
+            );
+            const inferred = result.requirements.filter((r) => r.source === 'inferred').length;
+            detail =
+              `extracted ${result.requirements.length} requirements (${inferred} inferred)` +
+              (result.ambiguities.length ? `; ${result.ambiguities.length} to confirm` : '');
+            stepIn = result.usage.inputTokens;
+            stepOut = result.usage.outputTokens;
+          } catch (err) {
+            detail = `${step.detail} (live model unavailable: ${(err as Error).message})`;
+          }
+        } else {
+          await sleep(step.delayMs);
+        }
+
+        inputTokens += stepIn;
+        outputTokens += stepOut;
         events.next({
           type: 'stage',
           stage: step.stage,
           status: 'completed',
           promptId: step.promptId,
           model,
-          detail: step.detail,
-          inputTokens: step.inputTokens,
-          outputTokens: step.outputTokens,
+          detail,
+          inputTokens: stepIn,
+          outputTokens: stepOut,
         });
       }
       // Frontier pricing drives the headline cost (the composer/critic/repair dominate).
