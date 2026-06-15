@@ -13,6 +13,7 @@
     "test:int": "vitest run -c vitest.integration.config.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@cac/caml": "workspace:*",
     "@cac/catalog": "workspace:*",
     "@nestjs/common": "^11.0.0",
@@ -23,7 +24,8 @@
     "pg": "^8.13.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@cac/api-client": "workspace:*",

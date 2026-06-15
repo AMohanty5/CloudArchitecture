@@ -28,9 +28,22 @@ identically under tsx/node. Idempotence comes from the runner, not the DDL.
 **Revisit when:** query volume/complexity makes typed query-building (Drizzle) pay for
 itself, or when a non-owner DB role is introduced and RLS must actually bite.
 
+## 2026-06-15 — AI service: a TypeScript module in the core monolith, not Python (Day 30)
+**Context:** Blueprint doc 03/07/15 scaffolds the AI pipeline as a separate Python
+FastAPI app (`ai/`). The build plan left the language open (Day 27 → re-sequenced Day 30).
+**Decision:** Build the generation pipeline as a NestJS **`ai` module inside `apps/core`**
+(TypeScript), wired through `@anthropic-ai/sdk`. Prompts stay as-code in repo-root
+`ai/prompts/` (doc 17 YAML), loaded by a registry loader. Day 30 ships the scaffold: a job
+model + SSE stage stream with token/cost accounting, generation **stubbed** (no model call
+yet). Model-tier routing maps frontier→`claude-opus-4-8`, mid→`claude-sonnet-4-6`,
+small→`claude-haiku-4-5` (doc 07).
+**Rationale:** one runtime for a solo build; the modular-monolith boundary (behind
+`ai/api.ts`) means the pipeline can still be extracted to its own service later without a
+rewrite. The Python ecosystem (LangGraph etc.) isn't needed until the orchestration is
+genuinely complex. Prompts-as-code at the blueprint location keeps doc-17 eval-gating viable.
+**Revisit when:** the orchestrator state machine or eval harness outgrows TS, or a
+data-residency customer needs a BYO-model Python endpoint.
+
 ## Open — to be decided at the day indicated
-- **Day 27:** AI service in Python (blueprint choice, doc 03) vs TypeScript module
-  (one fewer runtime for a solo builder). Leaning TS until agent complexity demands
-  the Python ecosystem.
 - **Day 55:** Alpha hosting — blueprint Stage-1 AWS topology (doc 11) vs a
   fly.io/Railway-class shortcut for speed.

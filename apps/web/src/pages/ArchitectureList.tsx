@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createArchitecture, useArchitectures } from '../lib/queries';
+import { AiConsole } from './AiConsole';
 
 export function ArchitectureList() {
   const { data, isLoading, isError } = useArchitectures();
@@ -26,6 +27,8 @@ export function ArchitectureList() {
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem', maxWidth: 760, margin: '0 auto' }}>
       <h1>Architectures</h1>
+
+      <AiConsole />
 
       <div style={{ display: 'flex', gap: 8, margin: '1rem 0 1.5rem' }}>
         <input

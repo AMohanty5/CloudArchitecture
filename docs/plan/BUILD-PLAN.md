@@ -478,12 +478,28 @@ the Stage E AI work below; **the Stage E day numbers shift accordingly** (the in
 > each (AI service scaffold = Day 30, …, demo v2 = Day 37). Left un-renumbered to
 > avoid churn; will be normalized when Stage E starts.
 
-### Day 27 — AI service scaffold + provider wiring
-- [ ] `ai/` Python FastAPI app (or TS module if we decide to defer Python — decide today, record in DECISIONS.md): Anthropic SDK, prompt registry loader (doc 17 format), AgentTrace logging to disk/S3-compatible store
-- [ ] Job model: `POST /v1/ai/generate` → job id; SSE/WS progress channel
-- [ ] Token/cost accounting per job
+### Day 30 — AI service scaffold + provider wiring ✅ (2026-06-15) · (was "Day 27")
+**Decision recorded** (DECISIONS.md): the AI pipeline is a **TypeScript `ai` module in the
+core monolith**, not a separate Python app — one runtime, still extractable behind `ai/api.ts`.
+- [x] `ai` NestJS module: prompt-registry loader (doc 17 YAML at repo `ai/prompts/`, the
+  5 pipeline agents authored), an Anthropic provider (`@anthropic-ai/sdk`) with model-tier
+  routing (frontier→`claude-opus-4-8`, mid→`claude-sonnet-4-6`, small→`claude-haiku-4-5`)
+  + per-model pricing; client construction is lazy (no API key needed for the stub)
+- [x] Job model: `POST /api/v1/ai/generate` → `{ jobId }`; **SSE** progress channel
+  `GET /api/v1/ai/jobs/{id}/stream` (ReplaySubject → late subscribers see the whole run)
+- [x] Token/cost accounting per job (running totals → a `usage` event with an est. USD cost)
+- [x] Web: an "✨ Generate with AI" console on the list page that streams the pipeline
+  (router → requirements → planner → composer → critic → repair → usage → done)
 
-**Done when:** a stub job streams fake stages end-to-end into a web console panel.
+**Done when:** a stub job streams fake stages end-to-end into a web console panel ✅
+(6 backend tests: registry parse + the full streamed pipeline shape; the seed prompt
+streams all six stages, a usage line, and an `ai/gen-*` branch).
+
+> Day 30 notes: generation is **stubbed** — the orchestrator runs the real pipeline *shape*
+> and token-accounting, but no model is called yet (the provider + registry are wired for the
+> Composer day). Chose SSE over WebSocket (simpler, one-way, fits NestJS `@Sse`). **Deferred
+> from the blueprint's scaffold:** AgentTrace persistence (S3) and the intent router prompt —
+> both land when generation goes live. Adds `@anthropic-ai/sdk` + `yaml` to `@cac/core`.
 
 ### Day 28 — Requirements agent
 - [ ] Implement `requirements/v1` per doc 17 skeleton; output contract enforced (structured output)

@@ -5,14 +5,15 @@ import { RedisModule } from './redis/redis.module';
 import { ArchitectureModule } from './modules/architecture/api';
 import { CatalogModule } from './modules/catalog/api';
 import { EventsModule } from './modules/events/api';
+import { AiModule } from './modules/ai/api';
 
 /**
  * Modular monolith root (blueprint doc 15). Bounded-context modules live under
  * `modules/` and are imported only via their public `api.ts` (eslint-boundaries).
- * Active now: architecture, catalog, events; the rest are stubbed until their day.
+ * Active now: architecture, catalog, events, ai; the rest are stubbed until their day.
  */
 @Module({
-  imports: [DatabaseModule, RedisModule, ArchitectureModule, CatalogModule, EventsModule],
+  imports: [DatabaseModule, RedisModule, ArchitectureModule, CatalogModule, EventsModule, AiModule],
   controllers: [HealthController],
 })
 export class AppModule {}

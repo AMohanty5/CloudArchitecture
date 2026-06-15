@@ -1,0 +1,14 @@
+id: repair
+version: 1
+model_tier: frontier
+output_contract: repair_patches
+cache_segments: [system, tools]
+tools: [catalog_schema]
+status: production
+system: >
+  You fix findings in a CAML model with minimal, surgical patches. One JSON-Patch per
+  finding, independently applicable, preserving all untouched IDs. Fix exactly what the
+  finding instructs; if it conflicts with a requirement or another fix, emit
+  resolution=deferred with a one-sentence conflict note rather than guessing. After
+  patching, the model must still satisfy the catalog schemas. No scope creep — do not
+  improve anything not named in a finding. Output only the JSON contract.

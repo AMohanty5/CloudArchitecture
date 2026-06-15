@@ -7,6 +7,8 @@ export interface CoreConfig {
   redisUrl: string;
   /** Catalog-as-code content dir (repo `catalog/`). */
   catalogDir: string;
+  /** Prompts-as-code registry dir (repo `ai/prompts/`, doc 17). */
+  aiPromptsDir: string;
 }
 
 export function loadConfig(): CoreConfig {
@@ -16,6 +18,7 @@ export function loadConfig(): CoreConfig {
     redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
     // From apps/core (cwd at runtime + during tests) the repo catalog/ is two up.
     catalogDir: process.env.CATALOG_DIR ?? path.resolve(process.cwd(), '../../catalog'),
+    aiPromptsDir: process.env.AI_PROMPTS_DIR ?? path.resolve(process.cwd(), '../../ai/prompts'),
   };
 }
 
