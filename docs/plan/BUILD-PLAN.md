@@ -587,12 +587,41 @@ deep-links into the editor (live/keyed; the commit path runs in CI's integration
 > + commit-origin are a later write-path tweak). Live compose + the DB commit can't be run
 > here (no key / no Docker); the mocked loop against the real catalog is the CI coverage.
 
-### Days 31–32 — Critic + Repair agents, closed loop
-- [ ] `run_validation` tool (Day 25 engine); critic per doc 17; repair emitting per-finding patches; orchestrator loop (max 3 iterations)
-- [ ] Proposal UX: AI branch shown as a diff against current model (Day 19 UI reused) with accept/reject
-- [ ] Seeded-defect eval: mutate golden models, measure critic catch rate
+### Day 34 — Critic + Repair agents + closed loop ✅ (2026-06-15) · (was part of "Days 31–32")
+**Goal:** Catch and repair real weaknesses before the user sees the proposal.
+- [x] **Critic** (`critic.agent.ts`, frontier): a `run_validation` tool that runs the
+  **deterministic Day-25 engine** (ground truth) on the model under review, merged with the
+  model's requirements audit + adversarial findings → `{ verdict, findings[] }`
+- [x] **Repair** (`repair.agent.ts`, frontier): emits an **RFC-6902 patch** applied through
+  the CAML-aware `applyModelPatch` (re-validates post-apply) — a patch that would break the
+  model is rejected and its findings deferred, never emitting a broken model
+- [x] **Orchestrator** (`orchestrate.ts`): composer → critic; on `revise`, repair → critic,
+  up to 3 iterations; unresolved findings returned as `remainingFindings` (→ annotations).
+  Wired into the pipeline: the `critic` stage runs the loop and commits the **repaired**
+  model; the `repair` stage reports the outcome
+- [x] **Seeded-defect eval** (doc 07): a fixture with an injected weakness; mocked
+  critic/repair/orchestrate tests prove the loop fixes a defect and converges (real
+  `applyModelPatch` + `validateModel`); a live golden case (single-AZ DB **caught and
+  repaired**; unencrypted DB caught) gated on `ANTHROPIC_API_KEY`
 
-**Done when:** generation with a deliberate weakness (single-AZ DB) gets caught and repaired before the proposal reaches the user; accept merges it into history.
+**Done when:** generation with a deliberate weakness (single-AZ DB) gets caught and repaired
+before the proposal reaches the user ✅ (mocked loop verifies the mechanics in CI; the live
+golden case proves the catch+repair when keyed).
+
+> Day 34 notes: the critic calls the **same** deterministic engine as the canvas (doc 07:
+> "engines decide, AI explains"), so it can't invent or contradict findings. Repair emits a
+> patch (doc-17-faithful, ID-preserving) applied through the validated patcher — the live
+> risk is the model emitting correct array-index pointers; a bad patch defers cleanly rather
+> than failing the run. **Carried to Day 35:** the proposal-diff **accept/reject UX** (the
+> "accept merges into history" half of the Done-when) — today the repaired model is committed
+> directly. Live loop can't be run here (no key); the mocked loop is the CI coverage.
+
+### Day 35 — Proposal UX (diff accept/reject) — *pending* · (was part of "Days 31–32")
+- [ ] AI proposal shown as a **diff against the current model** (reuse the Day-19 diff UI) with accept/reject
+- [ ] Accept merges the proposal into history; reject discards the `ai/gen-*` lineage
+- [ ] Round out the seeded-defect eval into a small catch-rate suite (mutation set)
+
+**Done when:** an AI proposal lands as a reviewable diff; accept merges it into history.
 
 ### Days 33–34 — Generation hardening + demo v2
 - [ ] 30-case golden suite across workload classes; fix the worst failure modes

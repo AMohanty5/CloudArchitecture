@@ -16,6 +16,8 @@ import type { RequirementsResult } from './requirements.agent';
 import { runPlanner, unmappedRequirementIds } from './planner.agent';
 import type { PlannerResult } from './planner.agent';
 import { runComposer } from './composer.agent';
+import { orchestrateReview } from './orchestrate';
+import type { ReviewResult } from './orchestrate';
 import { loadPatterns } from './pattern-store';
 import type { PatternStore } from './pattern-store';
 import type { AiEvent, AiStage, GenerateInput } from './types';
@@ -110,6 +112,7 @@ export class GenerationService {
       let requirements: RequirementsResult | undefined;
       let plan: PlannerResult | undefined;
       let composed: CamlDocument | undefined;
+      let review: ReviewResult | undefined;
       const keyed = hasApiKey();
       for (const step of PIPELINE) {
         const tier = this.registry.byId.get(step.promptId ?? '')?.modelTier ?? step.tier;
@@ -164,6 +167,28 @@ export class GenerationService {
           } catch (err) {
             detail = `${step.detail} (compose failed: ${(err as Error).message})`;
           }
+        } else if (step.stage === 'critic' && keyed && composed && requirements) {
+          try {
+            review = await orchestrateReview(
+              { model: composed, requirements: requirements.requirements },
+              { client: anthropic(), model, criticSystem: this.systemFor('critic'), repairSystem: this.systemFor('repair') },
+            );
+            composed = review.finalModel; // commit the repaired model
+            const critical = review.initialFindings.filter((f) => f.severity === 'critical').length;
+            detail = `reviewed: ${review.initialFindings.length} finding(s)` + (critical ? ` (${critical} critical)` : '');
+            stepIn = review.usage.inputTokens; // includes the repair turns
+            stepOut = review.usage.outputTokens;
+          } catch (err) {
+            detail = `${step.detail} (review failed: ${(err as Error).message})`;
+          }
+        } else if (step.stage === 'repair' && keyed && review) {
+          // No model call here — surface the orchestrator's outcome (usage already counted).
+          detail =
+            review.remainingFindings.length === 0
+              ? `repaired ${review.repairs}; all findings resolved after ${review.iterations} review(s)`
+              : `repaired ${review.repairs}; ${review.remainingFindings.length} remaining (annotated) after ${review.iterations} review(s)`;
+          stepIn = 0;
+          stepOut = 0;
         } else {
           await sleep(step.delayMs);
         }
