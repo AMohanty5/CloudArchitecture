@@ -746,11 +746,12 @@ connector legend.
 
 **Done when:** edges render with semantic style + optional labels; bidirectional edges show both arrowheads; legend reflects the model ✅ (typecheck + 59 canvas tests pass; projector emits label/bidirectional, exact-shape edge test still green).
 
-### Day 44 — Icon system upgrade
+### Day 44 — Icon system upgrade ✅ (2026-06-21)
 **Goal:** Distinct service marks, not abbreviation tiles.
-- [ ] Per-category vector glyphs (middle ground) OR wire a licensed AWS icon pack behind the existing `/catalog/icons/{key}` endpoint (resolve the Backlog licensing item); icon manifest + fallback.
+- [x] Per-category vector glyphs drawn by the `/catalog/icons/{key}` generator (compute = chip, database = cylinder, storage = crate, networking = hub, security = shield, messaging = envelope, integration = swap-arrows, observability = pulse, analytics = bars, default = dot grid) on the category-tinted gradient tile, plus a cleaner short label (initials for multi-word keys). No frontend change — icons update across palette, nodes, and section rows.
+- [x] Graceful fallback: uncategorised/unknown keys → navy tile + dot-grid glyph.
 
-**Done when:** nodes render distinct glyphs per service/category; unknown keys still fall back gracefully.
+**Done when:** nodes render category glyphs; unknown keys fall back gracefully ✅ (core typecheck/build; smoke-tested across 7 categories — distinct glyph element sets + labels EC2/RDS/S3/AG…). NB: the official per-service AWS pack remains the Backlog licensing item — this is the middle-ground until that's cleared.
 
 ### Day 45 — Export parity + before/after + perf
 **Goal:** What you see is what you export; prove it scales.
