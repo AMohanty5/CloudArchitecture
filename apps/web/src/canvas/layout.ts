@@ -29,11 +29,14 @@ const ROOT_OPTIONS: Record<string, string> = {
   'elk.direction': 'RIGHT',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
   'elk.edgeRouting': 'ORTHOGONAL',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '60',
-  'elk.spacing.nodeNode': '40',
+  // Tighter spacing → a dense, architecture-diagram look (not a sparse dashboard).
+  'elk.layered.spacing.nodeNodeBetweenLayers': '40',
+  'elk.spacing.nodeNode': '20',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '16',
+  'elk.spacing.edgeNode': '12',
 };
-// Group padding leaves room for the kind-styled header (top) + a margin all round.
-const GROUP_OPTIONS: Record<string, string> = { 'elk.padding': '[top=36,left=18,bottom=18,right=18]' };
+// Group padding leaves room for the kind-styled header (top) + a tight margin all round.
+const GROUP_OPTIONS: Record<string, string> = { 'elk.padding': '[top=32,left=14,bottom=14,right=14]' };
 
 /** Build a hierarchical ELK graph from the projected nodes (parentId nesting) + edges. */
 export function toElkGraph(nodes: ProjectedNode[], edges: ProjectedEdge[]): ElkNode {

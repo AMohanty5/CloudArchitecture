@@ -61,6 +61,50 @@ interface CanvasProps {
   registerExporter?: (exporter: CanvasExporter) => void;
 }
 
+/** Connector semantics, mirroring `edgeStyle` in connections.ts (doc 06: kind-styled edges). */
+const LEGEND: Array<{ label: string; color: string; dash?: string }> = [
+  { label: 'Traffic', color: '#2563eb' },
+  { label: 'Data', color: '#059669', dash: '6 4' },
+  { label: 'Async / event', color: '#7c3aed', dash: '2 4' },
+  { label: 'Dependency', color: '#64748b', dash: '1 5' },
+];
+
+/** A small, non-interactive legend pinned to the canvas corner explaining connector kinds. */
+function ConnectorLegend() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 12,
+        left: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
+        padding: '9px 11px',
+        background: 'rgba(255,255,255,0.92)',
+        border: '1px solid #e5e7eb',
+        borderRadius: 9,
+        boxShadow: '0 1px 3px rgba(15,23,42,0.08)',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontSize: 11,
+        color: '#475569',
+        pointerEvents: 'none',
+        zIndex: 4,
+      }}
+    >
+      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: '#94a3b8' }}>Connections</div>
+      {LEGEND.map((l) => (
+        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="26" height="8" aria-hidden>
+            <line x1="1" y1="4" x2="25" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash} />
+          </svg>
+          <span>{l.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Inner flow — lives inside ReactFlowProvider so it can use the instance for screen→flow coords. */
 function Flow({
   model,
@@ -239,6 +283,7 @@ function Flow({
         <MiniMap pannable zoomable />
         <Controls showInteractive={false} />
       </ReactFlow>
+      {styledEdges.length > 0 ? <ConnectorLegend /> : null}
       {hint ? (
         <div
           style={{
