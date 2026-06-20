@@ -105,13 +105,17 @@ function glyphKey(category?: string): string {
   }
 }
 
-/** A 64×64 AWS-styled category tile for `key` — glyph + label — content for `image/svg+xml`. */
-export function serviceIconSvg(key: string, category?: string): string {
+/**
+ * A 64×64 AWS-styled category tile for `key` — glyph + label — content for `image/svg+xml`.
+ * `idSuffix` disambiguates the gradient id when many tiles are embedded in one document
+ * (e.g. the server SVG export), keeping ids unique.
+ */
+export function serviceIconSvg(key: string, category?: string, idSuffix?: string): string {
   const base = (category && CATEGORY_COLOR[category]) ?? DEFAULT_COLOR;
   const bottom = darken(base, 0.28);
   const label = shortLabel(key);
   const glyph = GLYPHS[glyphKey(category)] ?? GLYPHS.default;
-  const gradId = `g${glyphKey(category)}`;
+  const gradId = `g${glyphKey(category)}${idSuffix ? `-${idSuffix}` : ''}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="${escapeXml(key)}">
   <defs>
     <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">

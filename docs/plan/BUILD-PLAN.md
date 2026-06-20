@@ -753,12 +753,21 @@ connector legend.
 
 **Done when:** nodes render category glyphs; unknown keys fall back gracefully ✅ (core typecheck/build; smoke-tested across 7 categories — distinct glyph element sets + labels EC2/RDS/S3/AG…). NB: the official per-service AWS pack remains the Backlog licensing item — this is the middle-ground until that's cleared.
 
-### Day 45 — Export parity + before/after + perf
+### Day 45 — Export parity + before/after + perf ✅ (2026-06-21)
 **Goal:** What you see is what you export; prove it scales.
-- [ ] Server SVG/PNG export renders the new node/container/edge style (parity with the canvas).
-- [ ] Before/after capture in `docs/plan/DEMO.md`; perf check at ~500 nodes with the new styles.
+- [x] Server SVG renderer brought to close parity with the redesigned canvas: matching geometry (172×54 / theme), category-coloured container header bands, the **same category glyph icons** (reuses the catalog generator with unique gradient ids), role subtitles, and arrowhead kind-styled edges. PNG export already rasterises the live canvas → exact.
+- [x] Before/after table + reproduce steps + parity/perf notes in `docs/plan/DEMO.md`; perf checked — `project(500)` ≈ 1ms, canvas virtualizes (`onlyRenderVisibleElements`) + zoom-LOD.
 
-**Done when:** exported SVG/PNG visually matches the canvas; large-model render stays smooth.
+**Done when:** exported SVG/PNG visually matches the canvas; large-model render stays smooth ✅ (core typecheck; svg + export tests green; 500-node projector timing). Known gaps (documented): SVG omits section panels + ELK routing and uses humanized type subtitles; glyphs are per-category not per-service.
+
+---
+
+**Stage G complete (Days 38–45):** the canvas reads like an AWS Architecture Center diagram —
+a `theme.ts` design system, compact glyph-iconed blocks with role labels, category-coloured
+containers incl. rowified `tier` **section panels**, arrowhead/orthogonal connectors with a
+model-aware legend, drag + snap + alignment guides, layout presets, one-click templates, a title
+block, and close-parity SVG export. Remaining polish lives in the Backlog (official per-service
+AWS icon pack; semantic Multi-AZ/hub-spoke layouts; GenAI/Bedrock template + catalog entry).
 
 ---
 

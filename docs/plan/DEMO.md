@@ -151,3 +151,39 @@ result when either is exceeded.
 > Status: like Demo v1, this is the rehearsal artifact — run it once with a key on a live
 > stack, record the wall-clock + the golden-suite pass rate (`ANTHROPIC_API_KEY=… pnpm
 > --filter @cac/core test` runs the live evals), and fix the worst failure modes before showing it.
+
+---
+
+## Stage G — Architecture-diagram redesign (before / after)
+
+Driven by the target-vs-current review (2026-06-21). The canvas was reshaped from a
+sparse set of large service cards into an AWS-Architecture-Center-style diagram.
+
+| Aspect | Before | After (Stage G) |
+|---|---|---|
+| Service nodes | 190×64 card, 26px icon, raw `aws.ec2` id badge | 172×54 compact block, 30px **glyph** icon, **role** subtitle ("Relational database") |
+| Containers | faint tint, `label · kind` | category-coloured **header band** + tinted body; `tier` groups render as **section panels** (component rows inside) |
+| Edges | thin bezier + kind text labels | orthogonal **arrowhead** edges, hover emphasis, **bidirectional** markers, opt-in protocol:port label chips |
+| Icons | category-coloured abbreviation tile | per-category **vector glyphs** (chip / cylinder / shield / hub / …) + clean label |
+| Layout | single left→right ELK | **preset picker** (Layered →/↓, Compact, Tiered) persisted per-architecture |
+| Interaction | nudge + tidy only | **drag + snap-to-grid + alignment guides**; positions persist |
+| Start | blank canvas | **one-click templates** (3-tier, Serverless API, EKS, Data lake, Multi-AZ, Layered platform) |
+| Chrome | none | **title block** + collapsible **legend** (connectors + categories, model-aware) |
+
+### Reproduce (warm stack)
+1. **Architectures → Start from a template → "Layered platform"** — opens a populated, valid diagram.
+2. **Tidy up** dropdown → switch presets (Layered → / Tiered ↓) to re-flow.
+3. **🏷 Labels** → protocol/port chips on connections; hover an edge to emphasise.
+4. Drag a node — it snaps to the grid and shows blue alignment guides; reload to confirm it persisted.
+5. **⬇ Export → Download SVG** — the server SVG mirrors the canvas (compact nodes, category headers,
+   glyph icons, arrowhead edges). PNG export rasterises the live canvas (exact).
+
+### Parity + perf notes (say them)
+- **PNG** export is the live canvas rasterised → exact match. **SVG** is a separate true-vector
+  renderer brought to *close* parity (geometry, category colours, glyph icons, header bands,
+  arrowheads); it does **not** reproduce section panels or ELK routing, and uses humanized type
+  subtitles vs the canvas's curated role labels.
+- **Icons** are per-*category* glyphs (distinct per service only via the label); fully per-service
+  marks await the official AWS icon pack (licensing-gated backlog item).
+- **Perf:** `project(500)` runs in ~1ms; the canvas uses viewport virtualization
+  (`onlyRenderVisibleElements`) + zoom-LOD chips, so large models stay smooth.
