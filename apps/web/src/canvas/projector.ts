@@ -77,10 +77,10 @@ export interface Projection {
   edges: ProjectedEdge[];
 }
 
-const NODE_W = 190;
-const NODE_H = 64;
-const PAD = 18;
-const HEADER = 30;
+const NODE_W = 210;
+const NODE_H = 72;
+const PAD = 20;
+const HEADER = 40;
 const GAP = 18;
 
 function bucket<T>(map: Map<string | undefined, T[]>, key: string | undefined, value: T): void {

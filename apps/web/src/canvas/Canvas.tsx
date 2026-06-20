@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
+  BackgroundVariant,
   Controls,
+  MarkerType,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -94,13 +96,20 @@ function Flow({
     () =>
       edges.map((e) => {
         const ds = diffStatus?.[e.id];
+        const stroke = ds ? DIFF_COLOR[ds] : (e.style?.stroke ?? '#94a3b8');
+        const active = e.id === selectedEdgeId || Boolean(ds);
         return {
           ...e,
+          // Clean reference look: orthogonal routing, arrowheads, no inline kind labels.
+          type: 'smoothstep',
+          label: undefined,
+          markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 16, height: 16 },
           selected: e.id === selectedEdgeId,
           style: {
             ...e.style,
-            ...(ds ? { stroke: DIFF_COLOR[ds], strokeDasharray: ds === 'removed' ? '4 4' : undefined } : {}),
-            strokeWidth: e.id === selectedEdgeId || ds ? 3 : 1.5,
+            stroke,
+            ...(ds ? { strokeDasharray: ds === 'removed' ? '4 4' : undefined } : {}),
+            strokeWidth: active ? 2.5 : 1.75,
           },
         };
       }),
@@ -224,8 +233,9 @@ function Flow({
         onlyRenderVisibleElements
         minZoom={0.1}
         proOptions={{ hideAttribution: true }}
+        style={{ background: '#f8fafc' }}
       >
-        <Background />
+        <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#e2e8f0" />
         <MiniMap pannable zoomable />
         <Controls showInteractive={false} />
       </ReactFlow>

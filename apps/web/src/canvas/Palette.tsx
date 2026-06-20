@@ -32,17 +32,18 @@ function PaletteItem({ service }: { service: ServiceSummary }): React.JSX.Elemen
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        padding: '6px 8px',
+        gap: 9,
+        padding: '7px 9px',
         marginBottom: 6,
-        border: '1px solid #e2e8f0',
-        borderRadius: 8,
+        border: '1px solid #e5e7eb',
+        borderRadius: 10,
         background: '#fff',
+        boxShadow: '0 1px 2px rgba(15,23,42,0.05)',
         cursor: draggable ? 'grab' : 'not-allowed',
         opacity: draggable ? 1 : 0.5,
       }}
     >
-      <img src={service.iconUrl} width={22} height={22} alt="" />
+      <img src={service.iconUrl} width={28} height={28} alt="" style={{ borderRadius: 7, flexShrink: 0 }} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {service.name}

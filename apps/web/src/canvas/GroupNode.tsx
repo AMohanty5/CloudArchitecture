@@ -5,51 +5,61 @@ import type { DiffStatus } from './diffView';
 import { SEVERITY_COLOR } from './validationView';
 import type { Severity } from '../lib/queries';
 
-/** Header tint per group kind (blueprint doc 06: kind-styled containers). */
-const KIND_STYLE: Record<string, { bg: string; fg: string; border: string }> = {
-  network: { bg: 'rgba(37,99,235,0.10)', fg: '#1d4ed8', border: '#bfdbfe' },
-  subnet: { bg: 'rgba(13,148,136,0.10)', fg: '#0f766e', border: '#99f6e4' },
-  region: { bg: 'rgba(124,58,237,0.10)', fg: '#6d28d9', border: '#ddd6fe' },
-  zone: { bg: 'rgba(217,119,6,0.10)', fg: '#b45309', border: '#fde68a' },
-  tier: { bg: 'rgba(100,116,139,0.10)', fg: '#475569', border: '#e2e8f0' },
+/** Base accent colour per group kind (blueprint doc 06: kind-styled containers). */
+const KIND_COLOR: Record<string, string> = {
+  region: '#8b5cf6', // violet
+  network: '#2563eb', // blue (VPC)
+  subnet: '#0d9488', // teal
+  zone: '#d97706', // amber
+  tier: '#6366f1', // indigo
+  domain: '#db2777', // pink
+  account: '#0891b2', // cyan
+  cluster: '#7c3aed', // purple
+  custom: '#475569', // slate
 };
-const DEFAULT_STYLE = { bg: 'rgba(148,163,184,0.10)', fg: '#475569', border: '#e2e8f0' };
+const DEFAULT_COLOR = '#64748b';
+
+/** Translucent variants of the accent — header band, body wash, border. */
+function rgba(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
 
 /** A containment box (region / VPC / subnet / tier) with a kind-styled, labelled header. */
 function GroupNodeImpl({ data, selected }: NodeProps) {
   const d = data as { label?: string; kind?: string; invalid?: boolean; diffStatus?: DiffStatus; findingSeverity?: Severity };
-  const k = KIND_STYLE[d.kind ?? ''] ?? DEFAULT_STYLE;
+  const base = KIND_COLOR[d.kind ?? ''] ?? DEFAULT_COLOR;
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   const findingColor = d.findingSeverity ? SEVERITY_COLOR[d.findingSeverity] : undefined;
+  const borderColor = diffColor ?? findingColor ?? (d.invalid ? '#ef4444' : selected ? '#2563eb' : rgba(base, 0.45));
+
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
-        border: diffColor
-          ? `2px solid ${diffColor}`
-          : findingColor
-            ? `2px solid ${findingColor}`
-            : selected
-              ? '1px solid #2563eb'
-              : `1px solid ${d.invalid ? '#fca5a5' : k.border}`,
-        borderRadius: 12,
-        background: k.bg,
-        boxShadow: selected ? '0 0 0 2px rgba(37,99,235,0.30)' : undefined,
-        fontFamily: 'system-ui, sans-serif',
+        border: `1.5px solid ${borderColor}`,
+        borderRadius: 14,
+        background: rgba(base, 0.04),
+        boxShadow: selected ? `0 0 0 3px ${rgba(base, 0.18)}` : '0 1px 3px rgba(15,23,42,0.05)',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        overflow: 'hidden',
       }}
     >
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
-          padding: '5px 10px',
-          fontSize: 12,
-          fontWeight: 600,
-          color: k.fg,
-          borderBottom: `1px solid ${k.border}`,
+          gap: 7,
+          padding: '8px 12px',
+          fontSize: 11.5,
+          fontWeight: 700,
+          letterSpacing: 0.4,
+          textTransform: 'uppercase',
+          color: base,
+          background: rgba(base, 0.10),
+          borderBottom: `1px solid ${rgba(base, 0.20)}`,
         }}
       >
         {d.invalid ? <span title="Containment rule violated">⚠️</span> : null}
@@ -59,7 +69,10 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
             style={{ width: 9, height: 9, borderRadius: '50%', background: findingColor, flexShrink: 0 }}
           />
         ) : null}
-        {d.label} <span style={{ fontWeight: 400, opacity: 0.7 }}>· {d.kind}</span>
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
+        <span style={{ marginLeft: 'auto', fontWeight: 500, letterSpacing: 0, textTransform: 'none', color: rgba(base, 0.7), flexShrink: 0 }}>
+          {d.kind}
+        </span>
       </div>
     </div>
   );
