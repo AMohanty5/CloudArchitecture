@@ -739,12 +739,12 @@ connector legend.
 
 **Done when:** choosing a template creates a populated, pass-1+2-valid architecture that renders laid out ✅ — all 5 templates verified `commit=201` against the live write path (real pass-1 + pass-2 over the 60-service catalog); initial render uses the projector's nested layout, "Tidy up" applies ELK.
 
-### Day 43 — Connector semantics + routing polish
+### Day 43 — Connector semantics + routing polish ✅ (2026-06-21)
 **Goal:** Connectors that communicate intent.
-- [ ] Edge label chips (protocol/port) styled and toggleable; bidirectional markers; hover/selected emphasis.
-- [ ] Legend wired to the kinds actually present in the model.
+- [x] Edge label chips (protocol[:port], else kind) — styled white pill, toggled from a "🏷 Labels" toolbar button; bidirectional connections (`direction: 'bi'`) render arrowheads at both ends; hover thickens the edge (selected/diff already emphasised).
+- [x] Legend's Connections section reflects only the kinds present in the model (kind-keyed `CONNECTOR_KINDS`, expanded to all seven kinds).
 
-**Done when:** edges render with semantic style + optional labels; bidirectional edges show both arrowheads; legend reflects the model.
+**Done when:** edges render with semantic style + optional labels; bidirectional edges show both arrowheads; legend reflects the model ✅ (typecheck + 59 canvas tests pass; projector emits label/bidirectional, exact-shape edge test still green).
 
 ### Day 44 — Icon system upgrade
 **Goal:** Distinct service marks, not abbreviation tiles.

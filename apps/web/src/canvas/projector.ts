@@ -72,6 +72,8 @@ export interface ProjectedEdge {
   label: string;
   data: { kind: string };
   style: { stroke: string; strokeDasharray?: string };
+  /** Set when the connection is bidirectional (renders arrowheads at both ends). */
+  bidirectional?: boolean;
 }
 export interface Projection {
   nodes: ProjectedNode[];
@@ -190,7 +192,13 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
     const key = `${source}->${target}:${c.kind}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    edges.push({ id: c.id, source, target, label: c.kind, data: { kind: c.kind }, style: edgeStyle(c.kind) });
+    // Label = protocol[:port] when present, else the connection kind (shown only when labels are toggled on).
+    const protocol = typeof c.properties?.protocol === 'string' ? c.properties.protocol : undefined;
+    const port = typeof c.properties?.port === 'number' ? c.properties.port : undefined;
+    const label = protocol ? `${protocol}${port ? `:${port}` : ''}` : c.kind;
+    const edge: ProjectedEdge = { id: c.id, source, target, label, data: { kind: c.kind }, style: edgeStyle(c.kind) };
+    if (c.direction === 'bi') edge.bidirectional = true;
+    edges.push(edge);
   }
 
   return { nodes, edges };

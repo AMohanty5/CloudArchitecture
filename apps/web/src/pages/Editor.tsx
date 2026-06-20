@@ -117,6 +117,7 @@ export function Editor() {
     })();
     return stored && stored in LAYOUT_PRESETS ? (stored as LayoutStrategy) : DEFAULT_STRATEGY;
   });
+  const [showLabels, setShowLabels] = useState(false);
   const applyLayout = useCallback(
     (s: LayoutStrategy) => {
       setLayoutStrategy(s);
@@ -439,6 +440,22 @@ export function Editor() {
           ))}
         </select>
         <button
+          onClick={() => setShowLabels((v) => !v)}
+          title="Toggle connection labels (protocol/port)"
+          style={{
+            marginLeft: 4,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: showLabels ? '#eff6ff' : '#fff',
+            color: showLabels ? '#2563eb' : '#334155',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          🏷 Labels
+        </button>
+        <button
           onClick={() => setHistoryOpen((v) => !v)}
           title="History & diff"
           style={{
@@ -582,6 +599,7 @@ export function Editor() {
               evaluate={evaluate}
               onConnect={onConnect}
               onNodeMove={editor.moveNode}
+              showEdgeLabels={showLabels}
               findingSeverityById={findingSeverityById}
               registerExporter={(api) => (exporterRef.current = api)}
             />

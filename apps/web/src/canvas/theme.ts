@@ -56,12 +56,15 @@ export const CATEGORY_COLOR: Record<string, string> = {
   observability: '#E7157B',
 };
 
-/** Connector kinds → line style, mirroring `edgeStyle` in connections.ts. */
-export const CONNECTOR_LEGEND: Array<{ label: string; color: string; dash?: string }> = [
-  { label: 'Traffic', color: '#2563eb' },
-  { label: 'Data', color: '#059669', dash: '6 4' },
-  { label: 'Async / event', color: '#7c3aed', dash: '2 4' },
-  { label: 'Dependency', color: '#64748b', dash: '1 5' },
+/** Connector kinds → line style + label, mirroring `edgeStyle` in connections.ts. */
+export const CONNECTOR_KINDS: Array<{ kind: string; label: string; color: string; dash?: string }> = [
+  { kind: 'traffic', label: 'Traffic', color: '#2563eb' },
+  { kind: 'data', label: 'Data', color: '#059669', dash: '6 4' },
+  { kind: 'async', label: 'Async / event', color: '#7c3aed', dash: '2 4' },
+  { kind: 'replication', label: 'Replication', color: '#0891b2', dash: '6 4' },
+  { kind: 'dependency', label: 'Dependency', color: '#64748b', dash: '1 5' },
+  { kind: 'peering', label: 'Peering', color: '#94a3b8' },
+  { kind: 'identity', label: 'Identity', color: '#94a3b8' },
 ];
 
 /** The service categories shown in the canvas category legend (label → colour). */

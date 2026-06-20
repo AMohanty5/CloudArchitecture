@@ -22,7 +22,7 @@ import { SERVICE_DRAG_MIME } from './commands';
 import type { ServiceLike } from './commands';
 import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
-import { CATEGORY_LEGEND, CONNECTOR_LEGEND, FONT, NEUTRAL, RADIUS, SHADOW } from './theme';
+import { CATEGORY_LEGEND, CONNECTOR_KINDS, FONT, NEUTRAL, RADIUS, SHADOW } from './theme';
 import type { Severity } from '../lib/queries';
 
 const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
@@ -69,6 +69,8 @@ interface CanvasProps {
   subtitle?: string;
   /** When provided, nodes are draggable; receives the final parent-relative position on drag end. */
   onNodeMove?: (id: string, position: { x: number; y: number }) => void;
+  /** Show protocol/port labels on connections (toggled from the editor toolbar). */
+  showEdgeLabels?: boolean;
 }
 
 const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: NEUTRAL.muted };
@@ -99,8 +101,9 @@ function TitleBlock({ title, subtitle }: { title: string; subtitle?: string }) {
 }
 
 /** A collapsible legend (connector kinds + service categories) pinned to the canvas corner. */
-function CanvasLegend() {
+function CanvasLegend({ kinds }: { kinds: Set<string> }) {
   const [open, setOpen] = useState(true);
+  const connectors = CONNECTOR_KINDS.filter((c) => kinds.has(c.kind));
   return (
     <div
       style={{
@@ -126,17 +129,19 @@ function CanvasLegend() {
       </button>
       {open ? (
         <div style={{ display: 'flex', gap: 18, marginTop: 8 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={sectionLabel}>Connections</div>
-            {CONNECTOR_LEGEND.map((l) => (
-              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg width="26" height="8" aria-hidden>
-                  <line x1="1" y1="4" x2="25" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash} />
-                </svg>
-                <span>{l.label}</span>
-              </div>
-            ))}
-          </div>
+          {connectors.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={sectionLabel}>Connections</div>
+              {connectors.map((l) => (
+                <div key={l.kind} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="26" height="8" aria-hidden>
+                    <line x1="1" y1="4" x2="25" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash} />
+                  </svg>
+                  <span>{l.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <div style={sectionLabel}>Categories</div>
             {CATEGORY_LEGEND.map((c) => (
@@ -170,6 +175,7 @@ function Flow({
   title,
   subtitle,
   onNodeMove,
+  showEdgeLabels,
 }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
@@ -192,12 +198,18 @@ function Flow({
         const ds = diffStatus?.[e.id];
         const stroke = ds ? DIFF_COLOR[ds] : (e.style?.stroke ?? '#94a3b8');
         const active = e.id === selectedEdgeId || Boolean(ds);
+        const marker = { type: MarkerType.ArrowClosed, color: stroke, width: 16, height: 16 };
         return {
           ...e,
-          // Clean reference look: orthogonal routing, arrowheads, no inline kind labels.
+          // Clean reference look: orthogonal routing + arrowheads; labels are opt-in.
           type: 'smoothstep',
-          label: undefined,
-          markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 16, height: 16 },
+          label: showEdgeLabels ? e.label : undefined,
+          labelStyle: { fontSize: 10, fill: NEUTRAL.subtle, fontFamily: FONT },
+          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.9 },
+          labelBgPadding: [4, 2] as [number, number],
+          labelBgBorderRadius: 4,
+          markerEnd: marker,
+          markerStart: e.bidirectional ? marker : undefined,
           selected: e.id === selectedEdgeId,
           style: {
             ...e.style,
@@ -207,8 +219,10 @@ function Flow({
           },
         };
       }),
-    [edges, selectedEdgeId, diffStatus],
+    [edges, selectedEdgeId, diffStatus, showEdgeLabels],
   );
+  // Connector kinds present in the model → drives the legend's Connections section.
+  const presentKinds = useMemo(() => new Set(edges.map((e) => e.data.kind)), [edges]);
   const { screenToFlowPosition, getNodes, getInternalNode, getViewport } = useReactFlow();
   const editable = Boolean(onDropService);
   const selectable = Boolean(onSelect || onSelectEdge);
@@ -343,7 +357,7 @@ function Flow({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }} onDragOver={editable ? onDragOver : undefined} onDrop={editable ? onDrop : undefined}>
       {/* Animate position changes (e.g. ELK "Tidy up") with a short transform transition. */}
-      <style>{'.react-flow__node { transition: transform 0.28s ease; }'}</style>
+      <style>{'.react-flow__node { transition: transform 0.28s ease; } .react-flow__edge:hover .react-flow__edge-path { stroke-width: 3px; }'}</style>
       <ReactFlow
         nodes={selectedNodes as unknown as Node[]}
         edges={styledEdges as unknown as Edge[]}
@@ -388,7 +402,7 @@ function Flow({
         <div style={{ position: 'absolute', left: 0, right: 0, top: guides.y, height: 1, background: '#2563eb', pointerEvents: 'none', zIndex: 5 }} />
       ) : null}
       {title ? <TitleBlock title={title} subtitle={subtitle} /> : null}
-      {styledEdges.length > 0 ? <CanvasLegend /> : null}
+      {styledEdges.length > 0 ? <CanvasLegend kinds={presentKinds} /> : null}
       {hint ? (
         <div
           style={{
