@@ -5,11 +5,12 @@ import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
 import { SEVERITY_COLOR } from './validationView';
 import { roleLabel } from './roleLabels';
+import { FONT, NEUTRAL, NODE, RADIUS, SHADOW } from './theme';
 import type { Severity } from '../lib/queries';
 
 /** Compact architecture-block geometry — kept in sync with the projector's NODE_W / NODE_H. */
-const NODE_W = 172;
-const NODE_H = 54;
+const NODE_W = NODE.width;
+const NODE_H = NODE.height;
 
 /** Below this zoom the node renders as a low-detail chip (perf at scale, doc 06). */
 const LOD_ZOOM = 0.4;
@@ -62,11 +63,9 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     background: '#ffffff',
     border,
     opacity: d.diffStatus === 'removed' ? 0.55 : 1,
-    borderRadius: 10,
-    boxShadow: selected
-      ? '0 0 0 3px rgba(37,99,235,0.18), 0 2px 8px rgba(15,23,42,0.10)'
-      : '0 1px 2px rgba(15,23,42,0.08)',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
+    borderRadius: RADIUS.node,
+    boxShadow: selected ? SHADOW.nodeSelected : SHADOW.node,
+    fontFamily: FONT,
   };
 
   if (lowDetail) {
@@ -87,20 +86,20 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
       {d.service ? (
         <img
           src={`/api/v1/catalog/icons/${d.service}`}
-          width={30}
-          height={30}
+          width={NODE.iconSize}
+          height={NODE.iconSize}
           alt=""
           style={{ borderRadius: 7, flexShrink: 0 }}
         />
       ) : (
-        <div style={{ width: 30, height: 30, borderRadius: 7, background: '#f1f5f9', flexShrink: 0 }} />
+        <div style={{ width: NODE.iconSize, height: NODE.iconSize, borderRadius: 7, background: '#f1f5f9', flexShrink: 0 }} />
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontWeight: 600, fontSize: 12, color: '#1e293b', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.text, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {d.name}
         </div>
         {role ? (
-          <div style={{ fontSize: 9.5, color: '#94a3b8', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 9.5, color: NEUTRAL.muted, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {role}
           </div>
         ) : null}

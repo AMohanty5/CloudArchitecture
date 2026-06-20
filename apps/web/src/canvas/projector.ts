@@ -6,6 +6,7 @@
  */
 
 import { edgeStyle } from './connections';
+import { NODE } from './theme';
 
 export interface CamlComponent {
   id: string;
@@ -77,8 +78,8 @@ export interface Projection {
   edges: ProjectedEdge[];
 }
 
-const NODE_W = 172;
-const NODE_H = 54;
+const NODE_W: number = NODE.width;
+const NODE_H: number = NODE.height;
 const PAD = 14;
 const HEADER = 34;
 const GAP = 12;

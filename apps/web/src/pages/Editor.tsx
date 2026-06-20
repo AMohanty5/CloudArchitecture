@@ -519,11 +519,12 @@ export function Editor() {
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           {diffActive && diffView ? (
-            <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} />
+            <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} title={archName} subtitle="Comparing commits" />
           ) : model ? (
             <Canvas
               model={model as ProjectableModel}
               layout={layout}
+              title={archName}
               onDropService={onDropService}
               invalidGroupIds={invalidGroupIds}
               selectedId={selectedId}

@@ -694,6 +694,73 @@ Beyond Day 60 (sequenced from blueprint phases): real-time collab (Yjs server), 
 
 ---
 
+## Stage G — Architecture-diagram experience (Days 38–45)
+
+Make the canvas read like an **AWS Architecture Center / Cloudcraft** diagram, not a
+collection of service cards. Interleaves with Stage F. Driven by the target-vs-current
+review (2026-06-21). Already shipped pre-stage: compact blocks, role labels (not catalog
+ids), category-coloured containers, arrowhead/orthogonal edges, denser ELK layout, a
+connector legend.
+
+### Day 38 — Visual design system + canvas chrome ✅ (2026-06-21)
+**Goal:** One source of truth for the diagram's look, plus presentation chrome.
+- [x] `apps/web/src/canvas/theme.ts`: design tokens — category colours (by group kind + service category), node/container geometry, radii, shadow scale, typography, container tints. Refactored `ServiceNode`, `GroupNode`, `Palette`, legend to consume it (projector node dims sourced from `theme.NODE`).
+- [x] Title block overlay (diagram name + subtitle) pinned top-left of the canvas; optional `title`/`subtitle` props passed by `Editor` and `ProposalReview`.
+- [x] Collapsible legend with two sections — connector kinds + service categories — pinned bottom-left.
+
+**Done when:** node/container/legend colours all derive from `theme.ts`; the canvas shows a title block + category & connector legends; typecheck + canvas tests green ✅ (57 canvas tests pass).
+
+### Day 39 — Direct manipulation: drag, snap, align
+**Goal:** Move nodes like a real diagram tool.
+- [ ] Enable node dragging; persist drag to the layout sidecar (`onNodeDragStop` → position) through the existing autosave path.
+- [ ] Snap-to-grid (`snapGrid`) + alignment guides (helper lines on drag).
+- [ ] Keep arrow-key nudge + ELK tidy working alongside drag.
+
+**Done when:** dragging a node snaps to grid, shows alignment guides, and the position survives reload; nudge/tidy still work.
+
+### Day 40 — Layout presets
+**Goal:** Architecture-aware auto-layouts, not just left→right.
+- [ ] Layout strategies as ELK option sets: Layered LR (current), Top→Bottom, Multi-AZ (balanced), Hub-and-spoke, Serverless/event-driven.
+- [ ] Toolbar layout picker; chosen strategy drives `tidyUp`; persist the choice per architecture.
+
+**Done when:** switching a preset re-flows the diagram into that shape; the choice persists across reload.
+
+### Day 41 — Sectioned containers + nested panels
+**Goal:** Containers that look like the reference's layered panels.
+- [ ] Group render mode that lays children out as compact rows/sub-cards inside a labelled panel (the LiveKit/Pipecat-style sub-panels).
+- [ ] Layer bands (Users → App → Compute → Data → Security) as a top-level grouping option.
+
+**Done when:** a nested group renders as a sectioned panel; a layered model renders as horizontal bands matching the reference.
+
+### Day 42 — Architecture templates (one-click)
+**Goal:** Start from a polished reference, not a blank canvas.
+- [ ] Template library as committed CAML fixtures: 3-tier web (VPC+ALB+EC2+RDS), Serverless API, EKS platform, Data lake, Multi-AZ HA, GenAI/Bedrock.
+- [ ] "New from template" on the Architectures list → seeds a full model through the write path + an initial tidy layout.
+
+**Done when:** choosing a template creates a populated, pass-1+2-valid architecture that renders cleanly laid out.
+
+### Day 43 — Connector semantics + routing polish
+**Goal:** Connectors that communicate intent.
+- [ ] Edge label chips (protocol/port) styled and toggleable; bidirectional markers; hover/selected emphasis.
+- [ ] Legend wired to the kinds actually present in the model.
+
+**Done when:** edges render with semantic style + optional labels; bidirectional edges show both arrowheads; legend reflects the model.
+
+### Day 44 — Icon system upgrade
+**Goal:** Distinct service marks, not abbreviation tiles.
+- [ ] Per-category vector glyphs (middle ground) OR wire a licensed AWS icon pack behind the existing `/catalog/icons/{key}` endpoint (resolve the Backlog licensing item); icon manifest + fallback.
+
+**Done when:** nodes render distinct glyphs per service/category; unknown keys still fall back gracefully.
+
+### Day 45 — Export parity + before/after + perf
+**Goal:** What you see is what you export; prove it scales.
+- [ ] Server SVG/PNG export renders the new node/container/edge style (parity with the canvas).
+- [ ] Before/after capture in `docs/plan/DEMO.md`; perf check at ~500 nodes with the new styles.
+
+**Done when:** exported SVG/PNG visually matches the canvas; large-model render stays smooth.
+
+---
+
 ## Decisions log
 Maintained in `docs/plan/DECISIONS.md` — any day where we deviate from the blueprint
 (e.g. TS-instead-of-Python AI service, fly.io instead of AWS for alpha) gets a dated

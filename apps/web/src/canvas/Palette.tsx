@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCatalogSearch } from '../lib/queries';
 import type { ServiceSummary } from '../lib/queries';
 import { SERVICE_DRAG_MIME } from './commands';
+import { NEUTRAL, SHADOW } from './theme';
 
 function categoryOf(s: ServiceSummary): string {
   return s.abstractTypes?.[0]?.split('.')[0] ?? (s.groupKind ? 'network (group)' : 'other');
@@ -35,10 +36,10 @@ function PaletteItem({ service }: { service: ServiceSummary }): React.JSX.Elemen
         gap: 9,
         padding: '7px 9px',
         marginBottom: 6,
-        border: '1px solid #e5e7eb',
+        border: `1px solid ${NEUTRAL.border}`,
         borderRadius: 10,
         background: '#fff',
-        boxShadow: '0 1px 2px rgba(15,23,42,0.05)',
+        boxShadow: SHADOW.node,
         cursor: draggable ? 'grab' : 'not-allowed',
         opacity: draggable ? 1 : 0.5,
       }}

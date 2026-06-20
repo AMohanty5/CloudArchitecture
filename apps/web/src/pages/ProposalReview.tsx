@@ -109,7 +109,7 @@ export function ProposalReview() {
         {error ? (
           <p style={{ padding: '2rem', color: '#dc2626' }}>{error}</p>
         ) : model ? (
-          <Canvas model={model} layout={{}} diffStatus={status} />
+          <Canvas model={model} layout={{}} diffStatus={status} title={(model as { name?: string }).name ?? 'AI proposal'} subtitle="✨ Generated proposal" />
         ) : (
           <p style={{ padding: '2rem', color: '#64748b' }}>Loading proposal…</p>
         )}

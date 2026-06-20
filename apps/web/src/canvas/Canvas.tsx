@@ -22,6 +22,7 @@ import { SERVICE_DRAG_MIME } from './commands';
 import type { ServiceLike } from './commands';
 import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
+import { CATEGORY_LEGEND, CONNECTOR_LEGEND, FONT, NEUTRAL, RADIUS, SHADOW } from './theme';
 import type { Severity } from '../lib/queries';
 
 const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
@@ -59,48 +60,88 @@ interface CanvasProps {
   findingSeverityById?: Record<string, Severity>;
   /** Receives an export handle once the flow is mounted (PNG of the whole diagram). */
   registerExporter?: (exporter: CanvasExporter) => void;
+  /** Optional presentation title block pinned to the top-left of the canvas. */
+  title?: string;
+  subtitle?: string;
 }
 
-/** Connector semantics, mirroring `edgeStyle` in connections.ts (doc 06: kind-styled edges). */
-const LEGEND: Array<{ label: string; color: string; dash?: string }> = [
-  { label: 'Traffic', color: '#2563eb' },
-  { label: 'Data', color: '#059669', dash: '6 4' },
-  { label: 'Async / event', color: '#7c3aed', dash: '2 4' },
-  { label: 'Dependency', color: '#64748b', dash: '1 5' },
-];
+const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: NEUTRAL.muted };
 
-/** A small, non-interactive legend pinned to the canvas corner explaining connector kinds. */
-function ConnectorLegend() {
+/** A presentation title block pinned to the top-left of the canvas. */
+function TitleBlock({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        padding: '8px 14px',
+        background: 'rgba(255,255,255,0.92)',
+        border: `1px solid ${NEUTRAL.border}`,
+        borderRadius: RADIUS.group,
+        boxShadow: SHADOW.overlay,
+        fontFamily: FONT,
+        pointerEvents: 'none',
+        zIndex: 4,
+        maxWidth: 360,
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 700, color: NEUTRAL.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+      {subtitle ? <div style={{ fontSize: 11.5, color: NEUTRAL.subtle, marginTop: 1 }}>{subtitle}</div> : null}
+    </div>
+  );
+}
+
+/** A collapsible legend (connector kinds + service categories) pinned to the canvas corner. */
+function CanvasLegend() {
+  const [open, setOpen] = useState(true);
   return (
     <div
       style={{
         position: 'absolute',
         bottom: 12,
         left: 12,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 5,
-        padding: '9px 11px',
-        background: 'rgba(255,255,255,0.92)',
-        border: '1px solid #e5e7eb',
+        padding: open ? '9px 11px' : '6px 10px',
+        background: 'rgba(255,255,255,0.94)',
+        border: `1px solid ${NEUTRAL.border}`,
         borderRadius: 9,
-        boxShadow: '0 1px 3px rgba(15,23,42,0.08)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        boxShadow: SHADOW.overlay,
+        fontFamily: FONT,
         fontSize: 11,
-        color: '#475569',
-        pointerEvents: 'none',
+        color: NEUTRAL.subtle,
         zIndex: 4,
       }}
     >
-      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: '#94a3b8' }}>Connections</div>
-      {LEGEND.map((l) => (
-        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="26" height="8" aria-hidden>
-            <line x1="1" y1="4" x2="25" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash} />
-          </svg>
-          <span>{l.label}</span>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, ...sectionLabel }}
+      >
+        {open ? '▾' : '▸'} Legend
+      </button>
+      {open ? (
+        <div style={{ display: 'flex', gap: 18, marginTop: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={sectionLabel}>Connections</div>
+            {CONNECTOR_LEGEND.map((l) => (
+              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="26" height="8" aria-hidden>
+                  <line x1="1" y1="4" x2="25" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash} />
+                </svg>
+                <span>{l.label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={sectionLabel}>Categories</div>
+            {CATEGORY_LEGEND.map((c) => (
+              <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 11, height: 11, borderRadius: 3, background: c.color, flexShrink: 0 }} />
+                <span>{c.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      ) : null}
     </div>
   );
 }
@@ -120,6 +161,8 @@ function Flow({
   diffStatus,
   findingSeverityById,
   registerExporter,
+  title,
+  subtitle,
 }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
@@ -283,7 +326,8 @@ function Flow({
         <MiniMap pannable zoomable />
         <Controls showInteractive={false} />
       </ReactFlow>
-      {styledEdges.length > 0 ? <ConnectorLegend /> : null}
+      {title ? <TitleBlock title={title} subtitle={subtitle} /> : null}
+      {styledEdges.length > 0 ? <CanvasLegend /> : null}
       {hint ? (
         <div
           style={{
