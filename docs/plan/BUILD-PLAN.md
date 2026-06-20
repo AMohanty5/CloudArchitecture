@@ -725,12 +725,12 @@ connector legend.
 
 **Done when:** switching a preset re-flows the diagram into that shape; the choice persists across reload ✅ (typecheck + layout tests pass; default preset keeps the asserted layered/RIGHT/INCLUDE_CHILDREN options).
 
-### Day 41 — Sectioned containers + nested panels
+### Day 41 — Sectioned containers + nested panels ✅ (2026-06-21)
 **Goal:** Containers that look like the reference's layered panels.
-- [ ] Group render mode that lays children out as compact rows/sub-cards inside a labelled panel (the LiveKit/Pipecat-style sub-panels).
-- [ ] Layer bands (Users → App → Compute → Data → Security) as a top-level grouping option.
+- [x] Section-panel render mode: a `tier` group whose direct children are all components renders them as compact rows (icon + name + role) inside the labelled panel — not as separate cards. Projector rowifies them, sizes the panel, and remaps/dedupes their edges to the panel (container-to-container, like the reference); ELK treats the panel as a fixed-size leaf so Tidy up won't collapse it.
+- [x] Layer bands: a "Layered platform" template (Channels → Edge → Application → Data → Security) of stacked `tier` sections that flow into bands under the layered preset.
 
-**Done when:** a nested group renders as a sectioned panel; a layered model renders as horizontal bands matching the reference.
+**Done when:** a tier group renders as a sectioned panel; a layered model renders as bands ✅ — covered by 2 new projector tests (rows not emitted as nodes; edges remap + dedupe to the panel) and the `layered-platform` template (verified `commit=201`). Trade-off: section rows are presentational (not individually selectable/connectable) — use non-`tier` groups for per-component editing.
 
 ### Day 42 — Architecture templates (one-click) ✅ (2026-06-21)
 **Goal:** Start from a polished reference, not a blank canvas.

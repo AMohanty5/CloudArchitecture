@@ -83,6 +83,14 @@ const NODE_H: number = NODE.height;
 const PAD = 14;
 const HEADER = 34;
 const GAP = 12;
+/** Section-panel geometry (Day 41): a `tier` group renders its components as compact rows. */
+const ROW_H = 30;
+const SECTION_W = NODE_W + 2 * PAD;
+
+/** A `tier` group whose direct children are all components renders as a section panel. */
+function isSectionGroup(groupId: string, groupsByParent: Map<string | undefined, CamlGroup[]>, componentsByGroup: Map<string | undefined, CamlComponent[]>, kind: string): boolean {
+  return kind === 'tier' && (componentsByGroup.get(groupId)?.length ?? 0) > 0 && (groupsByParent.get(groupId)?.length ?? 0) === 0;
+}
 
 function bucket<T>(map: Map<string | undefined, T[]>, key: string | undefined, value: T): void {
   const list = map.get(key);
@@ -97,6 +105,8 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
   for (const c of model.components ?? []) bucket(componentsByGroup, c.group, c);
 
   const nodes: ProjectedNode[] = [];
+  // componentId → section group it is rendered inside as a row (its node is not emitted).
+  const rowifiedToGroup = new Map<string, string>();
 
   // Lay out the direct children of `parentId`, positioned relative to it, and
   // return the content size so the parent group node can be sized to fit.
@@ -107,17 +117,30 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
 
     for (const g of groupsByParent.get(parentId) ?? []) {
       y += GAP;
+      const section = isSectionGroup(g.id, groupsByParent, componentsByGroup, g.kind);
+      const rows = section ? (componentsByGroup.get(g.id) ?? []) : [];
       const node: ProjectedNode = {
         id: g.id,
         type: 'group',
         parentId,
         extent: parentId ? 'parent' : undefined,
         position: { x: startX, y },
-        data: { label: g.name, kind: g.kind },
-        style: { width: NODE_W, height: HEADER }, // backfilled after children
+        data: {
+          label: g.name,
+          kind: g.kind,
+          ...(section ? { items: rows.map((c) => ({ id: c.id, name: c.name, type: c.type, service: c.binding?.service })) } : {}),
+        },
+        style: { width: NODE_W, height: HEADER }, // backfilled below
       };
       nodes.push(node); // parent must precede its children in the node list
-      const size = layoutContainer(g.id);
+      let size: { width: number; height: number };
+      if (section) {
+        // Components become rows inside this panel — not separate nodes; edges remap to it.
+        for (const c of rows) rowifiedToGroup.set(c.id, g.id);
+        size = { width: SECTION_W, height: HEADER + rows.length * ROW_H + PAD };
+      } else {
+        size = layoutContainer(g.id);
+      }
       node.style = size;
       y += size.height;
       maxRight = Math.max(maxRight, startX + size.width);
@@ -155,14 +178,20 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
     }
   }
 
-  const edges: ProjectedEdge[] = (model.connections ?? []).map((c) => ({
-    id: c.id,
-    source: c.from,
-    target: c.to,
-    label: c.kind,
-    data: { kind: c.kind },
-    style: edgeStyle(c.kind),
-  }));
+  // Edges: an endpoint rendered as a section row has no node, so re-point it to the
+  // containing panel (container-to-container, like a reference diagram). Drop edges that
+  // collapse within one panel, and collapse duplicate panel↔panel edges of the same kind.
+  const edges: ProjectedEdge[] = [];
+  const seen = new Set<string>();
+  for (const c of model.connections ?? []) {
+    const source = rowifiedToGroup.get(c.from) ?? c.from;
+    const target = rowifiedToGroup.get(c.to) ?? c.to;
+    if (source === target) continue; // intra-section
+    const key = `${source}->${target}:${c.kind}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({ id: c.id, source, target, label: c.kind, data: { kind: c.kind }, style: edgeStyle(c.kind) });
+  }
 
   return { nodes, edges };
 }

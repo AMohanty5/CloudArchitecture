@@ -60,6 +60,39 @@ describe('project', () => {
     expect(project({ components: [] })).toEqual({ nodes: [], edges: [] });
   });
 
+  describe('section panels (tier groups)', () => {
+    const sectioned: ProjectableModel = {
+      groups: [
+        { id: 'orchestration', kind: 'tier', name: 'Orchestration' },
+        { id: 'data', kind: 'tier', name: 'Data' },
+      ],
+      components: [
+        { id: 'svc-a', name: 'A', type: 'compute.serverless.function', binding: { provider: 'aws', service: 'aws.lambda' }, group: 'orchestration' },
+        { id: 'svc-b', name: 'B', type: 'compute.serverless.function', binding: { provider: 'aws', service: 'aws.lambda' }, group: 'orchestration' },
+        { id: 'db', name: 'DB', type: 'database.keyvalue', binding: { provider: 'aws', service: 'aws.dynamodb' }, group: 'data' },
+      ],
+      connections: [
+        { id: 'a-db', from: 'svc-a', to: 'db', kind: 'data' },
+        { id: 'b-db', from: 'svc-b', to: 'db', kind: 'data' },
+      ],
+    };
+
+    it('renders a tier group as a panel with item rows, not separate service nodes', () => {
+      const { nodes } = project(sectioned);
+      const orch = nodes.find((n) => n.id === 'orchestration')!;
+      expect(orch.type).toBe('group');
+      expect((orch.data.items as unknown[]).length).toBe(2);
+      expect(nodes.find((n) => n.id === 'svc-a')).toBeUndefined();
+      expect(nodes.find((n) => n.id === 'db')).toBeUndefined();
+    });
+
+    it('remaps section-row edges to the panel and dedupes equal panel↔panel edges', () => {
+      const { edges } = project(sectioned);
+      expect(edges).toHaveLength(1); // a-db + b-db → orchestration→data (data), deduped
+      expect(edges[0]).toMatchObject({ source: 'orchestration', target: 'data', data: { kind: 'data' } });
+    });
+  });
+
   it('projects a 500-component model with correct counts and parent-before-child order', () => {
     const model = generateLargeModel(500);
     const { nodes, edges } = project(model);

@@ -83,6 +83,15 @@ export function toElkGraph(nodes: ProjectedNode[], edges: ProjectedEdge[], strat
     else roots.push(elk);
   }
 
+  // A "group" with no child nodes (e.g. a Day-41 section panel whose components render
+  // as rows) must be laid out as a fixed-size leaf, else ELK shrinks it to its padding.
+  for (const elk of elkById.values()) {
+    if (elk.children && elk.children.length === 0) {
+      delete elk.children;
+      delete elk.layoutOptions;
+    }
+  }
+
   return {
     id: 'root',
     layoutOptions: rootOptions(strategy),
