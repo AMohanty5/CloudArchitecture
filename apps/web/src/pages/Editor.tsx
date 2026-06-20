@@ -73,7 +73,7 @@ const SAVE_BADGE: Record<SaveState, { label: string; color: string }> = {
   saving: { label: '● Saving…', color: '#d97706' },
   saved: { label: '● Saved', color: '#16a34a' },
   conflict: { label: '● Conflict — reloaded from server', color: '#ea580c' },
-  error: { label: '● Save failed — reverted', color: '#dc2626' },
+  error: { label: '● Invalid — fix to save', color: '#dc2626' },
 };
 
 /** Group ids reachable from `rootId` (its descendants) — invalid re-parent targets. */

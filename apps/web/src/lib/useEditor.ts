@@ -189,11 +189,11 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
         setSaveState('conflict');
         await load(); // rebase onto server head (discards the optimistic change + history)
       } else {
-        // 422 (invalid) or other: roll back to the last committed model and surface
-        // the catalog/structural messages so the inspector can show them inline.
+        // 422 (invalid): keep the working model so the offending value stays in the
+        // inspector next to its error — reverting here emptied the field and left a
+        // stale, contextless message. The change just isn't persisted until valid.
         setSaveState('error');
         setErrors((error as unknown as { errors?: CommitError[] } | undefined)?.errors ?? []);
-        if (committedRef.current) reset(committedRef.current, layoutRef.current);
       }
       return;
     }
