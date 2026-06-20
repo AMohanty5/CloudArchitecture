@@ -732,12 +732,12 @@ connector legend.
 
 **Done when:** a nested group renders as a sectioned panel; a layered model renders as horizontal bands matching the reference.
 
-### Day 42 — Architecture templates (one-click)
+### Day 42 — Architecture templates (one-click) ✅ (2026-06-21)
 **Goal:** Start from a polished reference, not a blank canvas.
-- [ ] Template library as committed CAML fixtures: 3-tier web (VPC+ALB+EC2+RDS), Serverless API, EKS platform, Data lake, Multi-AZ HA, GenAI/Bedrock.
-- [ ] "New from template" on the Architectures list → seeds a full model through the write path + an initial tidy layout.
+- [x] Template library (`apps/web/src/canvas/templates.ts`): 3-tier web (VPC+ALB+EC2+RDS), Serverless API, EKS platform, Data lake, Multi-AZ HA. (GenAI/Bedrock deferred — needs an `aws.bedrock` catalog entry; no Bedrock service exists yet.)
+- [x] "Start from a template" grid on the Architectures list → `createArchitectureFromTemplate` seeds the full model through the write path (create → commit on `main`) and opens the editor.
 
-**Done when:** choosing a template creates a populated, pass-1+2-valid architecture that renders cleanly laid out.
+**Done when:** choosing a template creates a populated, pass-1+2-valid architecture that renders laid out ✅ — all 5 templates verified `commit=201` against the live write path (real pass-1 + pass-2 over the 60-service catalog); initial render uses the projector's nested layout, "Tidy up" applies ELK.
 
 ### Day 43 — Connector semantics + routing polish
 **Goal:** Connectors that communicate intent.

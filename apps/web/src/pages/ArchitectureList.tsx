@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { createArchitecture, useArchitectures } from '../lib/queries';
+import { createArchitecture, createArchitectureFromTemplate, useArchitectures } from '../lib/queries';
+import { TEMPLATES } from '../canvas/templates';
 import { AiConsole } from './AiConsole';
 
 export function ArchitectureList() {
@@ -10,6 +11,7 @@ export function ArchitectureList() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [seeding, setSeeding] = useState<string | null>(null);
 
   const onCreate = async (): Promise<void> => {
     const trimmed = name.trim();
@@ -21,6 +23,20 @@ export function ArchitectureList() {
       navigate(`/architectures/${id}`);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const onUseTemplate = async (key: string): Promise<void> => {
+    if (seeding) return;
+    const tmpl = TEMPLATES.find((t) => t.key === key);
+    if (!tmpl) return;
+    setSeeding(key);
+    try {
+      const { id } = await createArchitectureFromTemplate(tmpl.defaultName, tmpl.model);
+      await queryClient.invalidateQueries({ queryKey: ['architectures'] });
+      navigate(`/architectures/${id}`);
+    } catch {
+      setSeeding(null);
     }
   };
 
@@ -56,6 +72,34 @@ export function ArchitectureList() {
         >
           {creating ? 'Creating…' : 'New architecture'}
         </button>
+      </div>
+
+      <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: '#94a3b8', fontWeight: 700, margin: '0 0 8px' }}>
+        Start from a template
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, marginBottom: '1.75rem' }}>
+        {TEMPLATES.map((t) => {
+          const busy = seeding === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => void onUseTemplate(t.key)}
+              disabled={Boolean(seeding)}
+              style={{
+                textAlign: 'left',
+                padding: '12px 14px',
+                borderRadius: 10,
+                border: '1px solid #e2e8f0',
+                background: busy ? '#f1f5f9' : '#fff',
+                boxShadow: '0 1px 2px rgba(15,23,42,0.05)',
+                cursor: seeding ? 'default' : 'pointer',
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{busy ? 'Creating…' : t.label}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3, lineHeight: 1.4 }}>{t.description}</div>
+            </button>
+          );
+        })}
       </div>
 
       {isLoading ? <p style={{ color: '#64748b' }}>Loading…</p> : null}

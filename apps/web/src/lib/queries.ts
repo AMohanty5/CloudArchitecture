@@ -18,6 +18,35 @@ export async function createArchitecture(name: string): Promise<{ id: string }> 
   return data as { id: string };
 }
 
+/**
+ * Create an architecture and seed its `main` branch with a template body (groups +
+ * components + connections). Merges the body into the fresh model envelope (preserving
+ * the server-assigned id/camlVersion/metadata) and commits it through the write path,
+ * so the result is a normal, pass-1/pass-2-validated commit.
+ */
+export async function createArchitectureFromTemplate(
+  name: string,
+  body: { groups: unknown[]; components: unknown[]; connections: unknown[] },
+): Promise<{ id: string }> {
+  const { id } = await createArchitecture(name);
+  const got = await client.GET('/architectures/{id}/branches/{branch}/model', { params: { path: { id, branch: 'main' } } });
+  if (got.error || !got.data) throw new Error('failed to load seed model');
+  const parent = got.response.headers.get('etag');
+  if (!parent) throw new Error('missing initial commit hash');
+  const model = { ...(got.data as Record<string, unknown>), name, groups: body.groups, components: body.components, connections: body.connections };
+  const { error } = await client.POST('/architectures/{id}/branches/{branch}/commits', {
+    params: { path: { id, branch: 'main' } },
+    body: {
+      expectedParent: parent,
+      message: `Seed from template: ${name}`,
+      model: model as unknown as Record<string, never>,
+      layout: {} as Record<string, never>,
+    },
+  });
+  if (error) throw new Error('failed to seed template');
+  return { id };
+}
+
 export function useArchitectures(): UseQueryResult<ArchitectureSummary[]> {
   return useQuery({
     queryKey: ['architectures'],
