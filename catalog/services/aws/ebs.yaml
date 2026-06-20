@@ -1,0 +1,19 @@
+key: aws.ebs
+provider: aws
+name: Amazon EBS
+description: Block storage volumes attached to EC2 instances.
+status: ga
+icon: aws/storage/ebs.svg
+docs: https://docs.aws.amazon.com/ebs/
+abstractTypes: [storage.block]
+capabilities:
+  snapshots: { supported: true }
+  encryption: { supported: true }
+properties:
+  volumeType: { type: string, enum: [gp3, gp2, io2, io1, st1, sc1], default: gp3 }
+  sizeGb: { type: integer, minimum: 1, maximum: 65536, default: 20, costDimension: gb_month }
+  iops: { type: integer, minimum: 100, maximum: 256000 }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [dependency], from: [compute.vm, compute.vm.autoscaling_group] }

@@ -1,0 +1,20 @@
+key: aws.ecs
+provider: aws
+name: Amazon ECS Cluster
+description: Container orchestrator running tasks/services on Fargate or EC2 capacity.
+status: ga
+icon: aws/compute/ecs.svg
+docs: https://docs.aws.amazon.com/ecs/
+abstractTypes: [compute.container.orchestrator]
+capabilities:
+  fargate: { supported: true }
+  capacityProviders: { supported: true }
+properties:
+  capacityProvider:
+    type: string
+    enum: [fargate, fargate-spot, ec2]
+    default: fargate
+  containerInsights: { type: boolean, default: false }
+connectionRules:
+  outbound:
+    - { kinds: [dependency], to: [compute.container.registry] }

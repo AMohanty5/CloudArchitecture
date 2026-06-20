@@ -1,0 +1,16 @@
+key: aws.security_group
+provider: aws
+name: Security Group
+description: Stateful virtual firewall attached to ENIs (instances, ENIs, load balancers).
+status: ga
+icon: aws/networking/security_group.svg
+docs: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html
+abstractTypes: [network.firewall.network]
+capabilities:
+  stateful: { supported: true }
+properties:
+  ingressCount: { type: integer, minimum: 0, description: Number of inbound rules. }
+  egressCount: { type: integer, minimum: 0, description: Number of outbound rules. }
+connectionRules:
+  outbound:
+    - { kinds: [dependency], to: [compute.vm, compute.vm.autoscaling_group, compute.container.orchestrator.service, network.loadbalancer.l7, network.loadbalancer.l4] }

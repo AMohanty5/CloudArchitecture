@@ -1,0 +1,17 @@
+key: aws.direct_connect
+provider: aws
+name: AWS Direct Connect
+description: Dedicated private network link between on-premises and AWS.
+status: ga
+icon: aws/networking/direct_connect.svg
+docs: https://docs.aws.amazon.com/directconnect/
+abstractTypes: [network.link.direct]
+properties:
+  bandwidth:
+    type: string
+    enum: [50Mbps, 100Mbps, 1Gbps, 10Gbps, 100Gbps]
+    default: 1Gbps
+  redundant: { type: boolean, default: false }
+connectionRules:
+  outbound:
+    - { kinds: [peering], to: [network.gateway.transit, network.link.peering] }

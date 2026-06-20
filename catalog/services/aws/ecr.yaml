@@ -1,0 +1,21 @@
+key: aws.ecr
+provider: aws
+name: Amazon ECR
+description: Managed container image registry.
+status: ga
+icon: aws/compute/ecr.svg
+docs: https://docs.aws.amazon.com/ecr/
+abstractTypes: [compute.container.registry]
+capabilities:
+  imageScanning: { supported: true }
+  lifecyclePolicies: { supported: true }
+properties:
+  imageTagMutability:
+    type: string
+    enum: [mutable, immutable]
+    default: mutable
+  scanOnPush: { type: boolean, default: true, securityRelevant: true }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [dependency], from: [compute.container.orchestrator, compute.container.orchestrator.service, compute.serverless.function] }

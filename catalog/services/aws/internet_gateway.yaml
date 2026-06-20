@@ -1,0 +1,15 @@
+key: aws.internet_gateway
+provider: aws
+name: Internet Gateway
+description: Horizontally scaled gateway giving a VPC public internet access.
+status: ga
+icon: aws/networking/internet_gateway.svg
+docs: https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html
+abstractTypes: [network.gateway.internet]
+properties:
+  attached: { type: boolean, default: true, description: Whether the gateway is attached to a VPC. }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [external] }
+  outbound:
+    - { kinds: [traffic], to: [network.loadbalancer.l7, network.loadbalancer.l4, network.gateway.api] }

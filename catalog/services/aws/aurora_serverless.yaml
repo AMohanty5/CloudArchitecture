@@ -1,0 +1,22 @@
+key: aws.aurora_serverless
+provider: aws
+name: Amazon Aurora Serverless v2
+description: On-demand auto-scaling Aurora capacity measured in ACUs.
+status: ga
+icon: aws/database/aurora.svg
+docs: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html
+abstractTypes: [database.relational.serverless]
+capabilities:
+  autoscaling: { supported: true, mechanism: acu }
+  scaleToZero: { supported: false }
+properties:
+  engine: { type: string, enum: [aurora-postgresql, aurora-mysql], default: aurora-postgresql }
+  minCapacityAcu: { type: number, minimum: 0.5, maximum: 128, default: 0.5, costDimension: acu_hours }
+  maxCapacityAcu: { type: number, minimum: 1, maximum: 128, default: 16, costDimension: acu_hours }
+  storageEncrypted: { type: boolean, default: true, securityRelevant: true }
+  kmsKeyRef: { type: string }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [postgres, mysql], from: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group] }
+  outbound:
+    - { kinds: [replication], to: [database.relational] }

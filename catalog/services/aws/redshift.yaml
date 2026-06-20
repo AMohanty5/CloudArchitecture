@@ -1,0 +1,19 @@
+key: aws.redshift
+provider: aws
+name: Amazon Redshift
+description: Petabyte-scale managed data warehouse.
+status: ga
+icon: aws/database/redshift.svg
+docs: https://docs.aws.amazon.com/redshift/
+abstractTypes: [database.warehouse]
+capabilities:
+  serverless: { supported: true }
+  concurrencyScaling: { supported: true }
+properties:
+  mode: { type: string, enum: [provisioned, serverless], default: provisioned }
+  nodeType: { type: string, default: ra3.xlplus, costDimension: instance_hours }
+  nodeCount: { type: integer, minimum: 1, default: 2 }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [postgres], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, integration.etl] }

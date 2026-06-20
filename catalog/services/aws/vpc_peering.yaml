@@ -1,0 +1,14 @@
+key: aws.vpc_peering
+provider: aws
+name: VPC Peering Connection
+description: Private routing between two VPCs without traversing the internet.
+status: ga
+icon: aws/networking/vpc_peering.svg
+docs: https://docs.aws.amazon.com/vpc/latest/peering/
+abstractTypes: [network.link.peering]
+properties:
+  crossRegion: { type: boolean, default: false }
+  crossAccount: { type: boolean, default: false }
+connectionRules:
+  outbound:
+    - { kinds: [peering], to: [network.link.peering, network.gateway.transit] }

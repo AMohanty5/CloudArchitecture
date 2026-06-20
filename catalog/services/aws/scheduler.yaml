@@ -1,0 +1,16 @@
+key: aws.scheduler
+provider: aws
+name: Amazon EventBridge Scheduler
+description: Serverless scheduler invoking targets on cron or rate expressions.
+status: ga
+icon: aws/integration/scheduler.svg
+docs: https://docs.aws.amazon.com/scheduler/
+abstractTypes: [integration.scheduler]
+capabilities:
+  flexibleTimeWindows: { supported: true }
+properties:
+  scheduleExpression: { type: string, default: "rate(1 hour)" }
+  timezone: { type: string, default: UTC }
+connectionRules:
+  outbound:
+    - { kinds: [async], to: [compute.serverless.function, integration.workflow, messaging.queue, compute.batch] }

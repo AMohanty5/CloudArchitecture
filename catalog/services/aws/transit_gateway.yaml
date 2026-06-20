@@ -1,0 +1,18 @@
+key: aws.transit_gateway
+provider: aws
+name: AWS Transit Gateway
+description: Regional hub interconnecting VPCs and on-premises networks.
+status: ga
+icon: aws/networking/transit_gateway.svg
+docs: https://docs.aws.amazon.com/vpc/latest/tgw/
+abstractTypes: [network.gateway.transit]
+capabilities:
+  multiAccount: { supported: true }
+properties:
+  amazonSideAsn: { type: integer, minimum: 64512, maximum: 65534, default: 64512 }
+  defaultRouteTableAssociation: { type: boolean, default: true }
+connectionRules:
+  inbound:
+    - { kinds: [peering], from: [network.link.peering, network.link.direct, network.gateway.vpn] }
+  outbound:
+    - { kinds: [peering], to: [network.gateway.transit] }

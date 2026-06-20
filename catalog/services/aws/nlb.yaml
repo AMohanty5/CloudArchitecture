@@ -1,0 +1,26 @@
+key: aws.nlb
+provider: aws
+name: Network Load Balancer
+description: Layer-4 TCP/UDP load balancer for ultra-low-latency, high-throughput traffic.
+status: ga
+icon: aws/networking/nlb.svg
+docs: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/
+abstractTypes: [network.loadbalancer.l4]
+capabilities:
+  staticIp: { supported: true }
+  preserveSourceIp: { supported: true }
+properties:
+  scheme:
+    type: string
+    enum: [internet-facing, internal]
+    default: internet-facing
+  ipAddressType:
+    type: string
+    enum: [ipv4, dualstack]
+    default: ipv4
+  crossZoneEnabled: { type: boolean, default: false }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], protocols: [tcp, udp, tls], from: [network.gateway.internet, network.loadbalancer.global, external] }
+  outbound:
+    - { kinds: [traffic], to: [compute.vm.autoscaling_group, compute.container.orchestrator.service] }

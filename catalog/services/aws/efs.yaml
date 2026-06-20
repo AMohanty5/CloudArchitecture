@@ -1,0 +1,18 @@
+key: aws.efs
+provider: aws
+name: Amazon EFS
+description: Elastic NFS file system shared across instances, containers, and functions.
+status: ga
+icon: aws/storage/efs.svg
+docs: https://docs.aws.amazon.com/efs/
+abstractTypes: [storage.file]
+capabilities:
+  elastic: { supported: true }
+  multiAz: { supported: true }
+properties:
+  performanceMode: { type: string, enum: [generalPurpose, maxIO], default: generalPurpose }
+  throughputMode: { type: string, enum: [bursting, elastic, provisioned], default: elastic }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [nfs], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }

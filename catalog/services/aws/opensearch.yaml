@@ -1,0 +1,20 @@
+key: aws.opensearch
+provider: aws
+name: Amazon OpenSearch Service
+description: Managed search and analytics engine (OpenSearch/Elasticsearch).
+status: ga
+icon: aws/database/opensearch.svg
+docs: https://docs.aws.amazon.com/opensearch-service/
+abstractTypes: [database.search]
+capabilities:
+  ha: { supported: true, mechanism: multi-az }
+  serverless: { supported: true }
+properties:
+  engineVersion: { type: string, default: "OpenSearch_2.13" }
+  instanceType: { type: string, default: r6g.large.search, costDimension: instance_hours }
+  instanceCount: { type: integer, minimum: 1, default: 3 }
+  dedicatedMaster: { type: boolean, default: true }
+  encryptionAtRest: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [https], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }

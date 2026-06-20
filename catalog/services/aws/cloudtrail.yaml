@@ -1,0 +1,19 @@
+key: aws.cloudtrail
+provider: aws
+name: AWS CloudTrail
+description: Governance, compliance, and audit logging of account API activity.
+status: ga
+icon: aws/security/cloudtrail.svg
+docs: https://docs.aws.amazon.com/awscloudtrail/
+abstractTypes: [security.audit]
+capabilities:
+  dataEvents: { supported: true }
+  logFileValidation: { supported: true }
+properties:
+  multiRegion: { type: boolean, default: true }
+  logFileValidation: { type: boolean, default: true, securityRelevant: true }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  outbound:
+    - { kinds: [data], to: [storage.object] }
+    - { kinds: [dependency], to: [observability.logs] }

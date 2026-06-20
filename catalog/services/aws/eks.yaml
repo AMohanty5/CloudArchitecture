@@ -1,0 +1,23 @@
+key: aws.eks
+provider: aws
+name: Amazon EKS Cluster
+description: Managed Kubernetes control plane.
+status: ga
+icon: aws/compute/eks.svg
+docs: https://docs.aws.amazon.com/eks/
+abstractTypes: [compute.container.orchestrator]
+capabilities:
+  managedControlPlane: { supported: true }
+  fargate: { supported: true }
+properties:
+  kubernetesVersion:
+    type: string
+    enum: ["1.28", "1.29", "1.30", "1.31"]
+    default: "1.31"
+  endpointAccess:
+    type: string
+    enum: [public, private, public-and-private]
+    default: public-and-private
+connectionRules:
+  outbound:
+    - { kinds: [dependency], to: [compute.container.registry] }

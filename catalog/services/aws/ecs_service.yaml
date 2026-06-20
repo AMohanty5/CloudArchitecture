@@ -1,0 +1,20 @@
+key: aws.ecs_service
+provider: aws
+name: Amazon ECS Service
+description: Containerised service on ECS/Fargate.
+status: ga
+icon: aws/compute/ecs.svg
+docs: https://docs.aws.amazon.com/ecs/
+abstractTypes: [compute.container.orchestrator.service]
+capabilities:
+  autoscaling: { supported: true }
+properties:
+  cpu: { type: integer, default: 256 }
+  memoryMb: { type: integer, default: 512 }
+  desiredCount: { type: integer, minimum: 0, default: 2 }
+  launchType: { type: string, enum: [fargate, ec2], default: fargate }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [network.loadbalancer.l7, network.gateway.api] }
+  outbound:
+    - { kinds: [data], to: [database.relational, database.keyvalue, database.cache, storage.object] }

@@ -1,0 +1,19 @@
+key: aws.ec2
+provider: aws
+name: Amazon EC2
+description: Virtual machine instance.
+status: ga
+icon: aws/compute/ec2.svg
+docs: https://docs.aws.amazon.com/ec2/
+abstractTypes: [compute.vm]
+capabilities:
+  resizable: { supported: true }
+properties:
+  instanceType: { type: string, default: t3.micro, costDimension: instance_hours }
+  ami: { type: string }
+  ebsOptimized: { type: boolean, default: true }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [network.loadbalancer.l7, network.loadbalancer.l4] }
+  outbound:
+    - { kinds: [data], to: [database.relational, database.keyvalue, database.cache, storage.object] }

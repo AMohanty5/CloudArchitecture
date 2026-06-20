@@ -1,0 +1,16 @@
+key: aws.acm
+provider: aws
+name: AWS Certificate Manager
+description: Provision and manage public/private TLS certificates.
+status: ga
+icon: aws/security/acm.svg
+docs: https://docs.aws.amazon.com/acm/
+abstractTypes: [security.certificate]
+capabilities:
+  autoRenewal: { supported: true }
+properties:
+  validationMethod: { type: string, enum: [dns, email], default: dns }
+  keyAlgorithm: { type: string, enum: [RSA_2048, EC_prime256v1, EC_secp384r1], default: RSA_2048 }
+connectionRules:
+  outbound:
+    - { kinds: [dependency], to: [network.cdn, network.loadbalancer.l7, network.gateway.api] }

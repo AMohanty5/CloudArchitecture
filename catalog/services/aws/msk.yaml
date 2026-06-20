@@ -1,0 +1,22 @@
+key: aws.msk
+provider: aws
+name: Amazon MSK
+description: Managed streaming for Apache Kafka.
+status: ga
+icon: aws/messaging/msk.svg
+docs: https://docs.aws.amazon.com/msk/
+abstractTypes: [messaging.broker.kafka]
+capabilities:
+  serverless: { supported: true }
+  tieredStorage: { supported: true }
+properties:
+  mode: { type: string, enum: [provisioned, serverless], default: provisioned }
+  kafkaVersion: { type: string, default: "3.6.0" }
+  brokerInstanceType: { type: string, default: kafka.m5.large, costDimension: instance_hours }
+  brokerCount: { type: integer, minimum: 2, default: 3 }
+  encryptionInTransit: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [async], protocols: [kafka], from: [compute.container.orchestrator.service, compute.vm.autoscaling_group, compute.serverless.function] }
+  outbound:
+    - { kinds: [async], to: [compute.serverless.function, compute.container.orchestrator.service] }

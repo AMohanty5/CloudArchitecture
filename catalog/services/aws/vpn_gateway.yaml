@@ -1,0 +1,18 @@
+key: aws.vpn_gateway
+provider: aws
+name: AWS Site-to-Site VPN
+description: Encrypted IPsec tunnel between a VPC and an on-premises network.
+status: ga
+icon: aws/networking/vpn_gateway.svg
+docs: https://docs.aws.amazon.com/vpn/latest/s2svpn/
+abstractTypes: [network.gateway.vpn]
+capabilities:
+  ha: { supported: true, mechanism: dual-tunnel }
+properties:
+  tunnelCount: { type: integer, minimum: 1, maximum: 2, default: 2 }
+  enableAcceleration: { type: boolean, default: false }
+connectionRules:
+  inbound:
+    - { kinds: [peering], from: [external] }
+  outbound:
+    - { kinds: [peering], to: [network.gateway.transit] }

@@ -1,0 +1,18 @@
+key: aws.fargate
+provider: aws
+name: AWS Fargate
+description: Serverless compute capacity for ECS/EKS containers — no instances to manage.
+status: ga
+icon: aws/compute/fargate.svg
+docs: https://docs.aws.amazon.com/AmazonECS/latest/userguide/what-is-fargate.html
+abstractTypes: [compute.container.instance]
+capabilities:
+  scaleToZero: { supported: false }
+  perTaskBilling: { supported: true }
+properties:
+  cpu: { type: integer, enum: [256, 512, 1024, 2048, 4096], default: 256, costDimension: vcpu_hours }
+  memoryMb: { type: integer, minimum: 512, maximum: 30720, default: 512, costDimension: gb_hours }
+  platformVersion: { type: string, default: LATEST }
+connectionRules:
+  inbound:
+    - { kinds: [dependency], from: [compute.container.orchestrator, compute.container.orchestrator.service] }

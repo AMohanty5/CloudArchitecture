@@ -1,0 +1,19 @@
+key: aws.privatelink
+provider: aws
+name: AWS PrivateLink
+description: Private VPC endpoint exposing a service without internet exposure.
+status: ga
+icon: aws/networking/privatelink.svg
+docs: https://docs.aws.amazon.com/vpc/latest/privatelink/
+abstractTypes: [network.endpoint.private]
+properties:
+  endpointType:
+    type: string
+    enum: [interface, gateway]
+    default: interface
+  privateDnsEnabled: { type: boolean, default: true }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+  outbound:
+    - { kinds: [traffic], to: [storage.object, network.loadbalancer.l4, network.gateway.api] }

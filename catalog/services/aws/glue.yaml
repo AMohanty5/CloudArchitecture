@@ -1,0 +1,20 @@
+key: aws.glue
+provider: aws
+name: AWS Glue
+description: Serverless ETL and data catalog for preparing and loading data.
+status: ga
+icon: aws/integration/glue.svg
+docs: https://docs.aws.amazon.com/glue/
+abstractTypes: [integration.etl]
+capabilities:
+  dataCatalog: { supported: true }
+  crawlers: { supported: true }
+properties:
+  workerType: { type: string, enum: [G.1X, G.2X, G.4X, G.8X], default: G.1X }
+  numberOfWorkers: { type: integer, minimum: 2, default: 10 }
+  glueVersion: { type: string, default: "4.0" }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [integration.scheduler, integration.workflow, messaging.eventbus] }
+  outbound:
+    - { kinds: [data], to: [storage.object, database.warehouse, database.relational] }

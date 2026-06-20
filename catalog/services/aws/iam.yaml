@@ -1,0 +1,17 @@
+key: aws.iam
+provider: aws
+name: AWS IAM
+description: Identity and access management — users, groups, and policies.
+status: ga
+icon: aws/security/iam.svg
+docs: https://docs.aws.amazon.com/IAM/latest/UserGuide/
+abstractTypes: [security.identity]
+capabilities:
+  policies: { supported: true }
+  mfa: { supported: true }
+properties:
+  accountAlias: { type: string }
+  mfaRequired: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  outbound:
+    - { kinds: [identity], to: [security.identity.principal] }

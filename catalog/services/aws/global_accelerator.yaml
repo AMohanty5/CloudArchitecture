@@ -1,0 +1,21 @@
+key: aws.global_accelerator
+provider: aws
+name: AWS Global Accelerator
+description: Anycast static IPs routing user traffic to optimal regional endpoints over the AWS backbone.
+status: ga
+icon: aws/networking/global_accelerator.svg
+docs: https://docs.aws.amazon.com/global-accelerator/
+abstractTypes: [network.loadbalancer.global]
+capabilities:
+  staticAnycastIp: { supported: true }
+  healthChecks: { supported: true }
+properties:
+  ipAddressType:
+    type: string
+    enum: [ipv4, dualstack]
+    default: ipv4
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [external, network.dns] }
+  outbound:
+    - { kinds: [traffic], to: [network.loadbalancer.l7, network.loadbalancer.l4, network.gateway.api] }

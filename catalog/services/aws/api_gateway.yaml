@@ -1,0 +1,19 @@
+key: aws.api_gateway
+provider: aws
+name: Amazon API Gateway
+description: Managed HTTP/REST API entry point.
+status: ga
+icon: aws/networking/api_gateway.svg
+docs: https://docs.aws.amazon.com/apigateway/
+abstractTypes: [network.gateway.api]
+capabilities:
+  throttling: { supported: true }
+  authz: { supported: true }
+properties:
+  protocol: { type: string, enum: [http, rest], default: http }
+  throttleRps: { type: integer }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], protocols: [https], from: [network.cdn, external] }
+  outbound:
+    - { kinds: [traffic], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group] }

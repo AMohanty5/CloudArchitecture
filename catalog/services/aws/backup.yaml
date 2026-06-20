@@ -1,0 +1,20 @@
+key: aws.backup
+provider: aws
+name: AWS Backup
+description: Centralized, policy-driven backup across AWS services.
+status: ga
+icon: aws/storage/backup.svg
+docs: https://docs.aws.amazon.com/aws-backup/
+abstractTypes: [storage.backup]
+capabilities:
+  crossRegionCopy: { supported: true }
+  vaultLock: { supported: true }
+properties:
+  scheduleCron: { type: string, default: "cron(0 5 ? * * *)" }
+  retentionDays: { type: integer, minimum: 1, default: 35 }
+  vaultLock: { type: boolean, default: false, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [dependency], from: [database.relational, storage.block, storage.file, storage.object, database.document] }
+  outbound:
+    - { kinds: [data], to: [storage.archive] }

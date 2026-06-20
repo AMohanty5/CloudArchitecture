@@ -57,6 +57,11 @@ export class CatalogQueryService {
     return { ...service, iconUrl: iconUrl(service.key) };
   }
 
+  /** Like {@link getService} but returns undefined instead of throwing — used by the icon endpoint. */
+  async tryGetService(key: string): Promise<CatalogService | undefined> {
+    return (await this.loadServices()).find((s) => s.key === key);
+  }
+
   private async loadServices(): Promise<CatalogService[]> {
     // 1. Redis index (hot path)
     try {

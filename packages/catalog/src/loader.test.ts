@@ -8,23 +8,72 @@ import { CatalogError, groupServiceKey, loadCatalog } from './loader.js';
 const catalogRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../catalog');
 
 describe('loadCatalog', () => {
-  it('loads the seed catalog with the expected service keys', () => {
+  it('loads the full Phase-1 AWS seed catalog (60 services, doc 14)', () => {
     const catalog = loadCatalog(catalogRoot);
-    expect([...catalog.servicesByKey.keys()].sort()).toEqual([
+    const keys = [...catalog.servicesByKey.keys()].sort();
+    expect(keys).toEqual([
+      'aws.acm',
       'aws.alb',
+      'aws.api_gateway',
+      'aws.app_runner',
+      'aws.aurora_mysql',
+      'aws.aurora_postgresql',
+      'aws.aurora_serverless',
+      'aws.backup',
+      'aws.batch',
+      'aws.cloudfront',
+      'aws.cloudtrail',
+      'aws.cloudwatch',
+      'aws.cognito',
+      'aws.direct_connect',
+      'aws.documentdb',
       'aws.dynamodb',
+      'aws.ebs',
+      'aws.ec2',
       'aws.ec2_asg',
+      'aws.ecr',
+      'aws.ecs',
+      'aws.ecs_service',
+      'aws.efs',
+      'aws.eks',
+      'aws.eks_service',
       'aws.elasticache_redis',
+      'aws.eventbridge',
+      'aws.fargate',
+      'aws.global_accelerator',
+      'aws.glue',
+      'aws.iam',
+      'aws.iam_role',
+      'aws.internet_gateway',
+      'aws.kinesis',
       'aws.kms',
       'aws.lambda',
+      'aws.msk',
+      'aws.nacl',
+      'aws.nat_gateway',
+      'aws.nlb',
+      'aws.opensearch',
+      'aws.privatelink',
       'aws.rds',
+      'aws.redshift',
+      'aws.route53',
       'aws.s3',
+      'aws.s3_glacier',
+      'aws.scheduler',
       'aws.secrets_manager',
+      'aws.security_group',
       'aws.sns',
       'aws.sqs',
+      'aws.step_functions',
       'aws.subnet',
+      'aws.timestream',
+      'aws.transit_gateway',
       'aws.vpc',
+      'aws.vpc_peering',
+      'aws.vpn_gateway',
+      'aws.waf',
     ]);
+    expect(keys).toHaveLength(60);
   });
 
   it('indexes group-kind services by provider/kind', () => {

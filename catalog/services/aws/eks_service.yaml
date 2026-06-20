@@ -1,0 +1,19 @@
+key: aws.eks_service
+provider: aws
+name: Amazon EKS Workload
+description: A Kubernetes workload (Deployment/Service) running on an EKS cluster.
+status: ga
+icon: aws/compute/eks.svg
+docs: https://docs.aws.amazon.com/eks/latest/userguide/eks-workloads.html
+abstractTypes: [compute.container.orchestrator.service]
+capabilities:
+  autoscaling: { supported: true, mechanism: hpa }
+properties:
+  replicas: { type: integer, minimum: 0, default: 2 }
+  cpuRequest: { type: string, default: 250m }
+  memoryRequest: { type: string, default: 512Mi }
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [network.loadbalancer.l7, network.loadbalancer.l4, network.gateway.api] }
+  outbound:
+    - { kinds: [data], to: [database.relational, database.keyvalue, database.cache, storage.object] }

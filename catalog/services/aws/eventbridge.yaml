@@ -1,0 +1,19 @@
+key: aws.eventbridge
+provider: aws
+name: Amazon EventBridge
+description: Serverless event bus routing events between services with rules and schemas.
+status: ga
+icon: aws/messaging/eventbridge.svg
+docs: https://docs.aws.amazon.com/eventbridge/
+abstractTypes: [messaging.eventbus]
+capabilities:
+  schemaRegistry: { supported: true }
+  contentFiltering: { supported: true }
+properties:
+  archiveEnabled: { type: boolean, default: false }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [compute.serverless.function, compute.container.orchestrator.service, integration.scheduler] }
+  outbound:
+    - { kinds: [async], to: [compute.serverless.function, messaging.queue, messaging.topic, integration.workflow] }

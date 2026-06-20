@@ -1,0 +1,21 @@
+key: aws.kinesis
+provider: aws
+name: Amazon Kinesis Data Streams
+description: Real-time data streaming with sharded, replayable records.
+status: ga
+icon: aws/messaging/kinesis.svg
+docs: https://docs.aws.amazon.com/kinesis/
+abstractTypes: [messaging.stream]
+capabilities:
+  replay: { supported: true }
+  onDemand: { supported: true }
+properties:
+  capacityMode: { type: string, enum: [provisioned, on-demand], default: on-demand }
+  shardCount: { type: integer, minimum: 1, default: 1 }
+  retentionHours: { type: integer, minimum: 24, maximum: 8760, default: 24 }
+  encrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group] }
+  outbound:
+    - { kinds: [async], to: [compute.serverless.function, integration.etl, database.timeseries] }

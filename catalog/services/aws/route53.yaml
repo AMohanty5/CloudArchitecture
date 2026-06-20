@@ -1,0 +1,23 @@
+key: aws.route53
+provider: aws
+name: Amazon Route 53
+description: Scalable DNS and domain name registration with health-checked routing policies.
+status: ga
+icon: aws/networking/route53.svg
+docs: https://docs.aws.amazon.com/route53/
+abstractTypes: [network.dns]
+capabilities:
+  healthChecks: { supported: true }
+  routingPolicies: { supported: true }
+properties:
+  zoneType:
+    type: string
+    enum: [public, private]
+    default: public
+  routingPolicy:
+    type: string
+    enum: [simple, weighted, latency, failover, geolocation]
+    default: simple
+connectionRules:
+  outbound:
+    - { kinds: [traffic], to: [network.cdn, network.loadbalancer.l7, network.loadbalancer.l4, network.gateway.api, network.loadbalancer.global] }

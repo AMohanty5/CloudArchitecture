@@ -1,0 +1,16 @@
+key: aws.nacl
+provider: aws
+name: Network ACL
+description: Stateless subnet-level firewall with ordered allow/deny rules.
+status: ga
+icon: aws/networking/nacl.svg
+docs: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html
+abstractTypes: [network.firewall.network]
+capabilities:
+  stateful: { supported: false }
+properties:
+  ingressCount: { type: integer, minimum: 0, description: Number of inbound rule entries. }
+  egressCount: { type: integer, minimum: 0, description: Number of outbound rule entries. }
+connectionRules:
+  outbound:
+    - { kinds: [dependency], to: [network.firewall.network] }

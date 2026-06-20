@@ -1,0 +1,21 @@
+key: aws.batch
+provider: aws
+name: AWS Batch
+description: Managed batch computing that schedules jobs across Fargate or EC2 capacity.
+status: ga
+icon: aws/compute/batch.svg
+docs: https://docs.aws.amazon.com/batch/
+abstractTypes: [compute.batch]
+capabilities:
+  spot: { supported: true }
+properties:
+  computeEnvironmentType:
+    type: string
+    enum: [fargate, fargate-spot, ec2, spot]
+    default: fargate
+  maxvCpus: { type: integer, minimum: 1, default: 256 }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [messaging.queue, integration.scheduler, integration.workflow] }
+  outbound:
+    - { kinds: [data], to: [storage.object, database.relational] }

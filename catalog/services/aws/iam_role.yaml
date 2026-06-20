@@ -1,0 +1,17 @@
+key: aws.iam_role
+provider: aws
+name: IAM Role
+description: An assumable identity with scoped permissions for workloads or services.
+status: ga
+icon: aws/security/iam_role.svg
+docs: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html
+abstractTypes: [security.identity.principal]
+properties:
+  trustedPrincipal: { type: string, description: Service or account allowed to assume the role. }
+  managedPolicyCount: { type: integer, minimum: 0 }
+  permissionsBoundary: { type: string, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [identity], from: [security.identity] }
+  outbound:
+    - { kinds: [identity], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group, storage.object, database.relational] }

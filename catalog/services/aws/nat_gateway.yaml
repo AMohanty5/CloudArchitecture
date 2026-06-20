@@ -1,0 +1,20 @@
+key: aws.nat_gateway
+provider: aws
+name: NAT Gateway
+description: Managed network address translation for outbound traffic from private subnets.
+status: ga
+icon: aws/networking/nat_gateway.svg
+docs: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html
+abstractTypes: [network.gateway.nat]
+capabilities:
+  ha: { supported: true, mechanism: per-az }
+properties:
+  connectivityType:
+    type: string
+    enum: [public, private]
+    default: public
+connectionRules:
+  inbound:
+    - { kinds: [traffic], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+  outbound:
+    - { kinds: [traffic], to: [network.gateway.internet] }

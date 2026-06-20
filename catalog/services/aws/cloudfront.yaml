@@ -1,0 +1,17 @@
+key: aws.cloudfront
+provider: aws
+name: Amazon CloudFront
+description: Global content delivery network (CDN).
+status: ga
+icon: aws/networking/cloudfront.svg
+docs: https://docs.aws.amazon.com/cloudfront/
+abstractTypes: [network.cdn]
+capabilities:
+  edgeCaching: { supported: true }
+  tlsTermination: { supported: true }
+properties:
+  priceClass: { type: string, enum: [all, 200, 100], default: all }
+  http2Enabled: { type: boolean, default: true }
+connectionRules:
+  outbound:
+    - { kinds: [traffic], to: [storage.object, network.loadbalancer.l7, network.gateway.api] }

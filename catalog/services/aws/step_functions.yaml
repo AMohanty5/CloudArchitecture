@@ -1,0 +1,18 @@
+key: aws.step_functions
+provider: aws
+name: AWS Step Functions
+description: Serverless workflow orchestration via state machines.
+status: ga
+icon: aws/integration/step_functions.svg
+docs: https://docs.aws.amazon.com/step-functions/
+abstractTypes: [integration.workflow]
+capabilities:
+  expressWorkflows: { supported: true }
+properties:
+  workflowType: { type: string, enum: [standard, express], default: standard }
+  loggingLevel: { type: string, enum: [OFF, ERROR, ALL], default: ERROR }
+connectionRules:
+  inbound:
+    - { kinds: [async], from: [messaging.eventbus, network.gateway.api, integration.scheduler] }
+  outbound:
+    - { kinds: [async], to: [compute.serverless.function, compute.batch, messaging.queue, messaging.topic] }

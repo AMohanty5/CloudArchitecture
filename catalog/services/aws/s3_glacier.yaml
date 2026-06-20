@@ -1,0 +1,19 @@
+key: aws.s3_glacier
+provider: aws
+name: Amazon S3 Glacier
+description: Low-cost archival object storage with retrieval tiers.
+status: ga
+icon: aws/storage/s3_glacier.svg
+docs: https://docs.aws.amazon.com/amazonglacier/
+abstractTypes: [storage.archive]
+capabilities:
+  durability: { supported: true, mechanism: eleven-nines }
+properties:
+  storageClass:
+    type: string
+    enum: [glacier-instant, glacier-flexible, glacier-deep-archive]
+    default: glacier-flexible
+  storageEncrypted: { type: boolean, default: true, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [data], from: [storage.object, storage.backup] }

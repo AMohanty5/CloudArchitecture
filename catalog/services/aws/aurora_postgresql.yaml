@@ -1,0 +1,28 @@
+key: aws.aurora_postgresql
+provider: aws
+name: Amazon Aurora (PostgreSQL-compatible)
+description: PostgreSQL-compatible managed relational database with distributed storage.
+status: ga
+icon: aws/database/aurora.svg
+docs: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/
+abstractTypes: [database.relational]
+capabilities:
+  ha: { supported: true, mechanism: multi-az-replicas }
+  backup: { supported: true }
+properties:
+  engineVersion: { type: string, enum: ["13", "14", "15", "16"], default: "16" }
+  instanceClass:
+    type: string
+    pattern: "^db\\.(r6g|r7g|x2g|t4g)\\.[a-z0-9]+$"
+    description: Aurora instance class, e.g. db.r7g.large.
+    costDimension: instance_hours
+  replicas: { type: integer, minimum: 0, maximum: 15, default: 1 }
+  multiAz: { type: boolean, default: true }
+  storageEncrypted: { type: boolean, default: true, securityRelevant: true }
+  kmsKeyRef: { type: string }
+  globalDatabase: { type: boolean, default: false }
+connectionRules:
+  inbound:
+    - { kinds: [data], protocols: [postgres], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+  outbound:
+    - { kinds: [replication], to: [database.relational] }

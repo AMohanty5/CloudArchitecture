@@ -1,0 +1,20 @@
+key: aws.cognito
+provider: aws
+name: Amazon Cognito
+description: User sign-up, sign-in, and identity federation for apps.
+status: ga
+icon: aws/security/cognito.svg
+docs: https://docs.aws.amazon.com/cognito/
+abstractTypes: [security.identity.idp]
+capabilities:
+  socialIdentityProviders: { supported: true }
+  saml: { supported: true }
+  mfa: { supported: true }
+properties:
+  mfaConfiguration: { type: string, enum: [OFF, OPTIONAL, ON], default: OPTIONAL, securityRelevant: true }
+  allowUnauthenticatedIdentities: { type: boolean, default: false, securityRelevant: true }
+connectionRules:
+  inbound:
+    - { kinds: [identity], from: [external] }
+  outbound:
+    - { kinds: [identity], to: [network.gateway.api, compute.serverless.app, network.loadbalancer.l7] }

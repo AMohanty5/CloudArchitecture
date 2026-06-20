@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CatalogQueryService } from './catalog-query.service';
-import { placeholderSvg } from './icons';
+import { categoryOf, serviceIconSvg } from './icons';
 
 interface HttpRes {
   setHeader(name: string, value: string): void;
@@ -27,10 +27,14 @@ export class CatalogController {
   }
 
   @Get('icons/:key')
-  @ApiOkResponse({ description: 'Placeholder SVG icon for a service (real icon packs are a Backlog item).' })
-  icon(@Param('key') key: string, @Res({ passthrough: true }) res: HttpRes): string {
+  @ApiOkResponse({ description: 'AWS category-tinted SVG icon for a service (official icon packs are a Backlog item).' })
+  async icon(@Param('key') key: string, @Res({ passthrough: true }) res: HttpRes): Promise<string> {
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    return placeholderSvg(key);
+    // Tint by the service's category (from its `icon:` path, else its abstract type).
+    // Unknown keys still render — categoryOf falls back to the navy default tile.
+    const svc = await this.query.tryGetService(key);
+    const category = categoryOf(svc?.icon, svc?.abstractTypes?.[0]);
+    return serviceIconSvg(key, category);
   }
 }

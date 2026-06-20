@@ -1,0 +1,17 @@
+key: aws.timestream
+provider: aws
+name: Amazon Timestream
+description: Serverless time-series database for IoT and operational metrics.
+status: ga
+icon: aws/database/timestream.svg
+docs: https://docs.aws.amazon.com/timestream/
+abstractTypes: [database.timeseries]
+capabilities:
+  serverless: { supported: true }
+  tieredStorage: { supported: true }
+properties:
+  memoryRetentionHours: { type: integer, minimum: 1, default: 24 }
+  magneticRetentionDays: { type: integer, minimum: 1, maximum: 73000, default: 365 }
+connectionRules:
+  inbound:
+    - { kinds: [data], from: [compute.serverless.function, messaging.stream, compute.container.orchestrator.service] }

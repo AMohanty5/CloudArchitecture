@@ -1,0 +1,20 @@
+key: aws.cloudwatch
+provider: aws
+name: Amazon CloudWatch
+description: Metrics, logs, dashboards, and alarms for AWS resources and applications.
+status: ga
+icon: aws/observability/cloudwatch.svg
+docs: https://docs.aws.amazon.com/cloudwatch/
+abstractTypes: [observability.metrics, observability.logs, observability.alerting]
+capabilities:
+  dashboards: { supported: true }
+  alarms: { supported: true }
+  logInsights: { supported: true }
+properties:
+  logRetentionDays: { type: integer, enum: [1, 7, 14, 30, 90, 365, 0], default: 30 }
+  detailedMonitoring: { type: boolean, default: false }
+connectionRules:
+  inbound:
+    - { kinds: [dependency], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function, database.relational, network.loadbalancer.l7] }
+  outbound:
+    - { kinds: [async], to: [messaging.topic] }

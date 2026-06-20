@@ -1,0 +1,23 @@
+key: aws.waf
+provider: aws
+name: AWS WAF
+description: Web application firewall protecting HTTP(S) endpoints from common exploits.
+status: ga
+icon: aws/networking/waf.svg
+docs: https://docs.aws.amazon.com/waf/
+abstractTypes: [network.firewall.waf]
+capabilities:
+  managedRules: { supported: true }
+  rateLimiting: { supported: true }
+properties:
+  scope:
+    type: string
+    enum: [regional, cloudfront]
+    default: regional
+  defaultAction:
+    type: string
+    enum: [allow, block]
+    default: allow
+connectionRules:
+  outbound:
+    - { kinds: [dependency], to: [network.cdn, network.loadbalancer.l7, network.gateway.api] }
