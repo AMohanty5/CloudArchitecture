@@ -280,6 +280,12 @@ export class GenerationService {
         }
       }
 
+      // Honest done message: only claim a reviewable proposal when one was actually
+      // composed. With no ANTHROPIC_API_KEY the pipeline runs in preview/stub mode and
+      // produces no model — say so rather than inviting a review of nothing.
+      const noModelReason = keyed
+        ? `Generation finished but produced no model — nothing to review.`
+        : `Live generation isn't configured (ANTHROPIC_API_KEY not set) — ran in preview/stub mode, so no model was produced.`;
       events.next({
         type: 'done',
         branch: `ai/gen-${randomUUID().slice(0, 8)}`,
@@ -287,7 +293,7 @@ export class GenerationService {
           ? `Stopped early (${stopped}). ${proposalReady ? 'A partial proposal is available to review.' : 'No model was produced.'}`
           : proposalReady
             ? `Proposal ready — review the diff and accept to merge into history.`
-            : `Proposal ready for "${input.prompt.slice(0, 60)}" — review the diff and merge.`,
+            : noModelReason,
         proposalReady,
       });
     } catch (err) {
