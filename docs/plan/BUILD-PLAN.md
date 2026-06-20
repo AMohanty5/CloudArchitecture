@@ -718,12 +718,12 @@ connector legend.
 
 **Done when:** dragging a node snaps to grid, shows alignment guides, and the position survives reload; nudge/tidy still work ✅ (typecheck + 57 canvas tests pass; persistence rides the existing autosave/layout path).
 
-### Day 40 — Layout presets
+### Day 40 — Layout presets ✅ (2026-06-21)
 **Goal:** Architecture-aware auto-layouts, not just left→right.
-- [ ] Layout strategies as ELK option sets: Layered LR (current), Top→Bottom, Multi-AZ (balanced), Hub-and-spoke, Serverless/event-driven.
-- [ ] Toolbar layout picker; chosen strategy drives `tidyUp`; persist the choice per architecture.
+- [x] Layout strategies as ELK option sets layered on a shared base: Layered → (L→R), Layered ↓ (Top–Bottom), Compact →, Tiered ↓ (network-simplex placement). All layered-based so group nesting holds. (Semantic topology presets — true multi-AZ columns / hub-spoke by fan-out — deferred; they need layout-by-meaning, not just ELK options.)
+- [x] Toolbar preset dropdown; selection drives `editor.tidyUp(strategy)`; "Tidy up" uses the current preset; choice persisted per-architecture in `localStorage`.
 
-**Done when:** switching a preset re-flows the diagram into that shape; the choice persists across reload.
+**Done when:** switching a preset re-flows the diagram into that shape; the choice persists across reload ✅ (typecheck + layout tests pass; default preset keeps the asserted layered/RIGHT/INCLUDE_CHILDREN options).
 
 ### Day 41 — Sectioned containers + nested panels
 **Goal:** Containers that look like the reference's layered panels.

@@ -5,6 +5,7 @@ import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
 import { project } from '../canvas/projector';
 import type { CamlConnection, LayoutSidecar } from '../canvas/projector';
 import { autoLayout } from '../canvas/layout';
+import type { LayoutStrategy } from '../canvas/layout';
 import { canRedo as canRedoFn, canUndo as canUndoFn, initHistory, record, redo as redoFn, undo as undoFn } from '../canvas/history';
 import type { History } from '../canvas/history';
 import { remapFragment } from '../canvas/clipboard';
@@ -43,7 +44,7 @@ export interface EditorApi {
   selectEdge: (id: string | undefined) => void;
   undo: () => void;
   redo: () => void;
-  tidyUp: () => Promise<void>;
+  tidyUp: (strategy?: LayoutStrategy) => Promise<void>;
   /** Add a component; `group` nests it (and skips the free-position sidecar entry). */
   addComponent: (service: ServiceLike, position: Position, group?: string) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
@@ -327,13 +328,13 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [apply],
   );
 
-  const tidyUp = useCallback(async () => {
+  const tidyUp = useCallback(async (strategy?: LayoutStrategy) => {
     const current = modelRef.current;
     if (!current) return;
     setTidying(true);
     try {
       const { nodes, edges } = project(current, layoutRef.current);
-      const sidecar = await autoLayout(nodes, edges);
+      const sidecar = await autoLayout(nodes, edges, strategy);
       apply(modelRef.current!, sidecar, 'tidy'); // replace the whole layout in one undoable step
     } catch {
       /* layout failed — leave the current layout in place */

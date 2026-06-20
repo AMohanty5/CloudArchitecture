@@ -12,6 +12,8 @@ import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
 import { useConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
 import { evaluateConnection, makeConnectionId } from '../canvas/connections';
+import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
+import type { LayoutStrategy } from '../canvas/layout';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
 import { buildDiffView } from '../canvas/diffView';
@@ -103,6 +105,30 @@ export function Editor() {
   const editor = useEditor(id);
   const { model, layout, saveState, errors, selectedId, selectedEdgeId } = editor;
   const badge = SAVE_BADGE[saveState];
+
+  // ---- Layout preset (Day 40): persisted per-architecture in localStorage ----
+  const [layoutStrategy, setLayoutStrategy] = useState<LayoutStrategy>(() => {
+    const stored = (() => {
+      try {
+        return localStorage.getItem(`cac:layout:${id}`);
+      } catch {
+        return null;
+      }
+    })();
+    return stored && stored in LAYOUT_PRESETS ? (stored as LayoutStrategy) : DEFAULT_STRATEGY;
+  });
+  const applyLayout = useCallback(
+    (s: LayoutStrategy) => {
+      setLayoutStrategy(s);
+      try {
+        localStorage.setItem(`cac:layout:${id}`, s);
+      } catch {
+        /* ignore quota/availability */
+      }
+      void editor.tidyUp(s);
+    },
+    [id, editor],
+  );
 
   // ---- History & diff (Day 19) ----
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -374,7 +400,7 @@ export function Editor() {
           </button>
         </div>
         <button
-          onClick={() => void editor.tidyUp()}
+          onClick={() => void editor.tidyUp(layoutStrategy)}
           disabled={editor.tidying || !model}
           title="Auto-layout (ELK)"
           style={{
@@ -390,6 +416,28 @@ export function Editor() {
         >
           {editor.tidying ? 'Tidying…' : '✨ Tidy up'}
         </button>
+        <select
+          value={layoutStrategy}
+          onChange={(e) => applyLayout(e.target.value as LayoutStrategy)}
+          disabled={editor.tidying || !model}
+          title="Layout preset"
+          style={{
+            marginLeft: 4,
+            padding: '4px 6px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: '#fff',
+            color: editor.tidying || !model ? '#cbd5e1' : '#334155',
+            cursor: editor.tidying || !model ? 'default' : 'pointer',
+            fontSize: 13,
+          }}
+        >
+          {(Object.keys(LAYOUT_PRESETS) as LayoutStrategy[]).map((s) => (
+            <option key={s} value={s}>
+              {LAYOUT_PRESETS[s].label}
+            </option>
+          ))}
+        </select>
         <button
           onClick={() => setHistoryOpen((v) => !v)}
           title="History & diff"

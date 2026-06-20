@@ -24,22 +24,47 @@ interface ElkEdge {
   targets: string[];
 }
 
-const ROOT_OPTIONS: Record<string, string> = {
+// Shared base — the layered algorithm with hierarchy + orthogonal routing and a
+// dense, architecture-diagram feel. Each preset layers its own options on top.
+const BASE_OPTIONS: Record<string, string> = {
   'elk.algorithm': 'layered',
-  'elk.direction': 'RIGHT',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
   'elk.edgeRouting': 'ORTHOGONAL',
-  // Tighter spacing → a dense, architecture-diagram look (not a sparse dashboard).
   'elk.layered.spacing.nodeNodeBetweenLayers': '40',
   'elk.spacing.nodeNode': '20',
   'elk.layered.spacing.edgeNodeBetweenLayers': '16',
   'elk.spacing.edgeNode': '12',
+  'elk.direction': 'RIGHT',
 };
+
+/** Selectable auto-layout strategies (Day 40). All layered-based so group nesting holds. */
+export type LayoutStrategy = 'layered-lr' | 'layered-tb' | 'compact-lr' | 'tiered-tb';
+
+export const DEFAULT_STRATEGY: LayoutStrategy = 'layered-lr';
+
+/** Preset label + the ELK options it overlays on BASE_OPTIONS. */
+export const LAYOUT_PRESETS: Record<LayoutStrategy, { label: string; options: Record<string, string> }> = {
+  'layered-lr': { label: 'Layered →', options: { 'elk.direction': 'RIGHT' } },
+  'layered-tb': { label: 'Layered ↓', options: { 'elk.direction': 'DOWN' } },
+  'compact-lr': {
+    label: 'Compact →',
+    options: { 'elk.direction': 'RIGHT', 'elk.layered.spacing.nodeNodeBetweenLayers': '28', 'elk.spacing.nodeNode': '12' },
+  },
+  'tiered-tb': {
+    label: 'Tiered ↓',
+    options: { 'elk.direction': 'DOWN', 'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX', 'elk.layered.spacing.nodeNodeBetweenLayers': '52' },
+  },
+};
+
+function rootOptions(strategy: LayoutStrategy): Record<string, string> {
+  return { ...BASE_OPTIONS, ...LAYOUT_PRESETS[strategy].options };
+}
+
 // Group padding leaves room for the kind-styled header (top) + a tight margin all round.
 const GROUP_OPTIONS: Record<string, string> = { 'elk.padding': '[top=32,left=14,bottom=14,right=14]' };
 
 /** Build a hierarchical ELK graph from the projected nodes (parentId nesting) + edges. */
-export function toElkGraph(nodes: ProjectedNode[], edges: ProjectedEdge[]): ElkNode {
+export function toElkGraph(nodes: ProjectedNode[], edges: ProjectedEdge[], strategy: LayoutStrategy = DEFAULT_STRATEGY): ElkNode {
   const elkById = new Map<string, ElkNode>();
   for (const n of nodes) {
     elkById.set(n.id, {
@@ -60,7 +85,7 @@ export function toElkGraph(nodes: ProjectedNode[], edges: ProjectedEdge[]): ElkN
 
   return {
     id: 'root',
-    layoutOptions: ROOT_OPTIONS,
+    layoutOptions: rootOptions(strategy),
     children: roots,
     edges: edges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
   };
@@ -91,8 +116,8 @@ function getWorker(): Worker {
 }
 
 /** Lay out the graph in the ELK Web Worker and resolve a layout sidecar. */
-export function autoLayout(nodes: ProjectedNode[], edges: ProjectedEdge[]): Promise<LayoutSidecar> {
-  const graph = toElkGraph(nodes, edges);
+export function autoLayout(nodes: ProjectedNode[], edges: ProjectedEdge[], strategy: LayoutStrategy = DEFAULT_STRATEGY): Promise<LayoutSidecar> {
+  const graph = toElkGraph(nodes, edges, strategy);
   return new Promise<LayoutSidecar>((resolve, reject) => {
     const w = getWorker();
     const onMessage = (ev: MessageEvent): void => {
