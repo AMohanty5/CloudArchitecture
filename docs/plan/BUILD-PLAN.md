@@ -710,13 +710,13 @@ connector legend.
 
 **Done when:** node/container/legend colours all derive from `theme.ts`; the canvas shows a title block + category & connector legends; typecheck + canvas tests green ✅ (57 canvas tests pass).
 
-### Day 39 — Direct manipulation: drag, snap, align
+### Day 39 — Direct manipulation: drag, snap, align ✅ (2026-06-21)
 **Goal:** Move nodes like a real diagram tool.
-- [ ] Enable node dragging; persist drag to the layout sidecar (`onNodeDragStop` → position) through the existing autosave path.
-- [ ] Snap-to-grid (`snapGrid`) + alignment guides (helper lines on drag).
-- [ ] Keep arrow-key nudge + ELK tidy working alongside drag.
+- [x] Enable node dragging (when `onNodeMove` is supplied); persist drag to the layout sidecar via a new `editor.moveNode` → `onNodeDragStop` through the existing autosave path.
+- [x] Snap-to-grid (`snapToGrid`/`snapGrid=[16,16]`) + alignment guides (blue helper lines on drag when an edge/centre aligns with another node, within 6 screen px).
+- [x] Arrow-key nudge + ELK tidy still work alongside drag.
 
-**Done when:** dragging a node snaps to grid, shows alignment guides, and the position survives reload; nudge/tidy still work.
+**Done when:** dragging a node snaps to grid, shows alignment guides, and the position survives reload; nudge/tidy still work ✅ (typecheck + 57 canvas tests pass; persistence rides the existing autosave/layout path).
 
 ### Day 40 — Layout presets
 **Goal:** Architecture-aware auto-layouts, not just left→right.

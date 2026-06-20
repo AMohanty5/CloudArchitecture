@@ -533,6 +533,7 @@ export function Editor() {
               onSelectEdge={editor.selectEdge}
               evaluate={evaluate}
               onConnect={onConnect}
+              onNodeMove={editor.moveNode}
               findingSeverityById={findingSeverityById}
               registerExporter={(api) => (exporterRef.current = api)}
             />

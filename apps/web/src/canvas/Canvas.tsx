@@ -27,6 +27,10 @@ import type { Severity } from '../lib/queries';
 
 const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
 
+/** Snap-to-grid step (flow units) and alignment-guide tolerance (screen px). */
+const GRID = 16;
+const GUIDE_PX = 6;
+
 /** Verdict for a candidate edge, resolved by the editor from catalog rules. */
 export interface ConnectVerdict {
   allowed: boolean;
@@ -63,6 +67,8 @@ interface CanvasProps {
   /** Optional presentation title block pinned to the top-left of the canvas. */
   title?: string;
   subtitle?: string;
+  /** When provided, nodes are draggable; receives the final parent-relative position on drag end. */
+  onNodeMove?: (id: string, position: { x: number; y: number }) => void;
 }
 
 const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: NEUTRAL.muted };
@@ -163,6 +169,7 @@ function Flow({
   registerExporter,
   title,
   subtitle,
+  onNodeMove,
 }: CanvasProps) {
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
@@ -202,10 +209,54 @@ function Flow({
       }),
     [edges, selectedEdgeId, diffStatus],
   );
-  const { screenToFlowPosition, getNodes } = useReactFlow();
+  const { screenToFlowPosition, getNodes, getInternalNode, getViewport } = useReactFlow();
   const editable = Boolean(onDropService);
   const selectable = Boolean(onSelect || onSelectEdge);
   const connectable = Boolean(onConnect);
+  const draggable = Boolean(onNodeMove);
+
+  // Alignment guides (Day 39): screen-space helper lines shown while dragging a node
+  // when one of its edges/centre lines up with another node's, within GUIDE_PX.
+  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
+  const onNodeDrag = useCallback(
+    (_: unknown, node: Node) => {
+      const dragged = getInternalNode(node.id);
+      if (!dragged) return;
+      const vp = getViewport();
+      const a = dragged.internals.positionAbsolute;
+      const aw = dragged.measured?.width ?? 0;
+      const ah = dragged.measured?.height ?? 0;
+      const ax = [a.x, a.x + aw / 2, a.x + aw];
+      const ay = [a.y, a.y + ah / 2, a.y + ah];
+      const threshold = GUIDE_PX / vp.zoom;
+      let gx: number | undefined;
+      let gy: number | undefined;
+      for (const other of getNodes()) {
+        if (other.id === node.id) continue;
+        const o = getInternalNode(other.id);
+        if (!o) continue;
+        const ow = o.measured?.width ?? 0;
+        const oh = o.measured?.height ?? 0;
+        const ox = [o.internals.positionAbsolute.x, o.internals.positionAbsolute.x + ow / 2, o.internals.positionAbsolute.x + ow];
+        const oy = [o.internals.positionAbsolute.y, o.internals.positionAbsolute.y + oh / 2, o.internals.positionAbsolute.y + oh];
+        if (gx === undefined) for (const e of ax) for (const t of ox) if (Math.abs(e - t) <= threshold) gx = t;
+        if (gy === undefined) for (const e of ay) for (const t of oy) if (Math.abs(e - t) <= threshold) gy = t;
+      }
+      // Flow → screen (the overlay shares the pane's box, so this is the pane offset).
+      setGuides({
+        x: gx === undefined ? undefined : gx * vp.zoom + vp.x,
+        y: gy === undefined ? undefined : gy * vp.zoom + vp.y,
+      });
+    },
+    [getInternalNode, getViewport, getNodes],
+  );
+  const onNodeDragStop = useCallback(
+    (_: unknown, node: Node) => {
+      setGuides({});
+      onNodeMove?.(node.id, node.position);
+    },
+    [onNodeMove],
+  );
 
   // Register a whole-diagram PNG exporter: fit all nodes into a fixed canvas, then
   // rasterise the React Flow viewport at the requested pixel ratio (doc 06 export).
@@ -298,7 +349,11 @@ function Flow({
         edges={styledEdges as unknown as Edge[]}
         nodeTypes={nodeTypes}
         fitView
-        nodesDraggable={false}
+        nodesDraggable={draggable}
+        snapToGrid={draggable}
+        snapGrid={[GRID, GRID]}
+        onNodeDrag={draggable ? onNodeDrag : undefined}
+        onNodeDragStop={draggable ? onNodeDragStop : undefined}
         nodesConnectable={connectable}
         elementsSelectable={selectable}
         onNodeClick={onSelect ? (_, node) => onSelect(node.id) : undefined}
@@ -326,6 +381,12 @@ function Flow({
         <MiniMap pannable zoomable />
         <Controls showInteractive={false} />
       </ReactFlow>
+      {guides.x !== undefined ? (
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: guides.x, width: 1, background: '#2563eb', pointerEvents: 'none', zIndex: 5 }} />
+      ) : null}
+      {guides.y !== undefined ? (
+        <div style={{ position: 'absolute', left: 0, right: 0, top: guides.y, height: 1, background: '#2563eb', pointerEvents: 'none', zIndex: 5 }} />
+      ) : null}
       {title ? <TitleBlock title={title} subtitle={subtitle} /> : null}
       {styledEdges.length > 0 ? <CanvasLegend /> : null}
       {hint ? (

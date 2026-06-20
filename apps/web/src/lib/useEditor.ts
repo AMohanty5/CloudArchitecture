@@ -62,6 +62,8 @@ export interface EditorApi {
   removeGroup: (groupId: string) => void;
   duplicate: (componentId: string) => void;
   nudge: (nodeId: string, dx: number, dy: number) => void;
+  /** Persist a node's position (parent-relative, from a drag) into the layout sidecar. */
+  moveNode: (nodeId: string, position: Position) => void;
   paste: (fragment: CamlFragment) => void;
   /** Restore an older commit's model as a new head commit (never a history rewrite). */
   restore: (model: EditableModel) => void;
@@ -320,6 +322,11 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [apply],
   );
 
+  const moveNode = useCallback(
+    (nodeId: string, position: Position) => apply(modelRef.current!, withPosition(layoutRef.current, nodeId, position), `move:${nodeId}`),
+    [apply],
+  );
+
   const tidyUp = useCallback(async () => {
     const current = modelRef.current;
     if (!current) return;
@@ -414,6 +421,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     removeGroup,
     duplicate,
     nudge,
+    moveNode,
     paste,
     restore: restoreCommit,
   };
