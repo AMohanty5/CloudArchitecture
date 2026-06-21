@@ -19,6 +19,7 @@ import { project } from './projector';
 import type { LayoutSidecar, ProjectableModel } from './projector';
 import { ServiceNode } from './ServiceNode';
 import { GroupNode } from './GroupNode';
+import { EntryNode } from './EntryNode';
 import { SERVICE_DRAG_MIME } from './commands';
 import type { ServiceLike } from './commands';
 import { DIFF_COLOR } from './diffView';
@@ -27,7 +28,7 @@ import { CANVAS_THEME, CATEGORY_LEGEND, CONNECTOR_KINDS, FONT, NEUTRAL, RADIUS, 
 import type { CanvasTheme } from './theme';
 import type { Severity } from '../lib/queries';
 
-const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
+const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode, entry: EntryNode };
 
 /** Snap-to-grid step (flow units) and alignment-guide tolerance (screen px). */
 const GRID = 16;

@@ -163,6 +163,30 @@ describe('project', () => {
     });
   });
 
+  describe('Internet entry node (Day 63)', () => {
+    it('synthesizes an Internet origin + edge for an internet-facing entry point', () => {
+      const m: ProjectableModel = {
+        components: [
+          { id: 'lb', name: 'ALB', type: 'network.loadbalancer.l7', binding: { provider: 'aws', service: 'aws.alb' }, properties: { scheme: 'internet-facing' } },
+          { id: 'app', name: 'App', type: 'compute.vm', binding: { provider: 'aws', service: 'aws.ec2' } },
+        ],
+        connections: [{ id: 'lb-app', from: 'lb', to: 'app', kind: 'traffic' }],
+      };
+      const { nodes, edges } = project(m);
+      const entry = nodes.find((n) => n.type === 'entry');
+      expect(entry?.id).toBe('__internet');
+      expect(edges).toContainEqual(expect.objectContaining({ source: '__internet', target: 'lb', data: { kind: 'traffic' } }));
+    });
+
+    it('adds no entry node when nothing is internet-facing (internal LB / plain model)', () => {
+      const internal: ProjectableModel = {
+        components: [{ id: 'lb', name: 'LB', type: 'network.loadbalancer.l7', binding: { provider: 'aws', service: 'aws.alb' }, properties: { scheme: 'internal' } }],
+      };
+      expect(project(internal).nodes.some((n) => n.type === 'entry')).toBe(false);
+      expect(project({ components: [] }).nodes.some((n) => n.type === 'entry')).toBe(false);
+    });
+  });
+
   it('projects a 500-component model with correct counts and parent-before-child order', () => {
     const model = generateLargeModel(500);
     const { nodes, edges } = project(model);

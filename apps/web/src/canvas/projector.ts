@@ -73,7 +73,7 @@ export interface LayoutSidecar {
 
 export interface ProjectedNode {
   id: string;
-  type: 'service' | 'group';
+  type: 'service' | 'group' | 'entry';
   position: { x: number; y: number };
   data: Record<string, unknown>;
   parentId?: string;
@@ -108,6 +108,16 @@ const SECTION_W = NODE_W + 2 * PAD;
 function isSectionGroup(groupId: string, groupsByParent: Map<string | undefined, CamlGroup[]>, componentsByGroup: Map<string | undefined, CamlComponent[]>, kind: string): boolean {
   return kind === 'tier' && (componentsByGroup.get(groupId)?.length ?? 0) > 0 && (groupsByParent.get(groupId)?.length ?? 0) === 0;
 }
+
+/** A component reachable directly from the internet — the diagram's flow should start here. */
+function isEntryPoint(c: CamlComponent): boolean {
+  const t = c.type;
+  if (t.startsWith('network.cdn') || t.startsWith('network.gateway.api') || t.startsWith('network.gateway.internet') || t === 'network.loadbalancer.global') return true;
+  return t.startsWith('network.loadbalancer') && c.properties?.scheme === 'internet-facing';
+}
+
+/** Projection-only id of the synthesized "Internet / Users" origin node. */
+const ENTRY_ID = '__internet';
 
 function bucket<T>(map: Map<string | undefined, T[]>, key: string | undefined, value: T): void {
   const list = map.get(key);
@@ -258,6 +268,14 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
 
   layoutContainer(undefined);
 
+  // Flow origin (Day 63): synthesize one "Internet / Users" node when the model has
+  // internet-facing entry points, so the architecture reads from a clear start. The node
+  // and its edges are projection-only — never persisted to the CAML model.
+  const entryTargets = (model.components ?? []).filter((c) => isEntryPoint(c) && !suppressed.has(c.id));
+  if (entryTargets.length > 0) {
+    nodes.push({ id: ENTRY_ID, type: 'entry', position: { x: -240, y: 40 }, data: { label: 'Internet' }, style: { width: NODE_W, height: NODE_H } });
+  }
+
   if (layout?.positions || layout?.sizes) {
     for (const node of nodes) {
       const pos = layout.positions?.[node.id];
@@ -287,6 +305,11 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
     const edge: ProjectedEdge = { id: c.id, source, target, label, data: { kind: c.kind }, style: edgeStyle(c.kind) };
     if (c.direction === 'bi') edge.bidirectional = true;
     edges.push(edge);
+  }
+
+  // Internet → each entry point (projection-only traffic edges from the origin node).
+  for (const t of entryTargets) {
+    edges.push({ id: `__entry-${t.id}`, source: ENTRY_ID, target: rowifiedToGroup.get(t.id) ?? t.id, label: 'https', data: { kind: 'traffic' }, style: edgeStyle('traffic') });
   }
 
   return { nodes, edges };
