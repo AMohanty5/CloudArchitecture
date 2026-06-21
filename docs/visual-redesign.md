@@ -254,6 +254,9 @@ These belong in `theme.ts` as a `CANVAS_THEME[mode]` map so `ServiceNode`, `Grou
 
 ## 13. Revised roadmap
 
+> **Canonical day numbering + status lives in `docs/plan/BUILD-PLAN.md` → Stage H.** This
+> section is the *visual detail*; if the two disagree, Stage H wins.
+
 Phase 1 keeps the connectivity fixes (you can't attach what you can't connect — and the
 container→lane change *is* the connectivity groundwork). Phase 2 delivers this spec.
 

@@ -238,6 +238,9 @@ direct `IAM → resource` data line (suggest the assume + communicate pattern).
 
 ## 10. Roadmap impact
 
+> **Canonical day numbering + status lives in `docs/plan/BUILD-PLAN.md` → Stage H.** This
+> section is the *relationship-model detail*; if the two disagree, Stage H wins.
+
 This reframes Phase-1/2 around relationship semantics (supersedes the line-drawing-only
 view of Days 52–53):
 

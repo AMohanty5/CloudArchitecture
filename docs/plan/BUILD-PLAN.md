@@ -771,6 +771,62 @@ AWS icon pack; semantic Multi-AZ/hub-spoke layouts; GenAI/Bedrock template + cat
 
 ---
 
+## Stage H — Correct AWS semantics + presentation-quality canvas (Days 46–68)
+
+**Canonical roadmap for all post-Stage-G work** — folds together three previously-separate
+threads (connection-correctness fixes, the visual redesign, and the semantic relationship
+model) into one sequence. Detail specs: `docs/visual-redesign.md` and
+`docs/aws-relationship-model.md` (those docs' roadmap sections are the *detail*; this is the
+*source of truth* for day numbering and status).
+
+Driven by real-world testing (the `test2` architecture, 2026-06-21) which surfaced two gaps:
+(1) attach/secure/identity relationships couldn't be created and were modeled as generic lines
+(incorrect AWS semantics); (2) the diagram still reads auto-generated.
+
+### Days 46–51 — Connection engine + catalog + repro ✅ (2026-06-21)
+Committed to `main`; **deployed to EC2 through Day 50** (the dark-canvas toggle, Day 51, and
+both spec docs are committed but **not yet deployed** — which is why the live app you're
+testing doesn't show them).
+- [x] **46** Connection engine — subtype matching + undirected structural edges (`e5eb929`)
+- [x] **47** Groups as connection endpoints — VPC peering ↔ VPC (`0842cee`)
+- [x] **48** Catalog connection-rule lint + storage/compute attachment audit (`33e79c3`)
+- [x] **49** Networking/security association audit — `compute.vm` sweep, NACL→subnet, SG broaden, IGW/TGW/VPN→VPC (`3910216`)
+- [x] **50** Validation rule SEC-005 (missing security group) + accessible reject hint (`9bbd3df`) ← *last deployed commit*
+- [x] (docs) Visual redesign spec + **dark-canvas backdrop toggle** (`d91c243`)
+- [x] **51** Reproduce & pin the EBS/SG connect failure (`e43c475`) — proved Blockers A (tier-row no handle), B (async-rules race), C (handle geometry, since confirmed in-browser by `test2`)
+- [x] (docs) AWS semantic relationship model spec (`69f169f`)
+
+### Phase 1 — Semantic relationships & interaction (Days 52–55) ⬜
+- [ ] **52** `classifyRelationship()` engine + the connect-bug fixes: 4-side handles + any-direction connect (Blocker C), prefetch connection rules so a just-dropped service connects instantly (Blocker B), handles on tier-panel rows (Blocker A), and **drop-onto-node creates the *classified* relationship** (attach/secure/assume) instead of a line.
+- [ ] **53** Composite `ServiceNode` — attachment compartments + security/identity badges; projector folds non-COMMUNICATES_WITH edges into their owner.
+- [ ] **54** Inspector relationship panels (Attach / Secure / Assume / Communicates) + VPC endpoints (Gateway + Interface/PrivateLink).
+- [ ] **55** Multi-subnet authoring (reliable drop-into-container, add-subnet, move between subnets) + NACL→subnet chip.
+
+### Phase 2 — Visual system overhaul (Days 56–66) ⬜  *(detail: `docs/visual-redesign.md`)*
+- [ ] **56** Design tokens v2 — type scale, monochrome container washes, 8px grid, light+dark `CANVAS_THEME`.
+- [ ] **57** Icon-forward node visual polish (builds on the Day-53 composite node).
+- [ ] **58** Container demotion — corner labels + washes replace bordered boxes/header bars.
+- [ ] **59** Subnet swimlanes (backdrop lanes from membership; unlocks straight routing).
+- [ ] **60** Region/VPC backdrop layer + z-order pipeline + **full dark theme across all surfaces** (extends the shipped backdrop toggle).
+- [ ] **61** Connector restyle — weights, desaturation, smaller arrows, port-side constraints.
+- [ ] **62** Layout engine — decouple flow-rank from nesting + virtual Internet entry + fitView fill.
+- [ ] **63** Layout archetypes I — 3-Tier, Multi-AZ, Serverless, Event-driven.
+- [ ] **64** Layout archetypes II — Microservices, Data-pipeline, Hub-spoke, GenAI/Contact-center + detection.
+- [ ] **65** Lightweight SG/route/endpoint indicators (chips) + legend/typography polish.
+- [ ] **66** Golden-image review — re-render `test2` + all templates, before/after, export parity, CTO-deck pass.
+
+### Phase 3 — Validation & polish (Days 67–68) ⬜
+- [ ] **67** Connectivity-doctor + relationship validation — grant-not-path hint (IAM→resource line), orphan-attachment, endpoint-not-in-subnet, no-NAT-route, unreachable instance.
+- [ ] **68** Full e2e regression of the three reported scenarios + the new visuals on a deployed build; **deploy to EC2**.
+
+> **Nothing was dropped:** every item from the earlier connectivity plan and the two spec docs
+> maps here — 4-side handles/nested-connectable → Day 52; VPC endpoints → Day 54; multi-subnet →
+> Day 55; full dark mode → Day 60; archetypes → Days 63–64; validation → Day 67. The
+> relationship model *reframed* Days 52–54 (attach/secure/assume now fold instead of drawing
+> lines) but folded in, not replaced, the prior connectivity work.
+
+---
+
 ## Decisions log
 Maintained in `docs/plan/DECISIONS.md` — any day where we deviate from the blueprint
 (e.g. TS-instead-of-Python AI service, fly.io instead of AWS for alpha) gets a dated
