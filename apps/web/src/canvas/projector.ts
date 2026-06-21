@@ -124,6 +124,19 @@ function isEntryPoint(c: CamlComponent): boolean {
 /** Projection-only id of the synthesized "Internet / Users" origin node. */
 const ENTRY_ID = '__internet';
 
+/** A network-link resource (peering / transit gateway / VPN / Direct Connect) that joins VPCs. */
+function isNetworkLink(t: string): boolean {
+  return t.startsWith('network.link.peering') || t.startsWith('network.link.direct') || t === 'network.gateway.transit' || t === 'network.gateway.vpn';
+}
+/** Label for a folded network-link connector. */
+function linkLabel(t: string): string {
+  if (t.startsWith('network.link.peering')) return 'peered';
+  if (t === 'network.gateway.transit') return 'transit';
+  if (t === 'network.gateway.vpn') return 'vpn';
+  if (t.startsWith('network.link.direct')) return 'direct connect';
+  return 'link';
+}
+
 function bucket<T>(map: Map<string | undefined, T[]>, key: string | undefined, value: T): void {
   const list = map.get(key);
   if (list) list.push(value);
@@ -210,6 +223,30 @@ function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Project
       sink[fe.bucket].push({ id: sec.id, name: sec.name, type: sec.type, service: sec.binding?.service });
     }
   }
+
+  // ---- Network-link folding (Day 73) ---------------------------------------------------
+  // A peering / TGW / VPN / Direct-Connect component that joins exactly two network groups
+  // (VPCs) folds into a single labeled connector between them — the link box disappears, the
+  // relationship reads as `VPC A ◄══ peered ══► VPC B`. Links joining >2 groups stay a hub node.
+  const linkEdges: ProjectedEdge[] = [];
+  for (const lc of (model.components ?? []).filter((c) => isNetworkLink(c.type) && !suppressed.has(c.id))) {
+    const conns = (model.connections ?? []).filter((cn) => cn.from === lc.id || cn.to === lc.id);
+    const groupTargets = conns.map((cn) => (cn.from === lc.id ? cn.to : cn.from)).filter((id) => groupIds.has(id));
+    if (groupTargets.length === 2 && conns.length === groupTargets.length) {
+      suppressed.add(lc.id);
+      for (const cn of conns) foldedConnIds.add(cn.id);
+      linkEdges.push({
+        id: `__link-${lc.id}`,
+        source: groupTargets[0]!,
+        target: groupTargets[1]!,
+        label: linkLabel(lc.type),
+        data: { kind: 'peering' },
+        style: edgeStyle('peering'),
+        bidirectional: true,
+      });
+    }
+  }
+
   const ownerHeight = (id: string): number => {
     const f = folds.get(id);
     if (!f) return NODE_H;
@@ -337,6 +374,8 @@ function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Project
   for (const t of entryTargets) {
     edges.push({ id: `__entry-${t.id}`, source: ENTRY_ID, target: rowifiedToGroup.get(t.id) ?? t.id, label: 'https', data: { kind: 'traffic' }, style: edgeStyle('traffic') });
   }
+  // Folded network-link connectors between VPCs (Day 73).
+  edges.push(...linkEdges);
 
   return { nodes, edges };
 }

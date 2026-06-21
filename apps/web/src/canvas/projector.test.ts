@@ -163,6 +163,44 @@ describe('project', () => {
     });
   });
 
+  describe('network-link folding (Day 73)', () => {
+    const peeringModel: ProjectableModel = {
+      groups: [
+        { id: 'vpc-a', kind: 'network', name: 'VPC A' },
+        { id: 'vpc-b', kind: 'network', name: 'VPC B' },
+      ],
+      components: [{ id: 'peer', name: 'Peering', type: 'network.link.peering', binding: { provider: 'aws', service: 'aws.vpc_peering' } }],
+      connections: [
+        { id: 'p-a', from: 'peer', to: 'vpc-a', kind: 'peering' },
+        { id: 'p-b', from: 'peer', to: 'vpc-b', kind: 'peering' },
+      ],
+    };
+
+    it('folds a peering between two VPCs into one labeled connector (box gone)', () => {
+      const { nodes, edges } = project(peeringModel);
+      expect(nodes.find((n) => n.id === 'peer')).toBeUndefined(); // box suppressed
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toMatchObject({ source: 'vpc-a', target: 'vpc-b', label: 'peered', data: { kind: 'peering' }, bidirectional: true });
+    });
+
+    it('keeps a hub (transit gateway joining >2 VPCs) as a node', () => {
+      const hub: ProjectableModel = {
+        groups: [
+          { id: 'a', kind: 'network', name: 'A' },
+          { id: 'b', kind: 'network', name: 'B' },
+          { id: 'c', kind: 'network', name: 'C' },
+        ],
+        components: [{ id: 'tgw', name: 'TGW', type: 'network.gateway.transit', binding: { provider: 'aws', service: 'aws.transit_gateway' } }],
+        connections: [
+          { id: 't-a', from: 'tgw', to: 'a', kind: 'peering' },
+          { id: 't-b', from: 'tgw', to: 'b', kind: 'peering' },
+          { id: 't-c', from: 'tgw', to: 'c', kind: 'peering' },
+        ],
+      };
+      expect(project(hub).nodes.find((n) => n.id === 'tgw')).toBeDefined(); // hub stays
+    });
+  });
+
   describe('composed mode (Day 70)', () => {
     it('flattens leaf nodes (absolute, no parentId) and replaces containers with backdrops', () => {
       const { nodes } = project(threeTier, undefined, { compose: true });
