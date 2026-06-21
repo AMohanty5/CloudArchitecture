@@ -866,6 +866,20 @@ Model contact centers semantically (Connect Instance is a container like a VPC);
 
 > **Risk:** the **Contact Flow workflow view** (94) is effectively a second editor. Recommend shipping the **model + composition (88–93)** first — a Connect architecture that lays out and reads correctly — then the flow drill-in (94) and templates/views (95–96).
 
+### Phase 3B — AWS Architecture Knowledge Engine (Days 98–106) ⬜  *(detail: `docs/architecture-intelligence.md`)*
+From "can these connect?" to an assistant that explains *why/how*, finds required **intermediaries**, flags **anti-patterns**, and **inserts** the fix. **Directly fixes the reported logical errors** (EventBridge→S3, CloudWatch→S3 rejected with no guidance) — and 98–101 do so on day one using the *existing* rules graph, no new catalog data. *Prioritizable ahead of Phase 3A.*
+- [ ] **98** Rules graph + **intermediary path-finder** — build the type-graph from `connectionRules`; BFS (depth ≤ 3) + representative-service map. Pure + tested.
+- [ ] **99** **Rich verdict** — `evaluateConnection` → supported / discouraged / needs-intermediary / unsupported; wire into the canvas connect flow.
+- [ ] **100** **Recommendation panel** — replace the bare reject hint with structured "Suggested architectures" (EventBridge → Lambda → S3, …) options.
+- [ ] **101** **Auto-correction** — "Insert Recommended Pattern" materializes the path (intermediaries + wiring) as one undoable command.
+- [ ] **102** **Knowledge metadata** — `knowledge` block (recommendedTargets / requiresIntermediary / antiPatterns) on the high-value services + lint.
+- [ ] **103** **Anti-pattern validation** — pack rules from `antiPatterns` (event-router→storage, monitoring→storage, identity→resource as data).
+- [ ] **104** **Architecture Advisor panel** — valid / recommended / common-patterns / anti-patterns in the inspector (reuses `suggestFor` + metadata).
+- [ ] **105** **Pattern library** — named insertable fragments + `recommendedPatterns` wiring.
+- [ ] **106** Golden (path-finder over the reported cases + templates) + deploy.
+
+> Ship **98–101** first — the path-finder + rich verdict + recommendation + auto-fix fixes the reported logical errors immediately over the *existing* rules graph; the curated metadata (102–105) just sharpens the messages.
+
 ### Phase 3 — Validation & polish (Days 67–68) ⬜
 - [x] **67** ✅ (2026-06-21) Relationship/connectivity validation — 3 advisory pack rules: **SEC-006** (IAM role grants a resource but no compute assumes it — the dangling-grant version of the IAM→S3 guidance), **OPS-002** (orphan attachment — a free-floating EBS/SG/role), **NET-001** (interface endpoint not in a subnet; gateway endpoints exempt). +6 tests (24 validation). *Deferred (need a routing/reachability model we don't have yet): no-NAT-route, unreachable-instance → backlog.*
 - [x] **68** ✅ (2026-06-21) Full regression gate — `pnpm test` across the monorepo **9/9 green** (web 120, core 104 [+49 API-gated skips], caml, catalog), catalog lint **0 warnings / 61 services**, web+core typecheck clean. The three originally-reported scenarios have dedicated passing regression tests (`connect-repro`, `relationships`, projector fold). Playwright `golden-journey` e2e exists but needs the running stack (not run here). **Deployed to EC2** + post-deploy smoke. *Stage H Phases 1–3 complete.*
