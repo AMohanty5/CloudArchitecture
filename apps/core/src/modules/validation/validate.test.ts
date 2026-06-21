@@ -112,6 +112,32 @@ describe('validateModel — REL-007 pinned autoscaling', () => {
   });
 });
 
+describe('validateModel — SEC-005 instance without a security group', () => {
+  const ec2 = (over: Partial<Component> = {}): Component => ({ id: 'app', type: 'compute.vm', name: 'App', ...over });
+  const sg: Component = {
+    id: 'sg',
+    type: 'network.firewall.network',
+    name: 'SG',
+    binding: { provider: 'aws', service: 'aws.security_group' },
+  };
+
+  it('fires for an instance with no security-group association', () => {
+    expect(ids(doc({ components: [ec2()] }))).toContain('SEC-005:app');
+  });
+
+  it('does not fire when a security group is associated, in either edge direction', () => {
+    const sgToApp = doc({ components: [ec2(), sg], connections: [{ id: 'c1', from: 'sg', to: 'app', kind: 'dependency' }] });
+    const appToSg = doc({ components: [ec2(), sg], connections: [{ id: 'c1', from: 'app', to: 'sg', kind: 'dependency' }] });
+    expect(ids(sgToApp)).not.toContain('SEC-005:app');
+    expect(ids(appToSg)).not.toContain('SEC-005:app');
+  });
+
+  it('covers autoscaling groups (compute.vm subtree) as well', () => {
+    const m = doc({ components: [ec2({ id: 'asg', type: 'compute.vm.autoscaling_group', name: 'ASG' })] });
+    expect(ids(m)).toContain('SEC-005:asg');
+  });
+});
+
 describe('validateModel — OPS-001 monitoring gap (severity modulated)', () => {
   const comp = (criticality: Component['criticality'], monitored: boolean): Component => ({
     id: 'c',

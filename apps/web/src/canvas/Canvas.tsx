@@ -405,6 +405,8 @@ function Flow({
       {styledEdges.length > 0 ? <CanvasLegend kinds={presentKinds} /> : null}
       {hint ? (
         <div
+          role="status"
+          aria-live="polite"
           style={{
             position: 'absolute',
             bottom: 12,

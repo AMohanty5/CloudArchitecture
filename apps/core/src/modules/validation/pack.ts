@@ -17,6 +17,8 @@ const isDatastore = (c: Component): boolean => c.type.startsWith('database.') ||
 const isDatabase = (c: Component): boolean => c.type.startsWith('database.');
 const isAllowedIntermediary = (c: Component): boolean =>
   c.type.startsWith('network.firewall.waf') || c.type.startsWith('network.gateway.api');
+const isInstance = (c: Component): boolean => c.type.startsWith('compute.vm');
+const isNetworkFirewall = (c: Component): boolean => c.type.startsWith('network.firewall.network');
 const isInternetEntry = (c: Component): boolean =>
   c.type.startsWith('user.') ||
   c.type.startsWith('external.') ||
@@ -134,6 +136,33 @@ const REL_007: Rule = {
   },
 };
 
+const SEC_005: Rule = {
+  id: 'SEC-005',
+  title: 'Instance has no security group',
+  category: 'security',
+  evaluate(ctx: RuleContext): Finding[] {
+    // A compute instance should sit behind a security group — modeled as a
+    // `network.firewall.network` component associated via a `dependency` edge (drawn
+    // either direction; Day 46 normalizes it). Flags instances with no such association.
+    const guarded = new Set<string>();
+    for (const cn of ctx.connections) {
+      if (cn.kind !== 'dependency') continue;
+      const a = ctx.componentsById.get(cn.from);
+      const b = ctx.componentsById.get(cn.to);
+      if (!a || !b) continue;
+      if (isInstance(a) && isNetworkFirewall(b)) guarded.add(a.id);
+      if (isInstance(b) && isNetworkFirewall(a)) guarded.add(b.id);
+    }
+    return ctx.components
+      .filter((c) => isInstance(c) && !guarded.has(c.id))
+      .map((c) =>
+        finding(SEC_005, 'medium', c.id, `${c.name} has no security group associated.`, {
+          remediation: 'Associate a security group with the instance.',
+        }),
+      );
+  },
+};
+
 const OPS_001: Rule = {
   id: 'OPS-001',
   title: 'Critical component has no monitoring',
@@ -155,5 +184,5 @@ const OPS_001: Rule = {
   },
 };
 
-export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, REL_001, REL_007, OPS_001];
+export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, REL_001, REL_007, OPS_001];
 export { PACK_VERSION };
