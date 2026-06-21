@@ -1,4 +1,5 @@
 import type { ProjectableModel, ProjectedNode } from './projector';
+import { subnetRole } from './subnets';
 
 /**
  * Backdrop-layer engine (Day 69, docs/canvas-composition.md §1). The deep change that turns
@@ -93,7 +94,15 @@ export function computeBackdrops(model: ProjectableModel, positions: Map<string,
         label: g.name,
         kind: g.kind,
         backdrop: true,
-        ...(g.kind === 'subnet' ? { public: g.properties?.public === true } : {}),
+        ...(g.kind === 'subnet'
+          ? {
+              public: g.properties?.public === true,
+              role: subnetRole(
+                g.properties?.role,
+                (model.components ?? []).filter((c) => c.group === g.id).map((c) => c.type),
+              ),
+            }
+          : {}),
       },
       style: { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 + TITLE },
       zIndex: -100 + depth * 10, // region (depth 0) furthest back; all behind nodes (≥0)

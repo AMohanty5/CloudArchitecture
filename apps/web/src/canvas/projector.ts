@@ -10,6 +10,7 @@ import { computeBackdrops } from './backdrops';
 import type { Rect } from './backdrops';
 import { classifyRelationship, foldBucket, groupFoldBucket, secondarySide } from './relationships';
 import type { FoldBucket } from './relationships';
+import { subnetRole } from './subnets';
 import { FOLD, NODE } from './theme';
 
 export interface CamlComponent {
@@ -241,7 +242,9 @@ function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Project
           kind: g.kind,
           ...(section ? { items: rows.map((c) => ({ id: c.id, name: c.name, type: c.type, service: c.binding?.service })) } : {}),
           ...(folds.get(g.id) ? { security: folds.get(g.id)!.security } : {}),
-          ...(g.kind === 'subnet' ? { public: g.properties?.public === true } : {}),
+          ...(g.kind === 'subnet'
+            ? { public: g.properties?.public === true, role: subnetRole(g.properties?.role, (componentsByGroup.get(g.id) ?? []).map((c) => c.type)) }
+            : {}),
         },
         style: { width: NODE_W, height: HEADER }, // backfilled below
       };

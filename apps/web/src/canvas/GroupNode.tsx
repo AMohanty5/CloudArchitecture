@@ -72,6 +72,7 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
     findingSeverity?: Severity;
     security?: Array<{ id: string; name: string }>;
     public?: boolean;
+    role?: string;
   };
   const security = d.security ?? [];
   // Subnets are tinted public (sky) vs private (slate); AZ bands are a quiet slate, lighter
@@ -164,6 +165,7 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
         {isSubnet ? (
           <span style={{ padding: '0 6px', borderRadius: 6, background: rgba(base, 0.12), fontSize: 9, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase', color: rgba(base, 0.9) }}>
             {d.public ? 'public' : 'private'}
+            {d.role && d.role !== 'shared' ? ` · ${d.role}` : ''}
           </span>
         ) : null}
       </div>
