@@ -27,5 +27,6 @@ connectionRules:
           database.relational,
           database.cache,
           database.search,
+          network.endpoint.private,
         ],
       }

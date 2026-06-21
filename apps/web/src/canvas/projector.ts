@@ -6,7 +6,7 @@
  */
 
 import { edgeStyle } from './connections';
-import { classifyRelationship, foldBucket, secondarySide } from './relationships';
+import { classifyRelationship, foldBucket, groupFoldBucket, secondarySide } from './relationships';
 import type { FoldBucket } from './relationships';
 import { FOLD, NODE } from './theme';
 
@@ -126,6 +126,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
   // their owner node and suppress the secondary's standalone node + the edge. Only
   // communication edges survive as lines. See docs/aws-relationship-model.md.
   const componentsById = new Map((model.components ?? []).map((c) => [c.id, c]));
+  const groupIds = new Set((model.groups ?? []).map((g) => g.id));
   const folds = new Map<string, FoldSink>();
   const suppressed = new Set<string>();
   const foldedConnIds = new Set<string>();
@@ -139,7 +140,20 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
       const b = componentsById.get(cn.to);
       if (a) connCount.set(a.id, (connCount.get(a.id) ?? 0) + 1);
       if (b) connCount.set(b.id, (connCount.get(b.id) ?? 0) + 1);
-      if (!a || !b) continue; // a group endpoint (e.g. NACL→subnet) — folding handled later
+      if (!a || !b) {
+        // Exactly one endpoint is a component, the other a group → a group fold (NACL→subnet):
+        // a security control folds onto the group as a 🛡 chip. Other component↔group edges stay lines.
+        const comp = a ?? b;
+        const grpId = a ? cn.to : cn.from;
+        if (comp && groupIds.has(grpId)) {
+          const gbkt = groupFoldBucket(comp.type);
+          if (gbkt) {
+            foldEdges.push({ id: cn.id, secId: comp.id, ownerId: grpId, bucket: gbkt });
+            secondaryCount.set(comp.id, (secondaryCount.get(comp.id) ?? 0) + 1);
+          }
+        }
+        continue;
+      }
       const bkt = foldBucket(classifyRelationship(a.type, b.type, cn.kind));
       if (!bkt) continue; // communicates_with → stays an edge
       const side = secondarySide(a.type, b.type, classifyRelationship(a.type, b.type, cn.kind));
@@ -193,6 +207,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
           label: g.name,
           kind: g.kind,
           ...(section ? { items: rows.map((c) => ({ id: c.id, name: c.name, type: c.type, service: c.binding?.service })) } : {}),
+          ...(folds.get(g.id) ? { security: folds.get(g.id)!.security } : {}),
         },
         style: { width: NODE_W, height: HEADER }, // backfilled below
       };

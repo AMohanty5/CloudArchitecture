@@ -8,7 +8,7 @@ import { CatalogError, groupServiceKey, loadCatalog } from './loader.js';
 const catalogRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../catalog');
 
 describe('loadCatalog', () => {
-  it('loads the full Phase-1 AWS seed catalog (60 services, doc 14)', () => {
+  it('loads the full Phase-1 AWS seed catalog (61 services, doc 14)', () => {
     const catalog = loadCatalog(catalogRoot);
     const keys = [...catalog.servicesByKey.keys()].sort();
     expect(keys).toEqual([
@@ -69,11 +69,12 @@ describe('loadCatalog', () => {
       'aws.timestream',
       'aws.transit_gateway',
       'aws.vpc',
+      'aws.vpc_gateway_endpoint',
       'aws.vpc_peering',
       'aws.vpn_gateway',
       'aws.waf',
     ]);
-    expect(keys).toHaveLength(60);
+    expect(keys).toHaveLength(61);
   });
 
   it('indexes group-kind services by provider/kind', () => {

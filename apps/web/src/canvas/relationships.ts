@@ -60,6 +60,15 @@ export function isFolded(rel: RelationshipClass): boolean {
 /** Visual bucket a folded relationship renders into on its owner node. */
 export type FoldBucket = 'attachments' | 'security' | 'identity';
 
+/**
+ * Bucket for folding a *component* into a *group* owner (e.g. a NACL securing a subnet, or
+ * a KMS key scoped to a network). Only security controls fold onto groups today; other
+ * component↔group edges stay as lines.
+ */
+export function groupFoldBucket(componentType: string): FoldBucket | null {
+  return isSecurityControl(componentType) ? 'security' : null;
+}
+
 /** Map a folded class to its render bucket; null for communicates_with (drawn as a line). */
 export function foldBucket(rel: RelationshipClass): FoldBucket | null {
   switch (rel) {

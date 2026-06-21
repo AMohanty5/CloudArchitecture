@@ -1,0 +1,18 @@
+key: aws.vpc_gateway_endpoint
+provider: aws
+name: Gateway VPC Endpoint
+description: Gateway VPC endpoint — a private route-table route to Amazon S3 or DynamoDB, with no ENI, NAT, or internet gateway. Searchable as "gateway endpoint".
+status: ga
+icon: aws/networking/privatelink.svg
+docs: https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html
+abstractTypes: [network.endpoint.private]
+capabilities:
+  routeTableTarget: { supported: true }
+properties:
+  targetService: { type: string, enum: [s3, dynamodb], default: s3 }
+connectionRules:
+  # Compute in the VPC routes to S3/DynamoDB privately through the gateway endpoint.
+  inbound:
+    - { kinds: [traffic], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }
+  outbound:
+    - { kinds: [data], to: [storage.object, database.keyvalue] }

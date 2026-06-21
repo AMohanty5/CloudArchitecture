@@ -135,6 +135,18 @@ describe('project', () => {
       expect(edges).toHaveLength(1);
       expect(edges[0]).toMatchObject({ id: 'c-s3', source: 'ec2', target: 's3' });
     });
+
+    it('folds a NACL into its subnet group as a security chip (no node, no line)', () => {
+      const m: ProjectableModel = {
+        groups: [{ id: 'sub', kind: 'subnet', name: 'Private' }],
+        components: [{ id: 'nacl', name: 'acl-1', type: 'network.firewall.network', binding: { provider: 'aws', service: 'aws.nacl' } }],
+        connections: [{ id: 'c-nacl', from: 'nacl', to: 'sub', kind: 'dependency' }],
+      };
+      const { nodes, edges } = project(m);
+      expect(nodes.find((n) => n.id === 'nacl')).toBeUndefined();
+      expect((nodes.find((n) => n.id === 'sub')!.data.security as FoldItem[]).map((s) => s.name)).toEqual(['acl-1']);
+      expect(edges).toHaveLength(0);
+    });
   });
 
   it('projects a 500-component model with correct counts and parent-before-child order', () => {

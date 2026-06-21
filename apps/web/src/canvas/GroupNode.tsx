@@ -27,7 +27,9 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
     invalid?: boolean;
     diffStatus?: DiffStatus;
     findingSeverity?: Severity;
+    security?: Array<{ id: string; name: string }>;
   };
+  const security = d.security ?? [];
   const base = kindColor(d.kind);
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   const findingColor = d.findingSeverity ? SEVERITY_COLOR[d.findingSeverity] : undefined;
@@ -74,6 +76,16 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
           <span title={`${d.findingSeverity} finding`} style={{ width: 9, height: 9, borderRadius: '50%', background: findingColor, flexShrink: 0 }} />
         ) : null}
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
+        {security.map((s) => (
+          <span
+            key={s.id}
+            title={`Secured by ${s.name}`}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, padding: '0 6px', borderRadius: 6, background: '#fff', border: `1px solid ${rgba(base, 0.3)}`, fontSize: 9, fontWeight: 500, letterSpacing: 0, textTransform: 'none', color: NEUTRAL.subtle, flexShrink: 0 }}
+          >
+            <span aria-hidden>🛡</span>
+            <span style={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+          </span>
+        ))}
         <span style={{ marginLeft: 'auto', fontWeight: 500, letterSpacing: 0, textTransform: 'none', color: rgba(base, 0.7), flexShrink: 0 }}>{d.kind}</span>
       </div>
       {isSection ? (

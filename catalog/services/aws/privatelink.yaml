@@ -1,16 +1,12 @@
 key: aws.privatelink
 provider: aws
-name: AWS PrivateLink
-description: Private VPC endpoint exposing a service without internet exposure.
+name: Interface VPC Endpoint (PrivateLink)
+description: Interface VPC endpoint — an ENI in a subnet, secured by a security group, privately reaching a service without internet exposure. Searchable as "interface endpoint" / "privatelink".
 status: ga
 icon: aws/networking/privatelink.svg
 docs: https://docs.aws.amazon.com/vpc/latest/privatelink/
 abstractTypes: [network.endpoint.private]
 properties:
-  endpointType:
-    type: string
-    enum: [interface, gateway]
-    default: interface
   privateDnsEnabled: { type: boolean, default: true }
 connectionRules:
   inbound:
