@@ -78,7 +78,7 @@ interface CanvasProps {
   canvasTheme?: CanvasTheme;
 }
 
-const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: NEUTRAL.muted };
+const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: `var(--cac-muted, ${NEUTRAL.muted})` };
 
 /** A presentation title block pinned to the top-left of the canvas. */
 function TitleBlock({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -89,8 +89,8 @@ function TitleBlock({ title, subtitle }: { title: string; subtitle?: string }) {
         top: 12,
         left: 12,
         padding: '8px 14px',
-        background: 'rgba(255,255,255,0.92)',
-        border: `1px solid ${NEUTRAL.border}`,
+        background: `var(--cac-surface, rgba(255,255,255,0.92))`,
+        border: `1px solid var(--cac-hairline, ${NEUTRAL.border})`,
         borderRadius: RADIUS.group,
         boxShadow: SHADOW.overlay,
         fontFamily: FONT,
@@ -99,8 +99,8 @@ function TitleBlock({ title, subtitle }: { title: string; subtitle?: string }) {
         maxWidth: 360,
       }}
     >
-      <div style={{ fontSize: 15, fontWeight: 700, color: NEUTRAL.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-      {subtitle ? <div style={{ fontSize: 11.5, color: NEUTRAL.subtle, marginTop: 1 }}>{subtitle}</div> : null}
+      <div style={{ fontSize: 15, fontWeight: 700, color: `var(--cac-text, ${NEUTRAL.text})`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+      {subtitle ? <div style={{ fontSize: 11.5, color: `var(--cac-muted, ${NEUTRAL.subtle})`, marginTop: 1 }}>{subtitle}</div> : null}
     </div>
   );
 }
@@ -116,13 +116,13 @@ function CanvasLegend({ kinds }: { kinds: Set<string> }) {
         bottom: 12,
         left: 12,
         padding: open ? '9px 11px' : '6px 10px',
-        background: 'rgba(255,255,255,0.94)',
-        border: `1px solid ${NEUTRAL.border}`,
+        background: `var(--cac-surface, rgba(255,255,255,0.94))`,
+        border: `1px solid var(--cac-hairline, ${NEUTRAL.border})`,
         borderRadius: 9,
         boxShadow: SHADOW.overlay,
         fontFamily: FONT,
         fontSize: 11,
-        color: NEUTRAL.subtle,
+        color: `var(--cac-muted, ${NEUTRAL.subtle})`,
         zIndex: 4,
       }}
     >
