@@ -836,7 +836,7 @@ From "nested resource cards" to "composed architecture" — the diagram communic
 
 ### Phase 2D — Sidebar / palette experience (Days 79–87) ⬜  *(detail: `docs/sidebar-redesign.md`)*
 Architecture-first toolbox to replace the flat service-catalog palette.
-- [ ] **79** Domain IA + collapsible sections + compact tiles + density modes (Compact/Comfortable/Detailed) — rewrite `Palette.tsx`.
+- [x] **79** ✅ (2026-06-22) **Architecture-first sidebar** — `domains.ts` `domainOf` maps each service to one of 9 domains (🏗 Containers · 🌐 Edge · 💻 Compute · 🗄 Data · 📨 Integration · 🔐 Security · 📈 Observability · 🎧 Contact Center · 🤖 AI); rewrote `Palette.tsx` into **collapsible domain sections** (count + chevron, empty domains hidden) with **compact draggable tiles** and a **Compact/Comfortable/Detailed density toggle** (persisted, default Compact; short names strip "Amazon/AWS"). +5 tests (172 web).
 - [ ] **80** Favorites + auto-recents (localStorage) + hover-only metadata.
 - [ ] **81** Search upgrade — keywords/aliases in `ranking.ts` + flat highlighted results.
 - [ ] **82** Templates-in-sidebar + `mergeTemplate` (insert a scaffold into the current canvas).
