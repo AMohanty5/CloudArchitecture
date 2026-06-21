@@ -11,6 +11,8 @@ import type { Rect } from './backdrops';
 import { classifyRelationship, foldBucket, groupFoldBucket, secondarySide } from './relationships';
 import type { FoldBucket } from './relationships';
 import { subnetRole } from './subnets';
+import { architectureLayer, LAYER_LABEL, LAYER_ORDER } from './layers';
+import type { ArchLayer } from './layers';
 import { FOLD, NODE } from './theme';
 
 export interface CamlComponent {
@@ -144,14 +146,77 @@ function bucket<T>(map: Map<string | undefined, T[]>, key: string | undefined, v
   else map.set(key, [value]);
 }
 
-/** Projection options. `compose` renders containers as backdrops (Day 70, flagged). */
+/** Projection options. `compose` = container backdrops (Day 70); `layers` = category bands (Day 76). */
 export interface ProjectOptions {
   compose?: boolean;
+  layers?: boolean;
 }
 
 export function project(model: ProjectableModel, layout?: LayoutSidecar, opts?: ProjectOptions): Projection {
+  if (opts?.layers) return projectLayers(model);
   const base = projectNested(model, layout);
   return opts?.compose ? composeProjection(base, model) : base;
+}
+
+/**
+ * Architecture-layers view (Day 76): lay the whole model out as horizontal category bands
+ * (EDGE → NETWORK → COMPUTE → INTEGRATION → DATA → SECURITY → OBS), independent of infra
+ * nesting, with only the communication edges drawn. A deterministic, infra-agnostic view.
+ */
+export function projectLayers(model: ProjectableModel): Projection {
+  const comps = model.components ?? [];
+  const byLayer = new Map<ArchLayer, CamlComponent[]>();
+  for (const c of comps) {
+    const l = architectureLayer(c.type);
+    const arr = byLayer.get(l);
+    if (arr) arr.push(c);
+    else byLayer.set(l, [c]);
+  }
+
+  const NODE_GAP = 24;
+  const BAND_PAD = 36;
+  const LABEL_OFFSET = 34;
+  const BAND_GAP = 18;
+  const nodes: ProjectedNode[] = [];
+  let y = 0;
+  for (const layer of LAYER_ORDER) {
+    const members = byLayer.get(layer);
+    if (!members || members.length === 0) continue;
+    const bandWidth = Math.max(BAND_PAD * 2 + members.length * NODE_W + (members.length - 1) * NODE_GAP, NODE_W + BAND_PAD * 2);
+    const bandHeight = LABEL_OFFSET + NODE_H + BAND_PAD / 2;
+    nodes.push({
+      id: `__band-${layer}`,
+      type: 'group',
+      position: { x: 0, y },
+      data: { label: LAYER_LABEL[layer], kind: 'tier', backdrop: true },
+      style: { width: bandWidth, height: bandHeight },
+      zIndex: -50,
+    });
+    members.forEach((c, i) => {
+      nodes.push({
+        id: c.id,
+        type: 'service',
+        position: { x: BAND_PAD + i * (NODE_W + NODE_GAP), y: y + LABEL_OFFSET },
+        data: { name: c.name, type: c.type, service: c.binding?.service, provider: c.binding?.provider },
+        style: { width: NODE_W, height: NODE_H },
+      });
+    });
+    y += bandHeight + BAND_GAP;
+  }
+
+  // Only the communication flow is drawn between bands; structural relationships are implied.
+  const byId = new Map(comps.map((c) => [c.id, c]));
+  const edges: ProjectedEdge[] = [];
+  for (const cn of model.connections ?? []) {
+    const a = byId.get(cn.from);
+    const b = byId.get(cn.to);
+    if (!a || !b) continue;
+    if (classifyRelationship(a.type, b.type, cn.kind) !== 'communicates_with') continue;
+    const edge: ProjectedEdge = { id: cn.id, source: cn.from, target: cn.to, label: cn.kind, data: { kind: cn.kind }, style: edgeStyle(cn.kind) };
+    if (cn.direction === 'bi') edge.bidirectional = true;
+    edges.push(edge);
+  }
+  return { nodes, edges };
 }
 
 function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Projection {

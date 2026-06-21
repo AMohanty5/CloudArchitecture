@@ -244,6 +244,37 @@ describe('project', () => {
     });
   });
 
+  describe('architecture-layers view (Day 76)', () => {
+    const m: ProjectableModel = {
+      groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }],
+      components: [
+        { id: 'lb', name: 'ALB', type: 'network.loadbalancer.l7', binding: { provider: 'aws', service: 'aws.alb' }, group: 'vpc' },
+        { id: 'ec2', name: 'App', type: 'compute.vm', binding: { provider: 'aws', service: 'aws.ec2' }, group: 'vpc' },
+        { id: 's3', name: 'Bucket', type: 'storage.object', binding: { provider: 'aws', service: 'aws.s3' } },
+        { id: 'sg', name: 'SG', type: 'network.firewall.network', binding: { provider: 'aws', service: 'aws.security_group' } },
+      ],
+      connections: [
+        { id: 'lb-ec2', from: 'lb', to: 'ec2', kind: 'traffic' },
+        { id: 'ec2-s3', from: 'ec2', to: 's3', kind: 'data' },
+        { id: 'sg-ec2', from: 'sg', to: 'ec2', kind: 'dependency' }, // structural → not drawn
+      ],
+    };
+
+    it('lays resources into category bands (EDGE above COMPUTE above DATA)', () => {
+      const { nodes } = project(m, undefined, { layers: true });
+      const bands = nodes.filter((n) => n.id.startsWith('__band-'));
+      expect(bands.map((b) => b.data.label)).toEqual(['EDGE', 'COMPUTE', 'DATA', 'SECURITY']);
+      const yOf = (id: string) => nodes.find((n) => n.id === id)!.position.y;
+      expect(yOf('lb')).toBeLessThan(yOf('ec2')); // edge band above compute band
+      expect(yOf('ec2')).toBeLessThan(yOf('s3')); // compute above data
+    });
+
+    it('draws only communication edges (structural SG→EC2 is implied by the band)', () => {
+      const { edges } = project(m, undefined, { layers: true });
+      expect(edges.map((e) => e.id).sort()).toEqual(['ec2-s3', 'lb-ec2']);
+    });
+  });
+
   describe('composed mode (Day 70)', () => {
     it('flattens leaf nodes (absolute, no parentId) and replaces containers with backdrops', () => {
       const { nodes } = project(threeTier, undefined, { compose: true });

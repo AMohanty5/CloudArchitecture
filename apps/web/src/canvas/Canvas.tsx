@@ -78,6 +78,8 @@ interface CanvasProps {
   canvasTheme?: CanvasTheme;
   /** Composed mode (Day 70, beta): containers render as backdrops behind flat nodes. */
   compose?: boolean;
+  /** Architecture-layers view (Day 76): category bands instead of infra nesting. */
+  layers?: boolean;
 }
 
 const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: `var(--cac-muted, ${NEUTRAL.muted})` };
@@ -185,6 +187,7 @@ function Flow({
   showEdgeLabels,
   canvasTheme = 'light',
   compose = false,
+  layers = false,
 }: CanvasProps) {
   const backdrop = CANVAS_THEME[canvasTheme];
   // Theme surfaces via CSS custom properties on the wrapper — they cascade to every custom
@@ -197,7 +200,7 @@ function Flow({
     '--cac-hairline': backdrop.hairline,
     '--cac-ring': backdrop.selectedRing,
   } as React.CSSProperties;
-  const { nodes, edges } = useMemo(() => project(model, layout, { compose }), [model, layout, compose]);
+  const { nodes, edges } = useMemo(() => project(model, layout, { compose, layers }), [model, layout, compose, layers]);
   const selectedNodes = useMemo(
     () =>
       nodes.map((n) => ({

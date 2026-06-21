@@ -159,6 +159,25 @@ export function Editor() {
       return next;
     });
   }, []);
+  // Architecture-layers view (Day 76): category bands instead of infra nesting.
+  const [layersView, setLayersView] = useState(() => {
+    try {
+      return localStorage.getItem('cac:layers') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleLayers = useCallback(() => {
+    setLayersView((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem('cac:layers', next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
   const applyLayout = useCallback(
     (s: LayoutStrategy) => {
       setLayoutStrategy(s);
@@ -574,6 +593,22 @@ export function Editor() {
           ▢ Compose
         </button>
         <button
+          onClick={toggleLayers}
+          title="Architecture layers view: EDGE / NETWORK / COMPUTE / DATA / SECURITY / OBS bands"
+          style={{
+            marginLeft: 4,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: layersView ? '#eff6ff' : '#fff',
+            color: layersView ? '#2563eb' : '#334155',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          ▦ Layers
+        </button>
+        <button
           onClick={() => setHistoryOpen((v) => !v)}
           title="History & diff"
           style={{
@@ -720,6 +755,7 @@ export function Editor() {
               showEdgeLabels={showLabels}
               canvasTheme={canvasTheme}
               compose={compose}
+              layers={layersView}
               findingSeverityById={findingSeverityById}
               registerExporter={(api) => (exporterRef.current = api)}
             />
