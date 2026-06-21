@@ -41,7 +41,7 @@ const BASE_OPTIONS: Record<string, string> = {
 };
 
 /** Selectable auto-layout strategies (Day 40). All layered-based so group nesting holds. */
-export type LayoutStrategy = 'layered-lr' | 'layered-tb' | 'compact-lr' | 'tiered-tb';
+export type LayoutStrategy = 'layered-lr' | 'layered-tb' | 'compact-lr' | 'tiered-tb' | 'flow-lr';
 
 export const DEFAULT_STRATEGY: LayoutStrategy = 'layered-lr';
 
@@ -57,7 +57,24 @@ export const LAYOUT_PRESETS: Record<LayoutStrategy, { label: string; options: Re
     label: 'Tiered ↓',
     options: { 'elk.direction': 'DOWN', 'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX', 'elk.layered.spacing.nodeNodeBetweenLayers': '52' },
   },
+  // Archetype flow (Day 64): partition nodes by tier so they read Internet → edge →
+  // compute → data left-to-right. Best for flatter architectures (serverless, event-driven,
+  // data pipeline); nested 3-tier still favours Layered →.
+  'flow-lr': { label: 'Flow ⇢', options: { 'elk.direction': 'RIGHT', 'elk.partitioning.activate': 'true' } },
 };
+
+/**
+ * Flow tier for the partition-ordered "Flow" layout: entry (0) → edge/networking (1) →
+ * compute/messaging/other (2) → data/storage (3). Derived from the node's abstract type
+ * (carried on `data.type` by the projector); the synthesized Internet node is tier 0.
+ */
+export function tierRank(node: ProjectedNode): number {
+  if (node.type === 'entry') return 0;
+  const t = String((node.data as { type?: string } | undefined)?.type ?? '');
+  if (t.startsWith('network.cdn') || t.startsWith('network.dns') || t.startsWith('network.gateway') || t.startsWith('network.loadbalancer') || t.startsWith('network.firewall')) return 1;
+  if (t.startsWith('database.') || t.startsWith('storage.')) return 3;
+  return 2;
+}
 
 function rootOptions(strategy: LayoutStrategy): Record<string, string> {
   return { ...BASE_OPTIONS, ...LAYOUT_PRESETS[strategy].options };
@@ -68,13 +85,18 @@ const GROUP_OPTIONS: Record<string, string> = { 'elk.padding': '[top=32,left=14,
 
 /** Build a hierarchical ELK graph from the projected nodes (parentId nesting) + edges. */
 export function toElkGraph(nodes: ProjectedNode[], edges: ProjectedEdge[], strategy: LayoutStrategy = DEFAULT_STRATEGY): ElkNode {
+  const partitioned = strategy === 'flow-lr';
   const elkById = new Map<string, ElkNode>();
   for (const n of nodes) {
+    const layoutOptions: Record<string, string> = n.type === 'group' ? { ...GROUP_OPTIONS } : {};
+    // Flow layout partitions leaf nodes by tier; groups keep their padding only.
+    if (partitioned && n.type !== 'group') layoutOptions['elk.partitioning.partition'] = String(tierRank(n));
     elkById.set(n.id, {
       id: n.id,
       width: n.style?.width,
       height: n.style?.height,
-      ...(n.type === 'group' ? { layoutOptions: GROUP_OPTIONS, children: [] } : {}),
+      ...(n.type === 'group' ? { children: [] } : {}),
+      ...(Object.keys(layoutOptions).length > 0 ? { layoutOptions } : {}),
     });
   }
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { fromElkGraph, toElkGraph } from './layout';
+import { fromElkGraph, toElkGraph, tierRank } from './layout';
 import type { ProjectedNode, ProjectedEdge } from './projector';
+
+const svcNode = (id: string, type: string): ProjectedNode => ({ id, type: 'service', position: { x: 0, y: 0 }, data: { type }, style: { width: 172, height: 46 } });
 
 const nodes: ProjectedNode[] = [
   { id: 'vpc', type: 'group', position: { x: 0, y: 0 }, data: {}, style: { width: 200, height: 100 } },
@@ -24,6 +26,28 @@ describe('toElkGraph', () => {
     expect(g.layoutOptions?.['elk.algorithm']).toBe('layered');
     expect(g.layoutOptions?.['elk.direction']).toBe('RIGHT');
     expect(g.layoutOptions?.['elk.hierarchyHandling']).toBe('INCLUDE_CHILDREN');
+  });
+});
+
+describe('tierRank + flow partitioning (Day 64)', () => {
+  it('ranks entry → edge → compute → data', () => {
+    expect(tierRank({ id: 'i', type: 'entry', position: { x: 0, y: 0 }, data: {} })).toBe(0);
+    expect(tierRank(svcNode('lb', 'network.loadbalancer.l7'))).toBe(1);
+    expect(tierRank(svcNode('cdn', 'network.cdn'))).toBe(1);
+    expect(tierRank(svcNode('app', 'compute.vm'))).toBe(2);
+    expect(tierRank(svcNode('q', 'messaging.queue'))).toBe(2);
+    expect(tierRank(svcNode('db', 'database.relational'))).toBe(3);
+    expect(tierRank(svcNode('s3', 'storage.object'))).toBe(3);
+  });
+
+  it('only the flow preset partitions leaves; layered does not', () => {
+    const ns = [svcNode('lb', 'network.loadbalancer.l7'), svcNode('db', 'database.relational')];
+    const flow = toElkGraph(ns, [], 'flow-lr');
+    expect(flow.layoutOptions?.['elk.partitioning.activate']).toBe('true');
+    expect(flow.children?.find((c) => c.id === 'lb')?.layoutOptions?.['elk.partitioning.partition']).toBe('1');
+    expect(flow.children?.find((c) => c.id === 'db')?.layoutOptions?.['elk.partitioning.partition']).toBe('3');
+    const layered = toElkGraph(ns, [], 'layered-lr');
+    expect(layered.children?.find((c) => c.id === 'lb')?.layoutOptions?.['elk.partitioning.partition']).toBeUndefined();
   });
 });
 
