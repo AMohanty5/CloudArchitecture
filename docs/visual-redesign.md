@@ -258,7 +258,10 @@ Phase 1 keeps the connectivity fixes (you can't attach what you can't connect �
 container→lane change *is* the connectivity groundwork). Phase 2 delivers this spec.
 
 **Phase 1 — Correctness & interaction (Days 51–55)**
-- 51 Reproduce & instrument the EBS/SG connect failure; pin the exact blocker.
+- 51 ✅ **Done.** Reproduced & pinned via `apps/web/src/canvas/connect-repro.test.ts`:
+  - **Blocker A (proven):** a component inside a `tier` section panel is rowified — `project()` emits no node for it, so it has no handle and can never be an edge endpoint.
+  - **Blocker B (proven):** the rules for a freshly-dropped service are `undefined` until its React Query resolves, so the first connection attempts are rejected (async race).
+  - **Not the blocker for the screenshot's subnet 3-tier:** there the verdict *allows* EBS↔EC2 / SG↔EC2 both ways, so any residual failure is in the React Flow DOM layer (nested-handle reachability) — to confirm in-browser at the start of Day 52.
 - 52 Make grouped/nested components connectable (handles on rows; de-occlude nested handles).
 - 53 Intuitive attachment UX (drop-onto-node ⇒ association edge; inspector "Attach…").
 - 54 VPC endpoints: add Gateway Endpoint, relabel PrivateLink → Interface Endpoint, rules + lint.
