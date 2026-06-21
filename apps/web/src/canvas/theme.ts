@@ -19,6 +19,17 @@ export const SHADOW = {
   overlay: '0 1px 3px rgba(15,23,42,0.08)',
 } as const;
 
+/**
+ * Canvas backdrop theme (light / dark) — pane background + grid dots. One token map so
+ * the canvas and any future backdrop layers read from a single source (see
+ * docs/visual-redesign.md §11). Phase-2 extends this to node/container surfaces.
+ */
+export type CanvasTheme = 'light' | 'dark';
+export const CANVAS_THEME: Record<CanvasTheme, { paneBg: string; gridDot: string }> = {
+  light: { paneBg: '#f8fafc', gridDot: '#e2e8f0' },
+  dark: { paneBg: '#0f172a', gridDot: '#1e293b' },
+};
+
 /** Neutral palette. */
 export const NEUTRAL = {
   text: '#1e293b',

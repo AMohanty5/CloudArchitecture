@@ -15,6 +15,7 @@ import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canv
 import type { Endpoint } from '../canvas/connections';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
+import type { CanvasTheme } from '../canvas/theme';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
 import { buildFragment, parseFragment, CAML_FRAGMENT_MIME } from '../canvas/clipboard';
 import { buildDiffView } from '../canvas/diffView';
@@ -119,6 +120,25 @@ export function Editor() {
     return stored && stored in LAYOUT_PRESETS ? (stored as LayoutStrategy) : DEFAULT_STRATEGY;
   });
   const [showLabels, setShowLabels] = useState(false);
+  // Canvas backdrop theme (light/dark) — a global preference (docs/visual-redesign.md §11).
+  const [canvasTheme, setCanvasTheme] = useState<CanvasTheme>(() => {
+    try {
+      return localStorage.getItem('cac:canvas-theme') === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+  const toggleCanvasTheme = useCallback(() => {
+    setCanvasTheme((t) => {
+      const next = t === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('cac:canvas-theme', next);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
   const applyLayout = useCallback(
     (s: LayoutStrategy) => {
       setLayoutStrategy(s);
@@ -470,6 +490,22 @@ export function Editor() {
           🏷 Labels
         </button>
         <button
+          onClick={toggleCanvasTheme}
+          title="Toggle dark / light canvas"
+          style={{
+            marginLeft: 4,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: '1px solid #e2e8f0',
+            background: canvasTheme === 'dark' ? '#0f172a' : '#fff',
+            color: canvasTheme === 'dark' ? '#e2e8f0' : '#334155',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          {canvasTheme === 'dark' ? '🌙 Dark' : '☀ Light'}
+        </button>
+        <button
           onClick={() => setHistoryOpen((v) => !v)}
           title="History & diff"
           style={{
@@ -598,7 +634,7 @@ export function Editor() {
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           {diffActive && diffView ? (
-            <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} title={archName} subtitle="Comparing commits" />
+            <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} title={archName} subtitle="Comparing commits" canvasTheme={canvasTheme} />
           ) : model ? (
             <Canvas
               model={model as ProjectableModel}
@@ -614,6 +650,7 @@ export function Editor() {
               onConnect={onConnect}
               onNodeMove={editor.moveNode}
               showEdgeLabels={showLabels}
+              canvasTheme={canvasTheme}
               findingSeverityById={findingSeverityById}
               registerExporter={(api) => (exporterRef.current = api)}
             />

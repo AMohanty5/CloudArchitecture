@@ -22,7 +22,8 @@ import { SERVICE_DRAG_MIME } from './commands';
 import type { ServiceLike } from './commands';
 import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
-import { CATEGORY_LEGEND, CONNECTOR_KINDS, FONT, NEUTRAL, RADIUS, SHADOW } from './theme';
+import { CANVAS_THEME, CATEGORY_LEGEND, CONNECTOR_KINDS, FONT, NEUTRAL, RADIUS, SHADOW } from './theme';
+import type { CanvasTheme } from './theme';
 import type { Severity } from '../lib/queries';
 
 const nodeTypes: NodeTypes = { service: ServiceNode, group: GroupNode };
@@ -71,6 +72,8 @@ interface CanvasProps {
   onNodeMove?: (id: string, position: { x: number; y: number }) => void;
   /** Show protocol/port labels on connections (toggled from the editor toolbar). */
   showEdgeLabels?: boolean;
+  /** Canvas backdrop theme (pane background + grid). Defaults to light. */
+  canvasTheme?: CanvasTheme;
 }
 
 const sectionLabel: React.CSSProperties = { fontSize: 9.5, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: NEUTRAL.muted };
@@ -176,7 +179,9 @@ function Flow({
   subtitle,
   onNodeMove,
   showEdgeLabels,
+  canvasTheme = 'light',
 }: CanvasProps) {
+  const backdrop = CANVAS_THEME[canvasTheme];
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
     () =>
@@ -389,9 +394,9 @@ function Flow({
         onlyRenderVisibleElements
         minZoom={0.1}
         proOptions={{ hideAttribution: true }}
-        style={{ background: '#f8fafc' }}
+        style={{ background: backdrop.paneBg }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#e2e8f0" />
+        <Background variant={BackgroundVariant.Dots} gap={22} size={1} color={backdrop.gridDot} />
         <MiniMap pannable zoomable />
         <Controls showInteractive={false} />
       </ReactFlow>
