@@ -803,7 +803,7 @@ testing doesn't show them).
 - [x] **55** ✅ (2026-06-21) **VPC endpoints**: relabeled PrivateLink → "Interface VPC Endpoint (PrivateLink)" (discoverable) + new `aws.vpc_gateway_endpoint` (S3/DynamoDB route, no ENI); SG now secures interface endpoints. **NACL→subnet chip**: projector folds a security control into a *group* owner (`groupFoldBucket`), GroupNode renders a 🛡 chip in the header — NACL connected to a subnet folds in, no node/line. 61-service catalog lints clean; +1 projector test (90 web). *Multi-subnet authoring already works (move-between-subnets via the inspector group picker); deferred: drop-into-covered-container reliability + inspector "+ Attach…" picker → backlog.*
 
 ### Phase 2 — Visual system overhaul (Days 56–66) ⬜  *(detail: `docs/visual-redesign.md`)*
-- [ ] **56** Design tokens v2 — type scale, monochrome container washes, 8px grid, light+dark `CANVAS_THEME`.
+- [x] **56** ✅ (2026-06-21) Design tokens v2 in `theme.ts` — `TYPE_SCALE` (10/11/13/16, inverted hierarchy), `SPACE` (8px grid), `CONTAINER` (faint monochrome wash + hairline alphas), and `CANVAS_THEME` expanded from `{paneBg,gridDot}` → full per-theme surface set (nodeSurface/text/muted/hairline/selectedRing/connector) with light+dark parity. 5 token-invariant tests (95 web). Foundation only — no visual change yet; Days 57–61 consume it.
 - [ ] **57** Icon-forward node visual polish (builds on the Day-53 composite node).
 - [ ] **58** Container demotion — corner labels + washes replace bordered boxes/header bars.
 - [ ] **59** Subnet swimlanes (backdrop lanes from membership; unlocks straight routing).

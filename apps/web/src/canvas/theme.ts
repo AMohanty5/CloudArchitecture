@@ -19,6 +19,27 @@ export const FOLD = { compartmentH: 22, badgeRowH: 26 } as const;
 /** Corner radii. */
 export const RADIUS = { node: 10, group: 12, chip: 8 } as const;
 
+/**
+ * Type scale on the 8px rhythm (visual-redesign §5). The hierarchy is inverted from the
+ * current render so services dominate: region labels are the largest *context* text, the
+ * service name is the loudest *content* text, metadata the quietest.
+ *   meta=L4  label=L2 (vpc/subnet)  name=L3 (service)  region=L1
+ */
+export const TYPE_SCALE = { meta: 10, label: 11, name: 13, region: 16 } as const;
+
+/** 8px spacing grid — all paddings/gaps should be a multiple of 4 drawn from here. */
+export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
+
+/**
+ * Container chrome (visual-redesign §3/§7): faint monochrome washes + near-invisible
+ * hairlines, so boundaries read as *context* rather than cages. `wash`/`borderAlpha` are
+ * opacities applied to the kind accent; Day 58 swaps GroupNode onto these.
+ */
+export const CONTAINER = {
+  wash: { region: 0.025, network: 0.04, subnetPublic: 0.04, subnetPrivate: 0.03, default: 0.03 },
+  borderAlpha: { region: 0.1, network: 0.18, subnet: 0.12, default: 0.14 },
+} as const;
+
 /** Elevation scale — subtle, modern (no glossy/skeuomorphic effects). */
 export const SHADOW = {
   node: '0 1px 2px rgba(15,23,42,0.08)',
@@ -28,14 +49,49 @@ export const SHADOW = {
 } as const;
 
 /**
- * Canvas backdrop theme (light / dark) — pane background + grid dots. One token map so
- * the canvas and any future backdrop layers read from a single source (see
- * docs/visual-redesign.md §11). Phase-2 extends this to node/container surfaces.
+ * Canvas theme (light / dark) — every surface the diagram paints, so the canvas, nodes,
+ * containers, and connectors read from one source (docs/visual-redesign.md §11). Today the
+ * canvas consumes `paneBg`/`gridDot`; Day 60 wires the node/container/connector tokens so
+ * dark mode covers every surface (not just the backdrop). Dark is its own token set, not an
+ * inversion: elevation comes from a lighter panel fill (shadows vanish on dark) and the AWS
+ * category colours stay as-is so icons keep popping.
  */
 export type CanvasTheme = 'light' | 'dark';
-export const CANVAS_THEME: Record<CanvasTheme, { paneBg: string; gridDot: string }> = {
-  light: { paneBg: '#f8fafc', gridDot: '#e2e8f0' },
-  dark: { paneBg: '#0f172a', gridDot: '#1e293b' },
+export interface CanvasThemeTokens {
+  paneBg: string;
+  gridDot: string;
+  /** Node card / panel fill. */
+  nodeSurface: string;
+  text: string;
+  muted: string;
+  /** Container + divider hairline. */
+  hairline: string;
+  /** Selection focus ring. */
+  selectedRing: string;
+  /** Connector strokes by semantic class (the only saturated structural colour is traffic). */
+  connector: { traffic: string; data: string; neutral: string };
+}
+export const CANVAS_THEME: Record<CanvasTheme, CanvasThemeTokens> = {
+  light: {
+    paneBg: '#f8fafc',
+    gridDot: '#e2e8f0',
+    nodeSurface: '#ffffff',
+    text: '#1e293b',
+    muted: '#94a3b8',
+    hairline: 'rgba(148,163,184,0.35)',
+    selectedRing: 'rgba(37,99,235,0.18)',
+    connector: { traffic: '#2563eb', data: '#059669', neutral: '#94a3b8' },
+  },
+  dark: {
+    paneBg: '#0f172a',
+    gridDot: '#1e293b',
+    nodeSurface: '#111a2e',
+    text: '#e2e8f0',
+    muted: '#64748b',
+    hairline: 'rgba(148,163,184,0.22)',
+    selectedRing: 'rgba(96,165,250,0.45)',
+    connector: { traffic: '#60a5fa', data: '#34d399', neutral: '#64748b' },
+  },
 };
 
 /** Neutral palette. */
