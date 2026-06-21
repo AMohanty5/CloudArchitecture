@@ -6,6 +6,8 @@
  */
 
 import { edgeStyle } from './connections';
+import { computeBackdrops } from './backdrops';
+import type { Rect } from './backdrops';
 import { classifyRelationship, foldBucket, groupFoldBucket, secondarySide } from './relationships';
 import type { FoldBucket } from './relationships';
 import { FOLD, NODE } from './theme';
@@ -127,7 +129,17 @@ function bucket<T>(map: Map<string | undefined, T[]>, key: string | undefined, v
   else map.set(key, [value]);
 }
 
-export function project(model: ProjectableModel, layout?: LayoutSidecar): Projection {
+/** Projection options. `compose` renders containers as backdrops (Day 70, flagged). */
+export interface ProjectOptions {
+  compose?: boolean;
+}
+
+export function project(model: ProjectableModel, layout?: LayoutSidecar, opts?: ProjectOptions): Projection {
+  const base = projectNested(model, layout);
+  return opts?.compose ? composeProjection(base, model) : base;
+}
+
+function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Projection {
   const groupsByParent = new Map<string | undefined, CamlGroup[]>();
   for (const g of model.groups ?? []) bucket(groupsByParent, g.parent, g);
   const componentsByGroup = new Map<string | undefined, CamlComponent[]>();
@@ -324,4 +336,56 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
   }
 
   return { nodes, edges };
+}
+
+/** Absolute position of every node, resolving parent-relative coords up the parentId chain. */
+function absolutePositions(nodes: ProjectedNode[]): Map<string, { x: number; y: number }> {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const abs = new Map<string, { x: number; y: number }>();
+  const resolve = (n: ProjectedNode): { x: number; y: number } => {
+    const cached = abs.get(n.id);
+    if (cached) return cached;
+    let pos = { x: n.position.x, y: n.position.y };
+    const parent = n.parentId ? byId.get(n.parentId) : undefined;
+    if (parent) {
+      const pa = resolve(parent);
+      pos = { x: pa.x + pos.x, y: pa.y + pos.y };
+    }
+    abs.set(n.id, pos);
+    return pos;
+  };
+  for (const n of nodes) resolve(n);
+  return abs;
+}
+
+/**
+ * Composed projection (Day 70): take the nested projection's good positions and re-render
+ * containment as **backdrops** — leaf nodes go flat (absolute coords, no parentId) and the
+ * structural region/VPC/AZ/subnet boxes are replaced by `computeBackdrops` rectangles behind
+ * the nodes. Tier "section panels" (groups with `items`) are kept as-is. This delivers the
+ * backdrop look on the existing layout; flat-ELK flow-rank decoupling is a flagged follow-up.
+ */
+export function composeProjection(projection: Projection, model: ProjectableModel): Projection {
+  const abs = absolutePositions(projection.nodes);
+  const leafPositions = new Map<string, Rect>();
+  for (const n of projection.nodes) {
+    if (n.type === 'service' || n.type === 'entry') {
+      const p = abs.get(n.id)!;
+      leafPositions.set(n.id, { x: p.x, y: p.y, width: n.style?.width ?? NODE_W, height: n.style?.height ?? NODE_H });
+    }
+  }
+  const backdrops = computeBackdrops(model, leafPositions);
+
+  const flat: ProjectedNode[] = [];
+  for (const n of projection.nodes) {
+    const p = abs.get(n.id)!;
+    if (n.type === 'group') {
+      const items = (n.data as { items?: unknown[] }).items;
+      // Keep section panels (they render their own rows); structural containers → backdrops.
+      if (Array.isArray(items) && items.length > 0) flat.push({ ...n, position: p, parentId: undefined, extent: undefined });
+      continue;
+    }
+    flat.push({ ...n, position: p, parentId: undefined, extent: undefined });
+  }
+  return { nodes: [...backdrops, ...flat], edges: projection.edges };
 }

@@ -163,6 +163,31 @@ describe('project', () => {
     });
   });
 
+  describe('composed mode (Day 70)', () => {
+    it('flattens leaf nodes (absolute, no parentId) and replaces containers with backdrops', () => {
+      const { nodes } = project(threeTier, undefined, { compose: true });
+      const services = nodes.filter((n) => n.type === 'service');
+      const groups = nodes.filter((n) => n.type === 'group');
+      // leaves are flat
+      expect(services.map((n) => n.id).sort()).toEqual(['app-asg', 'web-lb']);
+      for (const s of services) expect(s.parentId).toBeUndefined();
+      // structural containers became backdrops (behind nodes, flagged)
+      expect(groups.map((n) => n.id).sort()).toEqual(['region', 'subnet-app', 'subnet-pub', 'vpc']);
+      for (const g of groups) {
+        expect(g.data.backdrop).toBe(true);
+        expect(g.parentId).toBeUndefined();
+        expect(g.zIndex!).toBeLessThan(0);
+      }
+      // backdrops come before nodes in the list (painted behind)
+      expect(nodes.findIndex((n) => n.id === 'vpc')).toBeLessThan(nodes.findIndex((n) => n.id === 'web-lb'));
+    });
+
+    it('leaves the default (nested) projection unchanged', () => {
+      const web = project(threeTier).nodes.find((n) => n.id === 'web-lb')!;
+      expect(web.parentId).toBe('subnet-pub'); // still nested without the flag
+    });
+  });
+
   describe('Internet entry node (Day 63)', () => {
     it('synthesizes an Internet origin + edge for an internet-facing entry point', () => {
       const m: ProjectableModel = {
