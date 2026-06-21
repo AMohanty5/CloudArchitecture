@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
+  ConnectionMode,
   Controls,
   MarkerType,
   MiniMap,
@@ -386,6 +387,7 @@ function Flow({
               }
             : undefined
         }
+        connectionMode={ConnectionMode.Loose}
         isValidConnection={connectable ? isValidConnection : undefined}
         onConnect={connectable ? handleConnect : undefined}
         onConnectStart={() => showHint(null)}

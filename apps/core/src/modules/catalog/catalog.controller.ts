@@ -20,6 +20,12 @@ export class CatalogController {
     return this.query.search(q, provider);
   }
 
+  @Get('connection-rules')
+  @ApiOkResponse({ description: 'Every service connection-rule set keyed by catalog key — prefetched by the canvas for drag-time validation.' })
+  connectionRules() {
+    return this.query.getAllConnectionRules();
+  }
+
   @Get('services/:key')
   @ApiOkResponse({ description: 'Full service definition incl. the property JSON Schema for the form generator.' })
   detail(@Param('key') key: string) {

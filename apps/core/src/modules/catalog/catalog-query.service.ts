@@ -62,6 +62,21 @@ export class CatalogQueryService {
     return (await this.loadServices()).find((s) => s.key === key);
   }
 
+  /**
+   * All services' connection rules keyed by catalog key (only those that declare any).
+   * Lets the canvas prefetch every rule in one request so a just-dropped service is
+   * connectable immediately, with no per-service drag-time fetch race (Day 52).
+   */
+  async getAllConnectionRules(): Promise<Record<string, CatalogService['connectionRules']>> {
+    const out: Record<string, CatalogService['connectionRules']> = {};
+    for (const s of await this.loadServices()) {
+      if (s.connectionRules && (s.connectionRules.inbound?.length || s.connectionRules.outbound?.length)) {
+        out[s.key] = s.connectionRules;
+      }
+    }
+    return out;
+  }
+
   private async loadServices(): Promise<CatalogService[]> {
     // 1. Redis index (hot path)
     try {

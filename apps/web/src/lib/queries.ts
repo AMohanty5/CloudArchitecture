@@ -151,6 +151,26 @@ export function useConnectionRules(serviceKeys: string[]): Map<string, Connectio
   return map;
 }
 
+/**
+ * All services' connection rules, prefetched in a single request and returned as a map.
+ * Drives drag-time validation for *any* service — including one just dropped from the
+ * palette — with no per-service fetch race (Day 52 / Blocker B). Falls back to an empty
+ * map while loading; the verdict simply rejects until it resolves (then re-renders).
+ */
+export function useAllConnectionRules(): Map<string, ConnectionRules | undefined> {
+  const { data } = useQuery({
+    queryKey: ['catalog', 'connection-rules'],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<Record<string, ConnectionRules>> => {
+      const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
+      const res = await fetch(`${base}/catalog/connection-rules`);
+      if (!res.ok) throw new Error('failed to load connection rules');
+      return (await res.json()) as Record<string, ConnectionRules>;
+    },
+  });
+  return new Map(Object.entries(data ?? {}));
+}
+
 // ---- History & diff (Day 19) ----
 
 export interface CommitStats {

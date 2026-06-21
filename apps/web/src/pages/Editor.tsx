@@ -10,7 +10,7 @@ import { DiffPanel } from '../canvas/DiffPanel';
 import { ValidationPanel } from '../canvas/ValidationPanel';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
-import { useConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
+import { useAllConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
 import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
 import type { Endpoint } from '../canvas/connections';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
@@ -267,11 +267,9 @@ export function Editor() {
   const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
   const groupOptions = useMemo(() => groups.map((g) => ({ id: g.id, name: g.name, kind: g.kind })), [groups]);
 
-  const serviceKeys = useMemo(
-    () => [...new Set(components.map((c) => c.binding?.service).filter((s): s is string => Boolean(s)))],
-    [components],
-  );
-  const rulesByService = useConnectionRules(serviceKeys);
+  // Prefetch every service's rules in one request so a just-dropped palette item is
+  // connectable immediately (Day 52 / Blocker B — no per-service drag-time fetch race).
+  const rulesByService = useAllConnectionRules();
   const violations = useMemo(() => containmentViolations(model ?? {}), [model]);
   const invalidGroupIds = useMemo(() => violatingGroupIds(model ?? {}), [model]);
 

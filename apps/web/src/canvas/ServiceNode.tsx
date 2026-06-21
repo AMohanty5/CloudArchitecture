@@ -23,6 +23,24 @@ const handleStyle = {
   border: '1.5px solid #94a3b8',
 };
 
+/**
+ * Handles on all four sides so a node can be connected from whichever edge faces its
+ * neighbour — vertically-stacked resources in a subnet were unreachable with only
+ * left/right handles (Day 51 Blocker C). The canvas runs in `ConnectionMode.Loose`, so
+ * any handle may originate or receive a connection; the catalog verdict still governs
+ * validity. Unique ids keep React Flow from collapsing same-type handles.
+ */
+function NodeHandles(): React.JSX.Element {
+  return (
+    <>
+      <Handle id="t" type="target" position={Position.Top} style={handleStyle} />
+      <Handle id="l" type="target" position={Position.Left} style={handleStyle} />
+      <Handle id="r" type="source" position={Position.Right} style={handleStyle} />
+      <Handle id="b" type="source" position={Position.Bottom} style={handleStyle} />
+    </>
+  );
+}
+
 /** A small severity dot anchored to the node corner when a finding targets it (Day 26). */
 function FindingDot({ severity }: { severity: Severity }) {
   return (
@@ -72,9 +90,8 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     return (
       <div style={{ ...shell, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}>
         {d.findingSeverity ? <FindingDot severity={d.findingSeverity} /> : null}
-        <Handle type="target" position={Position.Left} style={handleStyle} />
+        <NodeHandles />
         <div style={{ fontWeight: 700, fontSize: 20, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
-        <Handle type="source" position={Position.Right} style={handleStyle} />
       </div>
     );
   }
@@ -82,7 +99,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
   return (
     <div style={{ ...shell, display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px' }}>
       {d.findingSeverity ? <FindingDot severity={d.findingSeverity} /> : null}
-      <Handle type="target" position={Position.Left} style={handleStyle} />
+      <NodeHandles />
       {d.service ? (
         <img
           src={`/api/v1/catalog/icons/${d.service}`}
@@ -104,7 +121,6 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
           </div>
         ) : null}
       </div>
-      <Handle type="source" position={Position.Right} style={handleStyle} />
     </div>
   );
 }

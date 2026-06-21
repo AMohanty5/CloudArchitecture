@@ -796,9 +796,9 @@ testing doesn't show them).
 - [x] **51** Reproduce & pin the EBS/SG connect failure (`e43c475`) — proved Blockers A (tier-row no handle), B (async-rules race), C (handle geometry, since confirmed in-browser by `test2`)
 - [x] (docs) AWS semantic relationship model spec (`69f169f`)
 
-### Phase 1 — Semantic relationships & interaction (Days 52–55) ⬜
-- [ ] **52** `classifyRelationship()` engine + the connect-bug fixes: 4-side handles + any-direction connect (Blocker C), prefetch connection rules so a just-dropped service connects instantly (Blocker B), handles on tier-panel rows (Blocker A), and **drop-onto-node creates the *classified* relationship** (attach/secure/assume) instead of a line.
-- [ ] **53** Composite `ServiceNode` — attachment compartments + security/identity badges; projector folds non-COMMUNICATES_WITH edges into their owner.
+### Phase 1 — Semantic relationships & interaction (Days 52–55)
+- [x] **52** ✅ (2026-06-21) `classifyRelationship()` engine (`relationships.ts`, 6 tests) + connect-bug fixes: **4-side handles + `ConnectionMode.Loose`** (Blocker C — vertical neighbours now connect from facing edges), **bulk `/catalog/connection-rules` prefetch** via `useAllConnectionRules` (Blocker B — a just-dropped service is connectable instantly). *Deferred to Day 53 (where they belong with the composite render): handles on tier-panel rows (Blocker A) + drop-onto-node folding.*
+- [ ] **53** Composite `ServiceNode` — attachment compartments + security/identity badges; projector folds non-COMMUNICATES_WITH edges into their owner; **drop-onto-node creates the classified (folded) relationship**; tier-row handles (Blocker A).
 - [ ] **54** Inspector relationship panels (Attach / Secure / Assume / Communicates) + VPC endpoints (Gateway + Interface/PrivateLink).
 - [ ] **55** Multi-subnet authoring (reliable drop-into-container, add-subnet, move between subnets) + NACL→subnet chip.
 

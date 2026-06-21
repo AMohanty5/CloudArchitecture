@@ -49,9 +49,11 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
         overflow: 'hidden',
       }}
     >
-      {/* Container-to-container edge anchors (used when section rows remap their edges here). */}
-      <Handle type="target" position={Position.Left} style={groupHandleStyle} />
-      <Handle type="source" position={Position.Right} style={groupHandleStyle} />
+      {/* Container-to-container edge anchors (four-sided so groups connect from any edge). */}
+      <Handle id="t" type="target" position={Position.Top} style={groupHandleStyle} />
+      <Handle id="l" type="target" position={Position.Left} style={groupHandleStyle} />
+      <Handle id="r" type="source" position={Position.Right} style={groupHandleStyle} />
+      <Handle id="b" type="source" position={Position.Bottom} style={groupHandleStyle} />
       <div
         style={{
           display: 'flex',
