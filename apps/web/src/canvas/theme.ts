@@ -36,9 +36,16 @@ export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
  * opacities applied to the kind accent; Day 58 swaps GroupNode onto these.
  */
 export const CONTAINER = {
-  wash: { region: 0.025, network: 0.04, subnetPublic: 0.04, subnetPrivate: 0.03, default: 0.03 },
+  wash: { region: 0.025, network: 0.04, subnetPublic: 0.05, subnetPrivate: 0.04, default: 0.03 },
   borderAlpha: { region: 0.1, network: 0.18, subnet: 0.12, default: 0.14 },
 } as const;
+
+/**
+ * Subnet lane accents (Day 59): public subnets read as a faint sky band, private as a
+ * quiet slate band — so the public/private split is legible at a glance without strong
+ * outlines (visual-redesign §3).
+ */
+export const SUBNET_TINT = { public: '#0ea5e9', private: '#64748b' } as const;
 
 /** Elevation scale — subtle, modern (no glossy/skeuomorphic effects). */
 export const SHADOW = {

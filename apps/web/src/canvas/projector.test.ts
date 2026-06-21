@@ -136,6 +136,20 @@ describe('project', () => {
       expect(edges[0]).toMatchObject({ id: 'c-s3', source: 'ec2', target: 's3' });
     });
 
+    it('carries the public/private flag onto subnet group data (Day 59 lanes)', () => {
+      const m: ProjectableModel = {
+        groups: [
+          { id: 'pub', kind: 'subnet', name: 'Public', properties: { public: true } },
+          { id: 'priv', kind: 'subnet', name: 'Private', properties: { public: false } },
+          { id: 'bare', kind: 'subnet', name: 'Bare' },
+        ],
+      };
+      const nodes = project(m).nodes;
+      expect(nodes.find((n) => n.id === 'pub')!.data.public).toBe(true);
+      expect(nodes.find((n) => n.id === 'priv')!.data.public).toBe(false);
+      expect(nodes.find((n) => n.id === 'bare')!.data.public).toBe(false); // default private
+    });
+
     it('folds a NACL into its subnet group as a security chip (no node, no line)', () => {
       const m: ProjectableModel = {
         groups: [{ id: 'sub', kind: 'subnet', name: 'Private' }],

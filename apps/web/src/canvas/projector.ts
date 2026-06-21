@@ -208,6 +208,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
           kind: g.kind,
           ...(section ? { items: rows.map((c) => ({ id: c.id, name: c.name, type: c.type, service: c.binding?.service })) } : {}),
           ...(folds.get(g.id) ? { security: folds.get(g.id)!.security } : {}),
+          ...(g.kind === 'subnet' ? { public: g.properties?.public === true } : {}),
         },
         style: { width: NODE_W, height: HEADER }, // backfilled below
       };

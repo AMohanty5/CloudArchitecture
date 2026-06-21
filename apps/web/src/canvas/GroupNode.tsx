@@ -5,7 +5,7 @@ import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
 import { SEVERITY_COLOR } from './validationView';
 import { roleLabel } from './roleLabels';
-import { CONTAINER, FONT, NEUTRAL, RADIUS, TYPE_SCALE, kindColor, rgba } from './theme';
+import { CONTAINER, FONT, NEUTRAL, RADIUS, SUBNET_TINT, TYPE_SCALE, kindColor, rgba } from './theme';
 import type { Severity } from '../lib/queries';
 
 /** A row in a section panel (Day 41): a component rendered compactly inside its tier group. */
@@ -69,9 +69,12 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
     diffStatus?: DiffStatus;
     findingSeverity?: Severity;
     security?: Array<{ id: string; name: string }>;
+    public?: boolean;
   };
   const security = d.security ?? [];
-  const base = kindColor(d.kind);
+  // Subnets are tinted as public (sky) vs private (slate) lanes; everything else by kind.
+  const isSubnet = d.kind === 'subnet';
+  const base = isSubnet ? (d.public ? SUBNET_TINT.public : SUBNET_TINT.private) : kindColor(d.kind);
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   const findingColor = d.findingSeverity ? SEVERITY_COLOR[d.findingSeverity] : undefined;
   const feedback = diffColor ?? findingColor ?? (d.invalid ? '#ef4444' : selected ? '#2563eb' : undefined);
@@ -118,7 +121,11 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
 
   // --- Structural container (region / VPC / subnet): demoted to wash + corner label. ---
   const kind = d.kind ?? '';
-  const wash = KIND_WASH[kind] ?? CONTAINER.wash.default;
+  const wash = isSubnet
+    ? d.public
+      ? CONTAINER.wash.subnetPublic
+      : CONTAINER.wash.subnetPrivate
+    : (KIND_WASH[kind] ?? CONTAINER.wash.default);
   const borderAlpha = KIND_BORDER[kind] ?? CONTAINER.borderAlpha.default;
   const isRegion = kind === 'region';
   return (
@@ -150,6 +157,11 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
         }}
       >
         {labelRow}
+        {isSubnet ? (
+          <span style={{ padding: '0 6px', borderRadius: 6, background: rgba(base, 0.12), fontSize: 9, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase', color: rgba(base, 0.9) }}>
+            {d.public ? 'public' : 'private'}
+          </span>
+        ) : null}
       </div>
     </div>
   );
