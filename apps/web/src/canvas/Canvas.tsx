@@ -183,6 +183,16 @@ function Flow({
   canvasTheme = 'light',
 }: CanvasProps) {
   const backdrop = CANVAS_THEME[canvasTheme];
+  // Theme surfaces via CSS custom properties on the wrapper — they cascade to every custom
+  // node/container so dark mode reaches all surfaces without threading the theme through the
+  // pure projector (Day 60). Nodes/containers read var(--cac-*) with a light fallback.
+  const themeVars = {
+    '--cac-surface': backdrop.nodeSurface,
+    '--cac-text': backdrop.text,
+    '--cac-muted': backdrop.muted,
+    '--cac-hairline': backdrop.hairline,
+    '--cac-ring': backdrop.selectedRing,
+  } as React.CSSProperties;
   const { nodes, edges } = useMemo(() => project(model, layout), [model, layout]);
   const selectedNodes = useMemo(
     () =>
@@ -361,7 +371,7 @@ function Flow({
   );
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }} onDragOver={editable ? onDragOver : undefined} onDrop={editable ? onDrop : undefined}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', ...themeVars }} onDragOver={editable ? onDragOver : undefined} onDrop={editable ? onDrop : undefined}>
       {/* Animate position changes (e.g. ELK "Tidy up") with a short transform transition. */}
       <style>{'.react-flow__node { transition: transform 0.28s ease; } .react-flow__edge:hover .react-flow__edge-path { stroke-width: 3px; }'}</style>
       <ReactFlow

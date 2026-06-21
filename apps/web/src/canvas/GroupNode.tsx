@@ -35,7 +35,7 @@ function SecurityChip({ name, base }: { name: string; base: string }): React.JSX
   return (
     <span
       title={`Secured by ${name}`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0 6px', borderRadius: 6, background: '#fff', border: `1px solid ${rgba(base, 0.3)}`, fontSize: 9, fontWeight: 500, color: NEUTRAL.subtle, flexShrink: 0 }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0 6px', borderRadius: 6, background: 'var(--cac-surface, #fff)', border: `1px solid ${rgba(base, 0.3)}`, fontSize: 9, fontWeight: 500, color: 'var(--cac-muted, #64748b)', flexShrink: 0 }}
     >
       <span aria-hidden>🛡</span>
       <span style={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
@@ -97,7 +97,7 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
   // --- Section panel (tier groups): the intentional panel look, unchanged. ---
   if (isSection) {
     return (
-      <div style={{ width: '100%', height: '100%', boxSizing: 'border-box', border: `1.5px solid ${feedback ?? rgba(base, 0.45)}`, borderRadius: RADIUS.group, background: '#ffffff', boxShadow: selected ? `0 0 0 3px ${rgba(base, 0.18)}` : '0 1px 3px rgba(15,23,42,0.05)', fontFamily: FONT, overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '100%', boxSizing: 'border-box', border: `1.5px solid ${feedback ?? rgba(base, 0.45)}`, borderRadius: RADIUS.group, background: 'var(--cac-surface, #ffffff)', boxShadow: selected ? `0 0 0 3px ${rgba(base, 0.18)}` : '0 1px 3px rgba(15,23,42,0.05)', fontFamily: FONT, overflow: 'hidden' }}>
         <GroupHandles />
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: base, background: rgba(base, 0.1), borderBottom: `1px solid ${rgba(base, 0.2)}` }}>
           {labelRow}
@@ -110,7 +110,7 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
               ) : (
                 <span style={{ width: 18, height: 18, borderRadius: 4, background: '#f1f5f9', flexShrink: 0 }} />
               )}
-              <span style={{ fontSize: 11.5, color: NEUTRAL.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--cac-text, #1e293b)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</span>
               <span style={{ marginLeft: 'auto', fontSize: 9, color: NEUTRAL.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>{roleLabel(it.type)}</span>
             </div>
           ))}

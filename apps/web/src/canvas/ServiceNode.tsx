@@ -117,7 +117,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
   // Boolean selector → this node only re-renders when it crosses the LOD threshold.
   const lowDetail = useStore((s) => s.transform[2] < LOD_ZOOM);
   const accent = diffColor ?? findingColor;
-  const border = accent ? `2px solid ${accent}` : selected ? '1.5px solid #2563eb' : '1px solid #e5e7eb';
+  const border = accent ? `2px solid ${accent}` : selected ? '1.5px solid #2563eb' : '1px solid var(--cac-hairline, #e5e7eb)';
   const role = roleLabel(d.type); // role subtitle, not the catalog id
 
   const shell: React.CSSProperties = {
@@ -125,7 +125,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     width: '100%',
     height: '100%', // fill the projector-sized node box (taller when it carries folds)
     boxSizing: 'border-box',
-    background: '#ffffff',
+    background: 'var(--cac-surface, #ffffff)',
     border,
     opacity: d.diffStatus === 'removed' ? 0.55 : 1,
     borderRadius: RADIUS.node,
@@ -139,7 +139,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
       <div style={{ ...shell, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}>
         {d.findingSeverity ? <FindingDot severity={d.findingSeverity} /> : null}
         <NodeHandles />
-        <div style={{ fontWeight: 700, fontSize: 20, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+        <div style={{ fontWeight: 700, fontSize: 20, color: 'var(--cac-text, #1e293b)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
       </div>
     );
   }
@@ -160,7 +160,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
           <div style={{ width: NODE.iconSize, height: NODE.iconSize, borderRadius: 7, background: '#f1f5f9', flexShrink: 0 }} />
         )}
         <div
-          style={{ fontWeight: 600, fontSize: TYPE_SCALE.name, color: NEUTRAL.text, lineHeight: 1.3, minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          style={{ fontWeight: 600, fontSize: TYPE_SCALE.name, color: 'var(--cac-text, #1e293b)', lineHeight: 1.3, minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
         >
           {d.name}
         </div>
@@ -172,7 +172,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
           style={{ display: 'flex', alignItems: 'center', gap: 7, height: FOLD.compartmentH, padding: '0 9px', boxSizing: 'border-box', borderTop: '1px dashed #e5e7eb', flexShrink: 0 }}
         >
           <SmallIcon service={a.service} size={16} />
-          <span style={{ fontSize: 11, color: NEUTRAL.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{a.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--cac-text, #1e293b)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{a.name}</span>
           <span style={{ fontSize: 8.5, color: NEUTRAL.muted, textTransform: 'uppercase', letterSpacing: 0.3, flexShrink: 0 }}>attached</span>
         </div>
       ))}
