@@ -4,6 +4,8 @@ import type { ServiceSummary } from '../lib/queries';
 import { SERVICE_DRAG_MIME } from './commands';
 import { domainOf, shortName, pushRecent, DOMAIN_ORDER, DOMAIN_LABEL, FAVORITE_DEFAULTS } from './domains';
 import type { Domain } from './domains';
+import { TEMPLATES } from './templates';
+import type { ArchitectureTemplate } from './templates';
 import { NEUTRAL } from './theme';
 
 function load(key: string, fallback: string[]): string[] {
@@ -127,7 +129,8 @@ function PaletteTile({
 const DENSITIES: Density[] = ['compact', 'comfortable', 'detailed'];
 
 /** Catalog palette: architecture-first domain sections + density modes (doc: sidebar-redesign). */
-export function Palette(): React.JSX.Element {
+export function Palette({ onInsertTemplate }: { onInsertTemplate?: (t: ArchitectureTemplate) => void } = {}): React.JSX.Element {
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [q, setQ] = useState('');
   const [density, setDensity] = useState<Density>(() => {
     try {
@@ -235,6 +238,37 @@ export function Palette(): React.JSX.Element {
               <PaletteTile key={s.key} service={s} favorited={favSet.has(s.key)} query={q} tag={domainOf(s)} {...tileProps} />
             ))
           )}
+        </div>
+      ) : null}
+
+      {!searching && onInsertTemplate ? (
+        <div style={{ marginBottom: 10 }}>
+          <button
+            onClick={() => setTemplatesOpen((v) => !v)}
+            style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '5px 2px', fontSize: 11, fontWeight: 700, letterSpacing: 0.2, color: '#64748b' }}
+          >
+            <span style={{ fontSize: 9, color: '#94a3b8' }}>{templatesOpen ? '▾' : '▸'}</span>
+            <span style={{ flex: 1 }}>◳ TEMPLATES</span>
+            <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 600 }}>{TEMPLATES.length}</span>
+          </button>
+          {templatesOpen ? (
+            <div>
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => onInsertTemplate(t)}
+                  title={`Insert “${t.label}” into the canvas — ${t.description}`}
+                  style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%', boxSizing: 'border-box', padding: '5px 8px', borderRadius: 8 }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(148,163,184,0.12)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: NEUTRAL.text }}>{t.label}</div>
+                  <div style={{ fontSize: 10.5, color: NEUTRAL.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.description}</div>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '8px 0 2px' }} />
         </div>
       ) : null}
 

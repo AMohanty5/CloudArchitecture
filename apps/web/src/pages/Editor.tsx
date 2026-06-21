@@ -749,7 +749,11 @@ export function Editor() {
             onRestore={onRestore}
           />
         ) : (
-          <Palette />
+          <Palette
+            onInsertTemplate={(t) =>
+              editor.paste({ __caml: 'fragment-v1', components: t.model.components, connections: t.model.connections, groups: t.model.groups })
+            }
+          />
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           {diffActive && diffView ? (
