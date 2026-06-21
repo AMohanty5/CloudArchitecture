@@ -46,11 +46,13 @@ function SecurityChip({ name, base }: { name: string; base: string }): React.JSX
 const KIND_WASH: Record<string, number> = {
   region: CONTAINER.wash.region,
   network: CONTAINER.wash.network,
+  zone: CONTAINER.wash.zone,
   subnet: CONTAINER.wash.subnetPrivate,
 };
 const KIND_BORDER: Record<string, number> = {
   region: CONTAINER.borderAlpha.region,
   network: CONTAINER.borderAlpha.network,
+  zone: CONTAINER.borderAlpha.zone,
   subnet: CONTAINER.borderAlpha.subnet,
 };
 
@@ -72,9 +74,11 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
     public?: boolean;
   };
   const security = d.security ?? [];
-  // Subnets are tinted as public (sky) vs private (slate) lanes; everything else by kind.
+  // Subnets are tinted public (sky) vs private (slate); AZ bands are a quiet slate, lighter
+  // than the VPC; everything else by kind.
   const isSubnet = d.kind === 'subnet';
-  const base = isSubnet ? (d.public ? SUBNET_TINT.public : SUBNET_TINT.private) : kindColor(d.kind);
+  const isZone = d.kind === 'zone';
+  const base = isSubnet ? (d.public ? SUBNET_TINT.public : SUBNET_TINT.private) : isZone ? '#64748b' : kindColor(d.kind);
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   const findingColor = d.findingSeverity ? SEVERITY_COLOR[d.findingSeverity] : undefined;
   const feedback = diffColor ?? findingColor ?? (d.invalid ? '#ef4444' : selected ? '#2563eb' : undefined);
@@ -134,7 +138,7 @@ function GroupNodeImpl({ data, selected }: NodeProps) {
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
-        border: `1px solid ${feedback ?? rgba(base, borderAlpha)}`,
+        border: `1px ${isZone ? 'dashed' : 'solid'} ${feedback ?? rgba(base, borderAlpha)}`,
         borderRadius: RADIUS.group,
         background: rgba(base, wash),
         boxShadow: selected ? `0 0 0 3px ${rgba(base, 0.18)}` : 'none',

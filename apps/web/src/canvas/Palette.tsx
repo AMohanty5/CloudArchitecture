@@ -8,6 +8,19 @@ function categoryOf(s: ServiceSummary): string {
   return s.abstractTypes?.[0]?.split('.')[0] ?? (s.groupKind ? 'network (group)' : 'other');
 }
 
+/**
+ * Architecture containers that have no catalog service (Day 71): Region + Availability Zone.
+ * Dropping one creates a `region`/`zone` group. Icons fall back to the navy default tile.
+ */
+const SYNTHETIC_CONTAINERS: ServiceSummary[] = [
+  { key: '_region', name: 'AWS Region', provider: 'aws', groupKind: 'region', status: 'ga', iconUrl: '/api/v1/catalog/icons/_region', score: 0 },
+  { key: '_az', name: 'Availability Zone', provider: 'aws', groupKind: 'zone', status: 'ga', iconUrl: '/api/v1/catalog/icons/_az', score: 0 },
+];
+function matchesQuery(s: ServiceSummary, q: string): boolean {
+  const t = q.trim().toLowerCase();
+  return !t || s.name.toLowerCase().includes(t) || s.key.includes(t) || (s.groupKind ?? '').includes(t);
+}
+
 function groupByCategory(items: ServiceSummary[]): Array<[string, ServiceSummary[]]> {
   const map = new Map<string, ServiceSummary[]>();
   for (const s of items) {
@@ -59,7 +72,8 @@ function PaletteItem({ service }: { service: ServiceSummary }): React.JSX.Elemen
 export function Palette(): React.JSX.Element {
   const [q, setQ] = useState('');
   const { data, isLoading } = useCatalogSearch(q);
-  const groups = groupByCategory(data ?? []);
+  const synthetic = SYNTHETIC_CONTAINERS.filter((s) => matchesQuery(s, q));
+  const groups = groupByCategory([...synthetic, ...(data ?? [])]);
   return (
     <aside
       style={{

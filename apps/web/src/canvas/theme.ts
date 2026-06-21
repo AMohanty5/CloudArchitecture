@@ -36,8 +36,8 @@ export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
  * opacities applied to the kind accent; Day 58 swaps GroupNode onto these.
  */
 export const CONTAINER = {
-  wash: { region: 0.025, network: 0.04, subnetPublic: 0.05, subnetPrivate: 0.04, default: 0.03 },
-  borderAlpha: { region: 0.1, network: 0.18, subnet: 0.12, default: 0.14 },
+  wash: { region: 0.025, network: 0.04, zone: 0.03, subnetPublic: 0.05, subnetPrivate: 0.04, default: 0.03 },
+  borderAlpha: { region: 0.1, network: 0.18, zone: 0.16, subnet: 0.12, default: 0.14 },
 } as const;
 
 /**

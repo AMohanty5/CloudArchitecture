@@ -159,10 +159,12 @@ export const TEMPLATES: ArchitectureTemplate[] = [
       groups: [
         { id: 'region-use1', kind: 'region', name: 'us-east-1', provider: 'aws' },
         { id: 'vpc-main', kind: 'network', name: 'Production VPC', parent: 'region-use1', properties: { cidr: '10.0.0.0/16' } },
-        { id: 'subnet-public-a', kind: 'subnet', name: 'Public · az-a', parent: 'vpc-main', properties: { cidr: '10.0.1.0/24', zone: 'us-east-1a', public: true } },
-        { id: 'subnet-public-b', kind: 'subnet', name: 'Public · az-b', parent: 'vpc-main', properties: { cidr: '10.0.2.0/24', zone: 'us-east-1b', public: true } },
-        { id: 'subnet-app-a', kind: 'subnet', name: 'Private · az-a', parent: 'vpc-main', properties: { cidr: '10.0.10.0/24', zone: 'us-east-1a', public: false } },
-        { id: 'subnet-app-b', kind: 'subnet', name: 'Private · az-b', parent: 'vpc-main', properties: { cidr: '10.0.11.0/24', zone: 'us-east-1b', public: false } },
+        { id: 'az-a', kind: 'zone', name: 'us-east-1a', parent: 'vpc-main' },
+        { id: 'az-b', kind: 'zone', name: 'us-east-1b', parent: 'vpc-main' },
+        { id: 'subnet-public-a', kind: 'subnet', name: 'Public', parent: 'az-a', properties: { cidr: '10.0.1.0/24', zone: 'us-east-1a', public: true } },
+        { id: 'subnet-public-b', kind: 'subnet', name: 'Public', parent: 'az-b', properties: { cidr: '10.0.2.0/24', zone: 'us-east-1b', public: true } },
+        { id: 'subnet-app-a', kind: 'subnet', name: 'Private', parent: 'az-a', properties: { cidr: '10.0.10.0/24', zone: 'us-east-1a', public: false } },
+        { id: 'subnet-app-b', kind: 'subnet', name: 'Private', parent: 'az-b', properties: { cidr: '10.0.11.0/24', zone: 'us-east-1b', public: false } },
       ],
       components: [
         { id: 'web-lb', type: 'network.loadbalancer.l7', name: 'Web load balancer', binding: aws('aws.alb'), group: 'subnet-public-a', properties: { scheme: 'internet-facing' } },

@@ -6,7 +6,8 @@ import type { CamlGroup, ProjectableModel } from './projector';
  * kinds; kinds not listed are unconstrained for now (pass-3 will generalise this).
  */
 const REQUIRED_PARENT_KINDS: Record<string, string[]> = {
-  subnet: ['network'],
+  subnet: ['network', 'zone'], // a subnet sits in a VPC directly, or inside an AZ band (Day 71)
+  zone: ['network'], // an Availability Zone groups subnets within a VPC
 };
 
 export interface ContainmentViolation {

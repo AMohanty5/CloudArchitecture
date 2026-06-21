@@ -68,6 +68,22 @@ describe('computeBackdrops', () => {
     expect(byId.get('app')!.data).toMatchObject({ public: false });
   });
 
+  it('nests an AZ layer: region ⊇ vpc ⊇ az ⊇ subnet (Day 71, depth-generic)', () => {
+    const azModel: ProjectableModel = {
+      groups: [
+        { id: 'region', kind: 'region', name: 'us-east-1' },
+        { id: 'vpc', kind: 'network', name: 'VPC', parent: 'region' },
+        { id: 'az', kind: 'zone', name: 'az-a', parent: 'vpc' },
+        { id: 'sub', kind: 'subnet', name: 'Private', parent: 'az' },
+      ],
+      components: [{ id: 'ec2', name: 'EC2', type: 'compute.vm', group: 'sub' }],
+    };
+    const bd = new Map(computeBackdrops(azModel, new Map([['ec2', { x: 0, y: 0, width: 100, height: 40 }]])).map((b) => [b.id, b]));
+    expect(encloses(rect(bd.get('region')!), rect(bd.get('vpc')!))).toBe(true);
+    expect(encloses(rect(bd.get('vpc')!), rect(bd.get('az')!))).toBe(true);
+    expect(encloses(rect(bd.get('az')!), rect(bd.get('sub')!))).toBe(true);
+  });
+
   it('skips groups with no laid-out members', () => {
     const empty = computeBackdrops({ groups: [{ id: 'g', kind: 'region', name: 'Empty' }], components: [] }, new Map());
     expect(empty).toEqual([]);

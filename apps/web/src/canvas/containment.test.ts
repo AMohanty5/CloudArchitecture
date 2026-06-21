@@ -34,4 +34,19 @@ describe('containmentViolations', () => {
     const model: ProjectableModel = { groups: [{ id: 'vpc-1', kind: 'network', name: 'VPC' }] };
     expect(containmentViolations(model)).toEqual([]);
   });
+
+  it('accepts an AZ in a VPC and a subnet in an AZ (Day 71)', () => {
+    const model: ProjectableModel = {
+      groups: [
+        { id: 'vpc', kind: 'network', name: 'VPC' },
+        { id: 'az', kind: 'zone', name: 'us-east-1a', parent: 'vpc' },
+        { id: 'sub', kind: 'subnet', name: 'Private', parent: 'az' },
+      ],
+    };
+    expect(containmentViolations(model)).toEqual([]);
+  });
+
+  it('flags an AZ that is not inside a network', () => {
+    expect(violatingGroupIds({ groups: [{ id: 'az', kind: 'zone', name: 'AZ' }] }).has('az')).toBe(true);
+  });
 });
