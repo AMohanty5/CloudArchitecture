@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useCatalogSearch } from '../lib/queries';
 import type { ServiceSummary } from '../lib/queries';
 import { SERVICE_DRAG_MIME } from './commands';
-import { domainOf, shortName, pushRecent, DOMAIN_ORDER, DOMAIN_LABEL, FAVORITE_DEFAULTS } from './domains';
+import { domainOf, shortName, pushRecent, SYNTHETIC_CONTAINERS, DOMAIN_ORDER, DOMAIN_LABEL, FAVORITE_DEFAULTS } from './domains';
 import type { Domain } from './domains';
 import { TEMPLATES } from './templates';
 import type { ArchitectureTemplate } from './templates';
@@ -34,11 +34,6 @@ function save(key: string, value: string[]): void {
 type Density = 'compact' | 'comfortable' | 'detailed';
 const DENSITY_HEIGHT: Record<Density, number> = { compact: 30, comfortable: 46, detailed: 60 };
 
-/** Architecture containers with no catalog service (Region + AZ); dropping one creates a group. */
-const SYNTHETIC_CONTAINERS: ServiceSummary[] = [
-  { key: '_region', name: 'AWS Region', provider: 'aws', groupKind: 'region', status: 'ga', iconUrl: '/api/v1/catalog/icons/_region', score: 0 },
-  { key: '_az', name: 'Availability Zone', provider: 'aws', groupKind: 'zone', status: 'ga', iconUrl: '/api/v1/catalog/icons/_az', score: 0 },
-];
 function matchesQuery(s: ServiceSummary, q: string): boolean {
   const t = q.trim().toLowerCase();
   return !t || s.name.toLowerCase().includes(t) || s.key.includes(t) || (s.groupKind ?? '').includes(t);

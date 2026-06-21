@@ -5,6 +5,14 @@
  * until the catalog expansion (Phase 3A); empty domains are hidden by the palette.
  */
 
+import type { ServiceSummary } from '../lib/queries';
+
+/** Architecture containers with no catalog service (Region + AZ); dropping one creates a group. */
+export const SYNTHETIC_CONTAINERS: ServiceSummary[] = [
+  { key: '_region', name: 'AWS Region', provider: 'aws', groupKind: 'region', status: 'ga', iconUrl: '/api/v1/catalog/icons/_region', score: 0 },
+  { key: '_az', name: 'Availability Zone', provider: 'aws', groupKind: 'zone', status: 'ga', iconUrl: '/api/v1/catalog/icons/_az', score: 0 },
+];
+
 export type Domain =
   | 'containers'
   | 'edge'

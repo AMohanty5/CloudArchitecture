@@ -16,6 +16,7 @@ import type { Endpoint } from '../canvas/connections';
 import { groupRelationships } from '../canvas/relationships';
 import { applyView, VIEW_LABEL } from '../canvas/views';
 import type { ArchView } from '../canvas/views';
+import { CommandPalette } from '../canvas/CommandPalette';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import type { CanvasTheme } from '../canvas/theme';
@@ -161,6 +162,28 @@ export function Editor() {
       return next;
     });
   }, []);
+  // Command palette (Day 83): ⌘K / `/` inserts a service or template by name.
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const insertSeq = useRef(0);
+  const cmdkPos = useCallback(() => {
+    const n = insertSeq.current++;
+    return { x: 140 + (n % 6) * 36, y: 140 + (n % 6) * 36 };
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const el = e.target as HTMLElement | null;
+      const typing = el != null && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCmdkOpen(true);
+      } else if (e.key === '/' && !typing && !cmdkOpen) {
+        e.preventDefault();
+        setCmdkOpen(true);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [cmdkOpen]);
   // Architecture view (Day 77): Resource (editable) vs read-only abstractions.
   const [view, setView] = useState<ArchView>('resource');
   // Architecture-layers view (Day 76): category bands instead of infra nesting.
@@ -487,6 +510,20 @@ export function Editor() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <CommandPalette
+        open={cmdkOpen}
+        onClose={() => setCmdkOpen(false)}
+        onService={(s) => {
+          const pos = cmdkPos();
+          if (s.groupKind) editor.addGroup(s, pos);
+          else editor.addComponent(s, pos);
+          setCmdkOpen(false);
+        }}
+        onTemplate={(t) => {
+          editor.paste({ __caml: 'fragment-v1', components: t.model.components, connections: t.model.connections, groups: t.model.groups });
+          setCmdkOpen(false);
+        }}
+      />
       <header
         style={{
           display: 'flex',
