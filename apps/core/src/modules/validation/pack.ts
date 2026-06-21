@@ -236,6 +236,23 @@ const NET_001: Rule = {
   },
 };
 
+const NET_002: Rule = {
+  id: 'NET-002',
+  title: 'Gateway endpoint is inside a subnet',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    // A gateway endpoint is a route-table target with no ENI, so it belongs at the VPC
+    // level, not in a subnet (the inverse of NET-001's interface-endpoint rule, Day 74).
+    return ctx.components
+      .filter((c) => c.binding?.service === 'aws.vpc_gateway_endpoint' && ctx.enclosingGroupOfKind(c.id, 'subnet'))
+      .map((c) =>
+        finding(NET_002, 'low', c.id, `${c.name} (gateway endpoint) is inside a subnet.`, {
+          remediation: 'Move the gateway endpoint to the VPC level — it is a route-table target, not an ENI in a subnet.',
+        }),
+      );
+  },
+};
+
 const OPS_001: Rule = {
   id: 'OPS-001',
   title: 'Critical component has no monitoring',
@@ -257,5 +274,5 @@ const OPS_001: Rule = {
   },
 };
 
-export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, SEC_006, REL_001, REL_007, OPS_001, OPS_002, NET_001];
+export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, SEC_006, REL_001, REL_007, OPS_001, OPS_002, NET_001, NET_002];
 export { PACK_VERSION };

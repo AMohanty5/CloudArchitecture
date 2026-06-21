@@ -150,6 +150,35 @@ describe('project', () => {
       expect(nodes.find((n) => n.id === 'bare')!.data.public).toBe(false); // default private
     });
 
+    it('folds a NACL onto a VPC as a VPC-level chip (Day 74)', () => {
+      const m: ProjectableModel = {
+        groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }],
+        components: [{ id: 'nacl', name: 'acl-vpc', type: 'network.firewall.network', binding: { provider: 'aws', service: 'aws.nacl' } }],
+        connections: [{ id: 'c', from: 'nacl', to: 'vpc', kind: 'dependency' }],
+      };
+      const { nodes } = project(m);
+      expect(nodes.find((n) => n.id === 'nacl')).toBeUndefined();
+      expect((nodes.find((n) => n.id === 'vpc')!.data.security as FoldItem[]).map((s) => s.name)).toEqual(['acl-vpc']);
+    });
+
+    it('associates one NACL with multiple subnets (chip on each, Day 74)', () => {
+      const m: ProjectableModel = {
+        groups: [
+          { id: 'a', kind: 'subnet', name: 'Public A', properties: { public: true } },
+          { id: 'b', kind: 'subnet', name: 'Public B', properties: { public: true } },
+        ],
+        components: [{ id: 'nacl', name: 'acl-pub', type: 'network.firewall.network', binding: { provider: 'aws', service: 'aws.nacl' } }],
+        connections: [
+          { id: 'na', from: 'nacl', to: 'a', kind: 'dependency' },
+          { id: 'nb', from: 'nacl', to: 'b', kind: 'dependency' },
+        ],
+      };
+      const { nodes } = project(m);
+      expect(nodes.find((n) => n.id === 'nacl')).toBeUndefined();
+      expect((nodes.find((n) => n.id === 'a')!.data.security as FoldItem[]).map((s) => s.name)).toEqual(['acl-pub']);
+      expect((nodes.find((n) => n.id === 'b')!.data.security as FoldItem[]).map((s) => s.name)).toEqual(['acl-pub']);
+    });
+
     it('folds a NACL into its subnet group as a security chip (no node, no line)', () => {
       const m: ProjectableModel = {
         groups: [{ id: 'sub', kind: 'subnet', name: 'Private' }],

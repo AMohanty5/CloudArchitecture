@@ -182,6 +182,19 @@ describe('validateModel — NET-001 interface endpoint outside a subnet', () => 
   });
 });
 
+describe('validateModel — NET-002 gateway endpoint placement', () => {
+  const gw = (group?: string): Component => ({ id: 'gw', type: 'network.endpoint.private', name: 'S3 gateway', binding: { provider: 'aws', service: 'aws.vpc_gateway_endpoint' }, ...(group ? { group } : {}) });
+  it('fires when a gateway endpoint sits inside a subnet', () => {
+    const m = doc({ groups: [{ id: 'sub', kind: 'subnet', name: 'Sub' }], components: [gw('sub')] });
+    expect(ids(m)).toContain('NET-002:gw');
+  });
+  it('does not fire at the VPC level (or top level)', () => {
+    const m = doc({ groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }], components: [gw('vpc')] });
+    expect(ids(m)).not.toContain('NET-002:gw');
+    expect(ids(doc({ components: [gw()] }))).not.toContain('NET-002:gw');
+  });
+});
+
 describe('validateModel — OPS-001 monitoring gap (severity modulated)', () => {
   const comp = (criticality: Component['criticality'], monitored: boolean): Component => ({
     id: 'c',
