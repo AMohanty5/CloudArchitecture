@@ -223,7 +223,10 @@ function Flow({
       return edges.map((e) => {
         const ds = diffStatus?.[e.id];
         const stroke = ds ? DIFF_COLOR[ds] : connectorColor(e.data.kind);
-        const active = e.id === selectedEdgeId || Boolean(ds);
+        // Active-path highlight (Day 75): when a node is selected, emphasise its incident
+        // edges and dim the rest so the eye follows that flow.
+        const onPath = !selectedId || e.source === selectedId || e.target === selectedId;
+        const active = e.id === selectedEdgeId || Boolean(ds) || (Boolean(selectedId) && onPath);
         const marker = { type: MarkerType.ArrowClosed, color: stroke, width: 11, height: 11 };
         return {
           ...e,
@@ -242,11 +245,12 @@ function Flow({
             stroke,
             ...(ds ? { strokeDasharray: ds === 'removed' ? '4 4' : undefined } : {}),
             strokeWidth: active ? 2.5 : 1.5,
+            opacity: selectedId && !onPath ? 0.28 : 1, // dim edges off the selected node's path
           },
         };
       });
     },
-    [edges, selectedEdgeId, diffStatus, showEdgeLabels, backdrop],
+    [edges, selectedEdgeId, selectedId, diffStatus, showEdgeLabels, backdrop],
   );
   // Connector kinds present in the model → drives the legend's Connections section.
   const presentKinds = useMemo(() => new Set(edges.map((e) => e.data.kind)), [edges]);

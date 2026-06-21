@@ -32,6 +32,14 @@ describe('classifyRelationship', () => {
     expect(classifyRelationship('security.identity.idp', 'network.gateway.api', 'identity')).toBe('communicates_with');
   });
 
+  it('classes observability watching a resource as monitors (a sidecar), not a line', () => {
+    expect(classifyRelationship('observability.metrics', 'compute.vm', 'dependency')).toBe('monitors');
+    expect(classifyRelationship('compute.vm', 'observability.logs', 'observability')).toBe('monitors');
+    expect(classifyRelationship('observability.metrics', 'database.relational', 'dependency')).toBe('monitors');
+    // observability → messaging (alerting) is a real flow, not a sidecar
+    expect(classifyRelationship('observability.alerting', 'messaging.topic', 'async')).toBe('communicates_with');
+  });
+
   it('isFolded is true for everything except communicates_with', () => {
     expect(isFolded('attached_to')).toBe(true);
     expect(isFolded('secured_by')).toBe(true);
@@ -71,6 +79,7 @@ describe('groupRelationships', () => {
       attachments: [],
       security: [],
       identity: [],
+      sidecar: [],
       communications: [],
     });
   });

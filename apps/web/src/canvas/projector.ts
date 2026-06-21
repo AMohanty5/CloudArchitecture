@@ -61,6 +61,7 @@ interface FoldSink {
   attachments: FoldItem[];
   security: FoldItem[];
   identity: FoldItem[];
+  sidecar: FoldItem[];
 }
 
 /**
@@ -219,7 +220,7 @@ function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Project
       suppressed.add(fe.secId);
       foldedConnIds.add(fe.id);
       let sink = folds.get(fe.ownerId);
-      if (!sink) { sink = { attachments: [], security: [], identity: [] }; folds.set(fe.ownerId, sink); }
+      if (!sink) { sink = { attachments: [], security: [], identity: [], sidecar: [] }; folds.set(fe.ownerId, sink); }
       sink[fe.bucket].push({ id: sec.id, name: sec.name, type: sec.type, service: sec.binding?.service });
     }
   }
@@ -250,7 +251,7 @@ function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Project
   const ownerHeight = (id: string): number => {
     const f = folds.get(id);
     if (!f) return NODE_H;
-    return NODE_H + f.attachments.length * FOLD.compartmentH + (f.security.length + f.identity.length > 0 ? FOLD.badgeRowH : 0);
+    return NODE_H + f.attachments.length * FOLD.compartmentH + (f.security.length + f.identity.length + f.sidecar.length > 0 ? FOLD.badgeRowH : 0);
   };
 
   const nodes: ProjectedNode[] = [];
@@ -315,7 +316,7 @@ function projectNested(model: ProjectableModel, layout?: LayoutSidecar): Project
           type: c.type,
           service: c.binding?.service,
           provider: c.binding?.provider,
-          ...(f ? { attachments: f.attachments, security: f.security, identity: f.identity } : {}),
+          ...(f ? { attachments: f.attachments, security: f.security, identity: f.identity, sidecar: f.sidecar } : {}),
         },
         style: { width: NODE_W, height: h },
       });

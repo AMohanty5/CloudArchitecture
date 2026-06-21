@@ -15,6 +15,7 @@ export interface RelationshipGroups {
   attachments: RelationshipItem[];
   security: RelationshipItem[];
   identity: RelationshipItem[];
+  sidecar: RelationshipItem[];
   communications: RelationshipItem[];
 }
 
@@ -143,12 +144,13 @@ export function Inspector({ component, errors, groups, relationships, onRename, 
       ))}
 
       {relationships &&
-      relationships.attachments.length + relationships.security.length + relationships.identity.length + relationships.communications.length > 0 ? (
+      relationships.attachments.length + relationships.security.length + relationships.identity.length + relationships.sidecar.length + relationships.communications.length > 0 ? (
         <>
           <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '8px 0 12px' }} />
           <RelationshipSection title="Attachments" glyph="▣" items={relationships.attachments} onDetach={onDetach} />
           <RelationshipSection title="Security" glyph="🛡" items={relationships.security} onDetach={onDetach} />
           <RelationshipSection title="Identity" glyph="🔐" items={relationships.identity} onDetach={onDetach} />
+          <RelationshipSection title="Observability" glyph="📊" items={relationships.sidecar} onDetach={onDetach} />
           <RelationshipSection title="Communicates with" glyph="→" items={relationships.communications} onDetach={onDetach} />
         </>
       ) : null}

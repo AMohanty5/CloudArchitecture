@@ -9,7 +9,7 @@
  * produced here.
  */
 
-export type RelationshipClass = 'attached_to' | 'secured_by' | 'assumes' | 'communicates_with';
+export type RelationshipClass = 'attached_to' | 'secured_by' | 'assumes' | 'monitors' | 'communicates_with';
 
 /** Connection kinds that always model a runtime interaction (the only ones drawn as lines). */
 const COMMUNICATION_KINDS = new Set(['traffic', 'data', 'async', 'replication', 'observability']);
@@ -24,6 +24,9 @@ const isAttachable = (t: string): boolean =>
   t.startsWith('storage.block') || // EBS
   t.startsWith('storage.file') || // EFS
   t.startsWith('network.interface'); // ENI (future)
+const isObservability = (t: string): boolean => t.startsWith('observability.'); // CloudWatch / X-Ray
+const isMonitorable = (t: string): boolean =>
+  t.startsWith('compute.') || t.startsWith('database.') || t.startsWith('storage.') || t.startsWith('network.loadbalancer');
 
 /**
  * Classify an edge by its endpoints' abstract types and connection kind. The order of
@@ -32,6 +35,9 @@ const isAttachable = (t: string): boolean =>
  * otherwise an attachment; everything else is a runtime communication.
  */
 export function classifyRelationship(fromType: string, toType: string, kind: string): RelationshipClass {
+  // Observability watching a resource (CloudWatch/X-Ray ↔ compute/db/storage/LB) is a sidecar,
+  // regardless of kind — but observability → messaging (alerting) falls through to a flow.
+  if ((isObservability(fromType) && isMonitorable(toType)) || (isObservability(toType) && isMonitorable(fromType))) return 'monitors';
   if (COMMUNICATION_KINDS.has(kind)) return 'communicates_with';
 
   if (kind === 'identity') {
@@ -58,7 +64,7 @@ export function isFolded(rel: RelationshipClass): boolean {
 }
 
 /** Visual bucket a folded relationship renders into on its owner node. */
-export type FoldBucket = 'attachments' | 'security' | 'identity';
+export type FoldBucket = 'attachments' | 'security' | 'identity' | 'sidecar';
 
 /**
  * Bucket for folding a *component* into a *group* owner (e.g. a NACL securing a subnet, or
@@ -78,6 +84,8 @@ export function foldBucket(rel: RelationshipClass): FoldBucket | null {
       return 'security';
     case 'assumes':
       return 'identity';
+    case 'monitors':
+      return 'sidecar';
     default:
       return null;
   }
@@ -93,6 +101,7 @@ export interface GroupedRelationships {
   attachments: RelationshipRow[];
   security: RelationshipRow[];
   identity: RelationshipRow[];
+  sidecar: RelationshipRow[];
   communications: RelationshipRow[];
 }
 
@@ -106,7 +115,7 @@ export function groupRelationships(
   connections: ReadonlyArray<{ id: string; from: string; to: string; kind: string }>,
   typeOf: (id: string) => string | undefined,
 ): GroupedRelationships {
-  const out: GroupedRelationships = { attachments: [], security: [], identity: [], communications: [] };
+  const out: GroupedRelationships = { attachments: [], security: [], identity: [], sidecar: [], communications: [] };
   for (const cn of connections) {
     if (cn.from !== compId && cn.to !== compId) continue;
     const fromT = typeOf(cn.from);
@@ -128,7 +137,15 @@ export function groupRelationships(
  */
 export function secondarySide(fromType: string, toType: string, rel: RelationshipClass): 'from' | 'to' | null {
   const test =
-    rel === 'attached_to' ? isAttachable : rel === 'secured_by' ? isSecurityControl : rel === 'assumes' ? isPrincipal : null;
+    rel === 'attached_to'
+      ? isAttachable
+      : rel === 'secured_by'
+        ? isSecurityControl
+        : rel === 'assumes'
+          ? isPrincipal
+          : rel === 'monitors'
+            ? isObservability
+            : null;
   if (!test) return null;
   if (test(fromType)) return 'from';
   if (test(toType)) return 'to';

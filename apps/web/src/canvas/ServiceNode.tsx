@@ -108,10 +108,12 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     attachments?: FoldItem[];
     security?: FoldItem[];
     identity?: FoldItem[];
+    sidecar?: FoldItem[];
   };
   const attachments = d.attachments ?? [];
   const security = d.security ?? [];
   const identity = d.identity ?? [];
+  const sidecar = d.sidecar ?? [];
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   const findingColor = d.findingSeverity ? SEVERITY_COLOR[d.findingSeverity] : undefined;
   // Boolean selector → this node only re-renders when it crosses the LOD threshold.
@@ -144,7 +146,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     );
   }
 
-  const hasBadges = security.length > 0 || identity.length > 0;
+  const hasBadges = security.length > 0 || identity.length > 0 || sidecar.length > 0;
   return (
     <div style={{ ...shell, display: 'flex', flexDirection: 'column' }}>
       {d.findingSeverity ? <FindingDot severity={d.findingSeverity} /> : null}
@@ -184,6 +186,9 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
           ))}
           {identity.map((i) => (
             <Chip key={i.id} glyph="🔐" label={i.name} />
+          ))}
+          {sidecar.map((m) => (
+            <Chip key={m.id} glyph="📊" label={m.name} />
           ))}
         </div>
       ) : null}

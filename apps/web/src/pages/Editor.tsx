@@ -450,6 +450,7 @@ export function Editor() {
       attachments: toItems(grouped.attachments),
       security: toItems(grouped.security),
       identity: toItems(grouped.identity),
+      sidecar: toItems(grouped.sidecar),
       communications: toItems(grouped.communications),
     };
   }, [selectedComponent, model, componentsById]);

@@ -125,6 +125,20 @@ describe('project', () => {
       expect((ec2.data.identity as FoldItem[]).map((i) => i.id)).toEqual(['role']);
     });
 
+    it('folds observability (CloudWatch) onto the watched node as a sidecar (Day 75)', () => {
+      const m: ProjectableModel = {
+        components: [
+          { id: 'ec2', name: 'App', type: 'compute.vm', binding: { provider: 'aws', service: 'aws.ec2' } },
+          { id: 'cw', name: 'Metrics', type: 'observability.metrics', binding: { provider: 'aws', service: 'aws.cloudwatch' } },
+        ],
+        connections: [{ id: 'c', from: 'cw', to: 'ec2', kind: 'dependency' }],
+      };
+      const { nodes, edges } = project(m);
+      expect(nodes.find((n) => n.id === 'cw')).toBeUndefined();
+      expect((nodes.find((n) => n.id === 'ec2')!.data.sidecar as FoldItem[]).map((s) => s.name)).toEqual(['Metrics']);
+      expect(edges).toHaveLength(0);
+    });
+
     it('grows the owner node height by a compartment + a badge row', () => {
       const ec2 = project(folded).nodes.find((n) => n.id === 'ec2')!;
       expect(ec2.style!.height).toBe(46 + 22 + 26); // NODE_H + 1×compartmentH + badgeRowH
