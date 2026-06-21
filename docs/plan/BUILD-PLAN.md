@@ -834,7 +834,7 @@ Architecture-first toolbox to replace the flat service-catalog palette.
 > up the 🎧/🤖 domains + the Connect/RAG templates. The two new domains render empty until then.
 
 ### Phase 3 — Validation & polish (Days 67–68) ⬜
-- [ ] **67** Connectivity-doctor + relationship validation — grant-not-path hint (IAM→resource line), orphan-attachment, endpoint-not-in-subnet, no-NAT-route, unreachable instance.
+- [x] **67** ✅ (2026-06-21) Relationship/connectivity validation — 3 advisory pack rules: **SEC-006** (IAM role grants a resource but no compute assumes it — the dangling-grant version of the IAM→S3 guidance), **OPS-002** (orphan attachment — a free-floating EBS/SG/role), **NET-001** (interface endpoint not in a subnet; gateway endpoints exempt). +6 tests (24 validation). *Deferred (need a routing/reachability model we don't have yet): no-NAT-route, unreachable-instance → backlog.*
 - [ ] **68** Full e2e regression of the three reported scenarios + the new visuals on a deployed build; **deploy to EC2**.
 
 > **Nothing was dropped:** every item from the earlier connectivity plan and the two spec docs

@@ -19,6 +19,14 @@ const isAllowedIntermediary = (c: Component): boolean =>
   c.type.startsWith('network.firewall.waf') || c.type.startsWith('network.gateway.api');
 const isInstance = (c: Component): boolean => c.type.startsWith('compute.vm');
 const isNetworkFirewall = (c: Component): boolean => c.type.startsWith('network.firewall.network');
+const isCompute = (c: Component): boolean => c.type.startsWith('compute.');
+const isPrincipal = (c: Component): boolean => c.type.startsWith('security.identity.principal');
+/** Resources that only make sense attached to something else (folded relationships, doc: aws-relationship-model). */
+const isAttachmentResource = (c: Component): boolean =>
+  c.type.startsWith('storage.block') ||
+  c.type.startsWith('storage.file') ||
+  c.type.startsWith('network.firewall.network') ||
+  isPrincipal(c);
 const isInternetEntry = (c: Component): boolean =>
   c.type.startsWith('user.') ||
   c.type.startsWith('external.') ||
@@ -163,6 +171,71 @@ const SEC_005: Rule = {
   },
 };
 
+const SEC_006: Rule = {
+  id: 'SEC-006',
+  title: 'IAM role grants access but no compute assumes it',
+  category: 'security',
+  evaluate(ctx: RuleContext): Finding[] {
+    // An IAM role's job is: a compute assumes it, and it grants a resource. A role that
+    // grants a resource (an identity link to a non-compute) but is assumed by no compute
+    // is a dangling grant — the access path is incomplete (doc: aws-relationship-model §8).
+    const out: Finding[] = [];
+    for (const role of ctx.components.filter(isPrincipal)) {
+      const neighbours = ctx.connections
+        .filter((cn) => cn.from === role.id || cn.to === role.id)
+        .map((cn) => ctx.componentsById.get(cn.from === role.id ? cn.to : cn.from))
+        .filter((c): c is Component => Boolean(c));
+      const grantsResource = neighbours.some((n) => !isCompute(n));
+      const assumedByCompute = neighbours.some(isCompute);
+      if (grantsResource && !assumedByCompute) {
+        out.push(
+          finding(SEC_006, 'low', role.id, `${role.name} grants access to a resource but no compute assumes it.`, {
+            remediation: 'Attach the role to the compute that needs it (EC2/Lambda/ECS), then draw the data path from that compute to the resource.',
+          }),
+        );
+      }
+    }
+    return out;
+  },
+};
+
+const OPS_002: Rule = {
+  id: 'OPS-002',
+  title: 'Resource is not attached to anything',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    const touched = new Set<string>();
+    for (const cn of ctx.connections) {
+      touched.add(cn.from);
+      touched.add(cn.to);
+    }
+    return ctx.components
+      .filter((c) => isAttachmentResource(c) && !touched.has(c.id))
+      .map((c) =>
+        finding(OPS_002, 'low', c.id, `${c.name} is not attached to anything.`, {
+          remediation: 'Attach it to the resource it protects/serves (drop it onto that node), or remove it.',
+        }),
+      );
+  },
+};
+
+const NET_001: Rule = {
+  id: 'NET-001',
+  title: 'Interface endpoint is not inside a subnet',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    // An interface VPC endpoint provisions an ENI, so it must live in a subnet. (Gateway
+    // endpoints — aws.vpc_gateway_endpoint — are route-table targets and are exempt.)
+    return ctx.components
+      .filter((c) => c.binding?.service === 'aws.privatelink' && !ctx.enclosingGroupOfKind(c.id, 'subnet'))
+      .map((c) =>
+        finding(NET_001, 'low', c.id, `${c.name} (interface endpoint) is not inside a subnet.`, {
+          remediation: 'Place the interface endpoint in a subnet — it provisions an ENI there.',
+        }),
+      );
+  },
+};
+
 const OPS_001: Rule = {
   id: 'OPS-001',
   title: 'Critical component has no monitoring',
@@ -184,5 +257,5 @@ const OPS_001: Rule = {
   },
 };
 
-export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, REL_001, REL_007, OPS_001];
+export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, SEC_006, REL_001, REL_007, OPS_001, OPS_002, NET_001];
 export { PACK_VERSION };

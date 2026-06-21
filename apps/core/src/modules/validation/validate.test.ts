@@ -138,6 +138,50 @@ describe('validateModel — SEC-005 instance without a security group', () => {
   });
 });
 
+describe('validateModel — SEC-006 dangling IAM grant', () => {
+  const role: Component = { id: 'role', type: 'security.identity.principal', name: 'AppRole', binding: { provider: 'aws', service: 'aws.iam_role' } };
+  const s3: Component = { id: 's3', type: 'storage.object', name: 'Bucket' };
+  const ec2: Component = { id: 'ec2', type: 'compute.vm', name: 'App' };
+
+  it('fires when a role grants a resource but no compute assumes it', () => {
+    const m = doc({ components: [role, s3], connections: [{ id: 'g', from: 'role', to: 's3', kind: 'identity' }] });
+    expect(ids(m)).toContain('SEC-006:role');
+  });
+  it('does not fire when a compute assumes the role', () => {
+    const m = doc({
+      components: [role, s3, ec2],
+      connections: [
+        { id: 'g', from: 'role', to: 's3', kind: 'identity' },
+        { id: 'a', from: 'role', to: 'ec2', kind: 'identity' },
+      ],
+    });
+    expect(ids(m)).not.toContain('SEC-006:role');
+  });
+});
+
+describe('validateModel — OPS-002 unattached resource', () => {
+  const ebs = (over: Partial<Component> = {}): Component => ({ id: 'ebs', type: 'storage.block', name: 'Vol', binding: { provider: 'aws', service: 'aws.ebs' }, ...over });
+  const ec2: Component = { id: 'ec2', type: 'compute.vm', name: 'App' };
+  it('fires for a free-floating EBS/SG/role', () => {
+    expect(ids(doc({ components: [ebs()] }))).toContain('OPS-002:ebs');
+  });
+  it('does not fire once it is attached', () => {
+    const m = doc({ components: [ebs(), ec2], connections: [{ id: 'c', from: 'ec2', to: 'ebs', kind: 'dependency' }] });
+    expect(ids(m)).not.toContain('OPS-002:ebs');
+  });
+});
+
+describe('validateModel — NET-001 interface endpoint outside a subnet', () => {
+  const ep = (group?: string): Component => ({ id: 'ep', type: 'network.endpoint.private', name: 'IF endpoint', binding: { provider: 'aws', service: 'aws.privatelink' }, ...(group ? { group } : {}) });
+  it('fires when an interface endpoint is not in a subnet', () => {
+    expect(ids(doc({ components: [ep()] }))).toContain('NET-001:ep');
+  });
+  it('does not fire inside a subnet', () => {
+    const m = doc({ groups: [{ id: 'sub', kind: 'subnet', name: 'Sub' }], components: [ep('sub')] });
+    expect(ids(m)).not.toContain('NET-001:ep');
+  });
+});
+
 describe('validateModel — OPS-001 monitoring gap (severity modulated)', () => {
   const comp = (criticality: Component['criticality'], monitored: boolean): Component => ({
     id: 'c',
