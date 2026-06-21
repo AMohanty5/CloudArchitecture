@@ -137,6 +137,14 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
   // communication edges survive as lines. See docs/aws-relationship-model.md.
   const componentsById = new Map((model.components ?? []).map((c) => [c.id, c]));
   const groupIds = new Set((model.groups ?? []).map((g) => g.id));
+  // Components inside a tier "section panel" render as rows, not composite nodes — folding
+  // onto/into them would drop a badge (owner is a row) or vanish the secondary, so skip them.
+  const sectionGroupIds = new Set<string>();
+  for (const g of model.groups ?? []) if (isSectionGroup(g.id, groupsByParent, componentsByGroup, g.kind)) sectionGroupIds.add(g.id);
+  const inSection = (compId: string): boolean => {
+    const grp = componentsById.get(compId)?.group;
+    return grp ? sectionGroupIds.has(grp) : false;
+  };
   const folds = new Map<string, FoldSink>();
   const suppressed = new Set<string>();
   const foldedConnIds = new Set<string>();
@@ -155,7 +163,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
         // a security control folds onto the group as a 🛡 chip. Other component↔group edges stay lines.
         const comp = a ?? b;
         const grpId = a ? cn.to : cn.from;
-        if (comp && groupIds.has(grpId)) {
+        if (comp && groupIds.has(grpId) && !inSection(comp.id)) {
           const gbkt = groupFoldBucket(comp.type);
           if (gbkt) {
             foldEdges.push({ id: cn.id, secId: comp.id, ownerId: grpId, bucket: gbkt });
@@ -170,6 +178,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
       if (!side) continue;
       const secId = side === 'from' ? cn.from : cn.to;
       const ownerId = side === 'from' ? cn.to : cn.from;
+      if (inSection(secId) || inSection(ownerId)) continue; // section rows can't carry/show folds
       foldEdges.push({ id: cn.id, secId, ownerId, bucket: bkt });
       secondaryCount.set(secId, (secondaryCount.get(secId) ?? 0) + 1);
     }
