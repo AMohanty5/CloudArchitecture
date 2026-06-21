@@ -274,7 +274,10 @@ export function Editor() {
     (source: string, target: string) => {
       const v = verdict(source, target);
       if (!v.allowed) return;
-      editor.connect({ id: makeConnectionId(), from: source, to: target, kind: v.kinds[0]! });
+      // Undirected structural edges drawn "backwards" come back with flip set; store
+      // them in their canonical orientation so IaC/validation see the right direction.
+      const [from, to] = v.flip ? [target, source] : [source, target];
+      editor.connect({ id: makeConnectionId(), from, to, kind: v.kinds[0]! });
     },
     [verdict, editor],
   );

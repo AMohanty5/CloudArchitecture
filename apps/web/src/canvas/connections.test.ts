@@ -50,6 +50,61 @@ describe('evaluateConnection', () => {
   });
 });
 
+describe('evaluateConnection — subtype matching', () => {
+  // A rule targeting the parent type `compute.vm` should also accept the ASG subtype.
+  const ebsRules: ConnectionRules = { inbound: [{ kinds: ['dependency'], from: ['compute.vm'] }] };
+  const ec2 = { type: 'compute.vm' };
+  const asg = { type: 'compute.vm.autoscaling_group' };
+  const ebs = { type: 'storage.block', rules: ebsRules };
+
+  it('matches a subtype against a parent-type rule (ASG → EBS)', () => {
+    const v = evaluateConnection(asg, ebs);
+    expect(v.allowed).toBe(true);
+    expect(v.kinds[0]).toBe('dependency');
+  });
+
+  it('still matches the exact parent type (EC2 → EBS)', () => {
+    expect(evaluateConnection(ec2, ebs).allowed).toBe(true);
+  });
+
+  it('does not match a parent type against a subtype-only rule', () => {
+    const onlyAsg: ConnectionRules = { inbound: [{ kinds: ['dependency'], from: ['compute.vm.autoscaling_group'] }] };
+    expect(evaluateConnection(ec2, { type: 'storage.block', rules: onlyAsg }).allowed).toBe(false);
+  });
+});
+
+describe('evaluateConnection — undirected structural relationships', () => {
+  // EBS only declares an inbound dependency from compute; EC2 has no storage rule.
+  const ebs = { type: 'storage.block', rules: { inbound: [{ kinds: ['dependency'], from: ['compute.vm'] }] } as ConnectionRules };
+  const ec2 = { type: 'compute.vm', rules: { inbound: [{ kinds: ['traffic'], from: ['network.loadbalancer.l7'] }] } as ConnectionRules };
+  // SG only declares an outbound dependency to compute.
+  const sg = { type: 'network.firewall.network', rules: { outbound: [{ kinds: ['dependency'], to: ['compute.vm'] }] } as ConnectionRules };
+
+  it('allows EBS → EC2 by flipping to the canonical EC2 → EBS dependency', () => {
+    const v = evaluateConnection(ebs, ec2);
+    expect(v.allowed).toBe(true);
+    expect(v.kinds).toEqual(['dependency']);
+    expect(v.flip).toBe(true);
+  });
+
+  it('allows the forward EC2 → EBS without flipping', () => {
+    const v = evaluateConnection(ec2, ebs);
+    expect(v.allowed).toBe(true);
+    expect(v.flip).toBeUndefined();
+  });
+
+  it('allows EC2 → SG by flipping to the canonical SG → EC2 dependency', () => {
+    const v = evaluateConnection(ec2, sg);
+    expect(v.allowed).toBe(true);
+    expect(v.kinds).toEqual(['dependency']);
+    expect(v.flip).toBe(true);
+  });
+
+  it('does not flip directional flow kinds (ASG → ALB stays rejected)', () => {
+    expect(evaluateConnection(asg, alb).allowed).toBe(false);
+  });
+});
+
 describe('edgeStyle', () => {
   it('styles known kinds and falls back for unknown', () => {
     expect(edgeStyle('traffic').strokeDasharray).toBeUndefined();
