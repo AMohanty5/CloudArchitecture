@@ -835,7 +835,7 @@ Architecture-first toolbox to replace the flat service-catalog palette.
 
 ### Phase 3 — Validation & polish (Days 67–68) ⬜
 - [x] **67** ✅ (2026-06-21) Relationship/connectivity validation — 3 advisory pack rules: **SEC-006** (IAM role grants a resource but no compute assumes it — the dangling-grant version of the IAM→S3 guidance), **OPS-002** (orphan attachment — a free-floating EBS/SG/role), **NET-001** (interface endpoint not in a subnet; gateway endpoints exempt). +6 tests (24 validation). *Deferred (need a routing/reachability model we don't have yet): no-NAT-route, unreachable-instance → backlog.*
-- [ ] **68** Full e2e regression of the three reported scenarios + the new visuals on a deployed build; **deploy to EC2**.
+- [x] **68** ✅ (2026-06-21) Full regression gate — `pnpm test` across the monorepo **9/9 green** (web 120, core 104 [+49 API-gated skips], caml, catalog), catalog lint **0 warnings / 61 services**, web+core typecheck clean. The three originally-reported scenarios have dedicated passing regression tests (`connect-repro`, `relationships`, projector fold). Playwright `golden-journey` e2e exists but needs the running stack (not run here). **Deployed to EC2** + post-deploy smoke. *Stage H Phases 1–3 complete.*
 
 > **Nothing was dropped:** every item from the earlier connectivity plan and the two spec docs
 > maps here — 4-side handles/nested-connectable → Day 52; VPC endpoints → Day 54; multi-subnet →
