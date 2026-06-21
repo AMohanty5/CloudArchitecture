@@ -30,10 +30,13 @@ const BASE_OPTIONS: Record<string, string> = {
   'elk.algorithm': 'layered',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
   'elk.edgeRouting': 'ORTHOGONAL',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '40',
-  'elk.spacing.nodeNode': '20',
-  'elk.layered.spacing.edgeNodeBetweenLayers': '16',
-  'elk.spacing.edgeNode': '12',
+  // More breathing room (whitespace over density, visual-redesign §1) + network-simplex
+  // placement, which aligns nodes per layer so edges run straighter with fewer bends.
+  'elk.layered.spacing.nodeNodeBetweenLayers': '56',
+  'elk.spacing.nodeNode': '28',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '20',
+  'elk.spacing.edgeNode': '16',
+  'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
   'elk.direction': 'RIGHT',
 };
 

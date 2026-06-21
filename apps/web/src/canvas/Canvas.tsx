@@ -386,6 +386,9 @@ function Flow({
         edges={styledEdges as unknown as Edge[]}
         nodeTypes={nodeTypes}
         fitView
+        // Fill + centre with a consistent margin; cap zoom so a small diagram doesn't
+        // balloon to fill the pane (fixes the cramped, right-shifted initial framing).
+        fitViewOptions={{ padding: 0.18, maxZoom: 1.4, minZoom: 0.15 }}
         nodesDraggable={draggable}
         snapToGrid={draggable}
         snapGrid={[GRID, GRID]}
