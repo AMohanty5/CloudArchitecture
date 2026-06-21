@@ -14,4 +14,4 @@ properties:
   magneticRetentionDays: { type: integer, minimum: 1, maximum: 73000, default: 365 }
 connectionRules:
   inbound:
-    - { kinds: [data], from: [compute.serverless.function, messaging.stream, compute.container.orchestrator.service] }
+    - { kinds: [data], from: [compute.vm, compute.serverless.function, messaging.stream, compute.container.orchestrator.service] }

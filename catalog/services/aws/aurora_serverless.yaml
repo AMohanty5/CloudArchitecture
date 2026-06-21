@@ -17,6 +17,6 @@ properties:
   kmsKeyRef: { type: string }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [postgres, mysql], from: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group] }
+    - { kinds: [data], protocols: [postgres, mysql], from: [compute.serverless.function, compute.container.orchestrator.service, compute.vm] }
   outbound:
     - { kinds: [replication], to: [database.relational] }

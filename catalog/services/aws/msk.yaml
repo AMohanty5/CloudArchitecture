@@ -17,6 +17,6 @@ properties:
   encryptionInTransit: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [async], protocols: [kafka], from: [compute.container.orchestrator.service, compute.vm.autoscaling_group, compute.serverless.function] }
+    - { kinds: [async], protocols: [kafka], from: [compute.container.orchestrator.service, compute.vm, compute.serverless.function] }
   outbound:
     - { kinds: [async], to: [compute.serverless.function, compute.container.orchestrator.service] }

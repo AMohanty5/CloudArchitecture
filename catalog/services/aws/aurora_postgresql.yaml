@@ -23,6 +23,6 @@ properties:
   globalDatabase: { type: boolean, default: false }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [postgres], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [data], protocols: [postgres], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }
   outbound:
     - { kinds: [replication], to: [database.relational] }

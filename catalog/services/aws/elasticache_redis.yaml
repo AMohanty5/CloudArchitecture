@@ -19,4 +19,4 @@ properties:
   transitEncryption: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [redis], from: [compute.vm.autoscaling_group, compute.serverless.function] }
+    - { kinds: [data], protocols: [redis], from: [compute.vm, compute.serverless.function] }

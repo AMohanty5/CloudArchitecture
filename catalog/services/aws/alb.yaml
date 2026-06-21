@@ -28,4 +28,4 @@ connectionRules:
   inbound:
     - { kinds: [traffic], protocols: [http, https], from: [network.cdn, network.gateway.api, external] }
   outbound:
-    - { kinds: [traffic], protocols: [http, https], to: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [traffic], protocols: [http, https], to: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }

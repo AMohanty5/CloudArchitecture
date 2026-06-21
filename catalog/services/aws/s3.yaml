@@ -19,4 +19,4 @@ properties:
   publicAccessBlocked: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [https], from: [compute.serverless.function, compute.vm.autoscaling_group, network.cdn] }
+    - { kinds: [data], protocols: [https], from: [compute.serverless.function, compute.vm, network.cdn] }

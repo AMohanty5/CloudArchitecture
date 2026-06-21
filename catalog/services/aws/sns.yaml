@@ -13,6 +13,6 @@ properties:
   encrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [async], from: [compute.serverless.function, compute.vm.autoscaling_group] }
+    - { kinds: [async], from: [compute.serverless.function, compute.vm] }
   outbound:
     - { kinds: [async], to: [messaging.queue, compute.serverless.function] }

@@ -12,5 +12,20 @@ properties:
   ingressCount: { type: integer, minimum: 0, description: Number of inbound rules. }
   egressCount: { type: integer, minimum: 0, description: Number of outbound rules. }
 connectionRules:
+  # A security group attaches to any ENI-bearing resource: instances, container tasks,
+  # load balancers, and VPC-resident managed services (RDS, ElastiCache, OpenSearch,
+  # in-VPC Lambda). `dependency` is undirected, so the edge may be drawn either way.
   outbound:
-    - { kinds: [dependency], to: [compute.vm, compute.container.orchestrator.service, network.loadbalancer.l7, network.loadbalancer.l4] }
+    - {
+        kinds: [dependency],
+        to: [
+          compute.vm,
+          compute.container.orchestrator.service,
+          compute.serverless.function,
+          network.loadbalancer.l7,
+          network.loadbalancer.l4,
+          database.relational,
+          database.cache,
+          database.search,
+        ],
+      }

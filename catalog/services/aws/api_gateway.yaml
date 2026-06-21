@@ -16,4 +16,4 @@ connectionRules:
   inbound:
     - { kinds: [traffic], protocols: [https], from: [network.cdn, external] }
   outbound:
-    - { kinds: [traffic], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group] }
+    - { kinds: [traffic], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm] }

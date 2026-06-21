@@ -16,6 +16,6 @@ properties:
   pointInTimeRecovery: { type: boolean, default: false }
 connectionRules:
   inbound:
-    - { kinds: [data], from: [compute.serverless.function, compute.vm.autoscaling_group] }
+    - { kinds: [data], from: [compute.serverless.function, compute.vm] }
   outbound:
     - { kinds: [replication], to: [database.keyvalue] }

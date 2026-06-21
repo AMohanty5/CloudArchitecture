@@ -14,4 +14,4 @@ connectionRules:
   inbound:
     - { kinds: [identity], from: [security.identity] }
   outbound:
-    - { kinds: [identity], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group, storage.object, database.relational] }
+    - { kinds: [identity], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm, storage.object, database.relational] }

@@ -16,6 +16,6 @@ properties:
   encrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [async], from: [compute.serverless.function, compute.container.orchestrator.service, compute.vm.autoscaling_group] }
+    - { kinds: [async], from: [compute.serverless.function, compute.container.orchestrator.service, compute.vm] }
   outbound:
     - { kinds: [async], to: [compute.serverless.function, integration.etl, database.timeseries] }

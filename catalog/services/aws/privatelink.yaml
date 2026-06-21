@@ -14,6 +14,6 @@ properties:
   privateDnsEnabled: { type: boolean, default: true }
 connectionRules:
   inbound:
-    - { kinds: [traffic], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [traffic], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }
   outbound:
     - { kinds: [traffic], to: [storage.object, network.loadbalancer.l4, network.gateway.api] }

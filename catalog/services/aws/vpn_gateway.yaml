@@ -15,4 +15,5 @@ connectionRules:
   inbound:
     - { kinds: [peering], from: [external] }
   outbound:
-    - { kinds: [peering], to: [network.gateway.transit] }
+    # A VPN gateway attaches to a VPC (network group) and can route via a TGW.
+    - { kinds: [peering], to: [network.gateway.transit, group.network] }

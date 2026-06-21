@@ -15,4 +15,5 @@ connectionRules:
   inbound:
     - { kinds: [peering], from: [network.link.peering, network.link.direct, network.gateway.vpn] }
   outbound:
-    - { kinds: [peering], to: [network.gateway.transit] }
+    # TGW peers with other TGWs and attaches VPCs (network groups).
+    - { kinds: [peering], to: [network.gateway.transit, group.network] }

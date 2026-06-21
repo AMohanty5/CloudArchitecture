@@ -23,4 +23,4 @@ connectionRules:
   inbound:
     - { kinds: [traffic], protocols: [tcp, udp, tls], from: [network.gateway.internet, network.loadbalancer.global, external] }
   outbound:
-    - { kinds: [traffic], to: [compute.vm.autoscaling_group, compute.container.orchestrator.service] }
+    - { kinds: [traffic], to: [compute.vm, compute.container.orchestrator.service] }

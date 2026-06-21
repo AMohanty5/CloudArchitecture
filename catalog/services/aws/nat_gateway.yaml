@@ -15,6 +15,6 @@ properties:
     default: public
 connectionRules:
   inbound:
-    - { kinds: [traffic], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [traffic], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }
   outbound:
     - { kinds: [traffic], to: [network.gateway.internet] }

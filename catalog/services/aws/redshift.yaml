@@ -16,4 +16,4 @@ properties:
   encrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [postgres], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, integration.etl] }
+    - { kinds: [data], protocols: [postgres], from: [compute.vm, compute.container.orchestrator.service, integration.etl] }

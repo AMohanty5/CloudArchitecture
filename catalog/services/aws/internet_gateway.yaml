@@ -13,3 +13,5 @@ connectionRules:
     - { kinds: [traffic], from: [external] }
   outbound:
     - { kinds: [traffic], to: [network.loadbalancer.l7, network.loadbalancer.l4, network.gateway.api] }
+    # An IGW is attached to exactly one VPC (network group).
+    - { kinds: [dependency], to: [group.network] }

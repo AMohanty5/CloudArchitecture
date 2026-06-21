@@ -17,4 +17,4 @@ properties:
   encryptionAtRest: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [https], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [data], protocols: [https], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }

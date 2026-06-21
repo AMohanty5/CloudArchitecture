@@ -16,4 +16,4 @@ properties:
   storageEncrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [data], protocols: [mongodb], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [data], protocols: [mongodb], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function] }

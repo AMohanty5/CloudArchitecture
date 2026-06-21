@@ -12,5 +12,7 @@ properties:
   ingressCount: { type: integer, minimum: 0, description: Number of inbound rule entries. }
   egressCount: { type: integer, minimum: 0, description: Number of outbound rule entries. }
 connectionRules:
+  # A network ACL is associated with one or more subnets (not with instances/ENIs —
+  # that's the security group's job). `dependency` is undirected, so either draw works.
   outbound:
-    - { kinds: [dependency], to: [network.firewall.network] }
+    - { kinds: [dependency], to: [group.subnet] }
