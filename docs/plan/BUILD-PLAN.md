@@ -804,7 +804,7 @@ testing doesn't show them).
 
 ### Phase 2 — Visual system overhaul (Days 56–66) ⬜  *(detail: `docs/visual-redesign.md`)*
 - [x] **56** ✅ (2026-06-21) Design tokens v2 in `theme.ts` — `TYPE_SCALE` (10/11/13/16, inverted hierarchy), `SPACE` (8px grid), `CONTAINER` (faint monochrome wash + hairline alphas), and `CANVAS_THEME` expanded from `{paneBg,gridDot}` → full per-theme surface set (nodeSurface/text/muted/hairline/selectedRing/connector) with light+dark parity. 5 token-invariant tests (95 web). Foundation only — no visual change yet; Days 57–61 consume it.
-- [ ] **57** Icon-forward node visual polish (builds on the Day-53 composite node).
+- [x] **57** ✅ (2026-06-21) Icon-forward node: name is now the dominant text (`TYPE_SCALE.name` 13/600), the always-on role subtitle moved to a **hover tooltip** (`title`), header compacted to a single line (`NODE` 54→46h, icon 30→28) — reads as an architecture object, not a dashboard widget. Composes with the Day-53 compartments/badges. 95 web tests green (fold-height test updated).
 - [ ] **58** Container demotion — corner labels + washes replace bordered boxes/header bars.
 - [ ] **59** Subnet swimlanes (backdrop lanes from membership; unlocks straight routing).
 - [ ] **60** Region/VPC backdrop layer + z-order pipeline + **full dark theme across all surfaces** (extends the shipped backdrop toggle).

@@ -127,7 +127,7 @@ describe('project', () => {
 
     it('grows the owner node height by a compartment + a badge row', () => {
       const ec2 = project(folded).nodes.find((n) => n.id === 'ec2')!;
-      expect(ec2.style!.height).toBe(54 + 22 + 26); // NODE_H + 1×compartmentH + badgeRowH
+      expect(ec2.style!.height).toBe(46 + 22 + 26); // NODE_H + 1×compartmentH + badgeRowH
     });
 
     it('draws only the communication edge (EC2→S3), folding the rest', () => {

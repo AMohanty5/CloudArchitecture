@@ -5,8 +5,8 @@
  * backend icon generator (apps/core .../catalog/icons.ts).
  */
 
-/** Compact architecture-block geometry. */
-export const NODE = { width: 172, height: 54, iconSize: 30, radius: 10 } as const;
+/** Compact architecture-block geometry. Header is single-line now that metadata is hover-only (Day 57). */
+export const NODE = { width: 172, height: 46, iconSize: 28, radius: 10 } as const;
 
 /**
  * Composite-node fold geometry (Day 53): an owner node grows by one `compartmentH` per

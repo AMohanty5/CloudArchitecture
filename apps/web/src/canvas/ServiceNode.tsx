@@ -5,7 +5,7 @@ import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
 import { SEVERITY_COLOR } from './validationView';
 import { roleLabel } from './roleLabels';
-import { FOLD, FONT, NEUTRAL, NODE, RADIUS, SHADOW } from './theme';
+import { FOLD, FONT, NEUTRAL, NODE, RADIUS, SHADOW, TYPE_SCALE } from './theme';
 import type { FoldItem } from './projector';
 import type { Severity } from '../lib/queries';
 
@@ -149,22 +149,20 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     <div style={{ ...shell, display: 'flex', flexDirection: 'column' }}>
       {d.findingSeverity ? <FindingDot severity={d.findingSeverity} /> : null}
       <NodeHandles />
-      {/* Header: icon + name + role (the dominant part). */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', height: NODE_H, boxSizing: 'border-box', flexShrink: 0 }}>
+      {/* Header: category icon + the dominant name. Role/type are hover-only (title). */}
+      <div
+        title={role ? `${role} · ${d.type}` : d.type}
+        style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 9px', height: NODE_H, boxSizing: 'border-box', flexShrink: 0 }}
+      >
         {d.service ? (
           <img src={`/api/v1/catalog/icons/${d.service}`} width={NODE.iconSize} height={NODE.iconSize} alt="" style={{ borderRadius: 7, flexShrink: 0 }} />
         ) : (
           <div style={{ width: NODE.iconSize, height: NODE.iconSize, borderRadius: 7, background: '#f1f5f9', flexShrink: 0 }} />
         )}
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.text, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {d.name}
-          </div>
-          {role ? (
-            <div style={{ fontSize: 9.5, color: NEUTRAL.muted, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {role}
-            </div>
-          ) : null}
+        <div
+          style={{ fontWeight: 600, fontSize: TYPE_SCALE.name, color: NEUTRAL.text, lineHeight: 1.3, minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+        >
+          {d.name}
         </div>
       </div>
       {/* ATTACHED_TO: each attached resource as a compartment row inside the owner. */}
