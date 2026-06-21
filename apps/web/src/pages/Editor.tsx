@@ -11,7 +11,8 @@ import { ValidationPanel } from '../canvas/ValidationPanel';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
 import { useConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
-import { evaluateConnection, makeConnectionId } from '../canvas/connections';
+import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
+import type { Endpoint } from '../canvas/connections';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import { containmentViolations, violatingGroupIds } from '../canvas/containment';
@@ -254,19 +255,29 @@ export function Editor() {
   const violations = useMemo(() => containmentViolations(model ?? {}), [model]);
   const invalidGroupIds = useMemo(() => violatingGroupIds(model ?? {}), [model]);
 
+  // Resolve a node id to a connection endpoint. Components carry their abstract type and
+  // catalog rules; groups (e.g. a VPC) carry a synthetic `group.<kind>` type and no rules.
+  const endpointFor = useCallback(
+    (nodeId: string): Endpoint | undefined => {
+      const c = componentsById.get(nodeId);
+      if (c) return { type: c.type, rules: rulesByService.get(c.binding?.service ?? '') };
+      const g = groupsById.get(nodeId);
+      if (g) return { type: groupEndpointType(g.kind) };
+      return undefined;
+    },
+    [componentsById, groupsById, rulesByService],
+  );
+
   // Resolve a candidate edge (source→target node ids) to a catalog verdict.
   const verdict = useCallback(
     (sourceId: string, targetId: string) => {
       if (sourceId === targetId) return { allowed: false, kinds: [], protocols: [], reason: 'A node cannot connect to itself' };
-      const from = componentsById.get(sourceId);
-      const to = componentsById.get(targetId);
+      const from = endpointFor(sourceId);
+      const to = endpointFor(targetId);
       if (!from || !to) return { allowed: false, kinds: [], protocols: [], reason: 'Unknown endpoint' };
-      return evaluateConnection(
-        { type: from.type, rules: rulesByService.get(from.binding?.service ?? '') },
-        { type: to.type, rules: rulesByService.get(to.binding?.service ?? '') },
-      );
+      return evaluateConnection(from, to);
     },
-    [componentsById, rulesByService],
+    [endpointFor],
   );
   const evaluate = useCallback((source: string, target: string): ConnectVerdict => verdict(source, target), [verdict]);
 

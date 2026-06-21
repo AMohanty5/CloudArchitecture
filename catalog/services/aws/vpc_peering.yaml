@@ -10,5 +10,7 @@ properties:
   crossRegion: { type: boolean, default: false }
   crossAccount: { type: boolean, default: false }
 connectionRules:
+  # A peering connection links two VPCs (network groups). `peering` is undirected, so the
+  # canvas accepts the edge drawn from either the VPC or the peering connection.
   outbound:
-    - { kinds: [peering], to: [network.link.peering, network.gateway.transit] }
+    - { kinds: [peering], to: [group.network] }

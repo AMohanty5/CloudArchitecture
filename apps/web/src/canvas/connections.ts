@@ -35,6 +35,17 @@ function uniq(xs: string[]): string[] {
 }
 
 /**
+ * Endpoint type token for a CAML group (e.g. a VPC, materialized as a `network` group).
+ * Groups have a `kind` but no abstract type or service binding, so they can't carry
+ * connection rules of their own; a connection to a group is gated by the *component*
+ * endpoint's rules referencing `group.<kind>` (e.g. aws.vpc_peering → group.network).
+ * The `group.` namespace can't collide with component abstract types.
+ */
+export function groupEndpointType(kind: string): string {
+  return `group.${kind}`;
+}
+
+/**
  * Whether a concrete component `type` satisfies a rule entry, allowing subtype
  * descent: a rule that targets `compute.vm` also matches `compute.vm.autoscaling_group`,
  * because an ASG *is a* VM in the taxonomy (doc 05). Matching is one-directional — a

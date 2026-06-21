@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateConnection, edgeStyle, makeConnectionId } from './connections';
+import { evaluateConnection, edgeStyle, groupEndpointType, makeConnectionId } from './connections';
 import type { ConnectionRules } from '../lib/queries';
 
 const albRules: ConnectionRules = {
@@ -102,6 +102,39 @@ describe('evaluateConnection — undirected structural relationships', () => {
 
   it('does not flip directional flow kinds (ASG → ALB stays rejected)', () => {
     expect(evaluateConnection(asg, alb).allowed).toBe(false);
+  });
+});
+
+describe('evaluateConnection — group endpoints (VPC peering ↔ VPC)', () => {
+  // aws.vpc_peering targets the network group; a VPC group carries no rules of its own.
+  const peering = {
+    type: 'network.link.peering',
+    rules: { outbound: [{ kinds: ['peering'], to: ['group.network'] }] } as ConnectionRules,
+  };
+  const vpc = { type: groupEndpointType('network') }; // group endpoint, no rules
+
+  it('allows VPC-peering → VPC as peering (forward)', () => {
+    const v = evaluateConnection(peering, vpc);
+    expect(v.allowed).toBe(true);
+    expect(v.kinds).toEqual(['peering']);
+    expect(v.flip).toBeUndefined();
+  });
+
+  it('allows VPC → VPC-peering by flipping (undirected)', () => {
+    const v = evaluateConnection(vpc, peering);
+    expect(v.allowed).toBe(true);
+    expect(v.kinds).toEqual(['peering']);
+    expect(v.flip).toBe(true);
+  });
+
+  it('rejects a group endpoint with no matching rule', () => {
+    expect(evaluateConnection(vpc, { type: groupEndpointType('subnet') }).allowed).toBe(false);
+  });
+});
+
+describe('groupEndpointType', () => {
+  it('namespaces a group kind so it cannot collide with abstract types', () => {
+    expect(groupEndpointType('network')).toBe('group.network');
   });
 });
 
