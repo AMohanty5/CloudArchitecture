@@ -38,6 +38,18 @@ describe('rankServices', () => {
     expect(rankServices(services, { q: 'relational' })[0]?.service.key).toBe('aws.rds');
   });
 
+  it('matches alias keywords (object storage → S3, nosql → DynamoDB, cache → ElastiCache)', () => {
+    const more = [
+      svc('aws.s3', 'Amazon S3', { abstractTypes: ['storage.object'] }),
+      svc('aws.dynamodb', 'Amazon DynamoDB', { abstractTypes: ['database.keyvalue'] }),
+      svc('aws.elasticache_redis', 'Amazon ElastiCache', { abstractTypes: ['database.cache'] }),
+      ...services,
+    ];
+    expect(rankServices(more, { q: 'object storage' })[0]?.service.key).toBe('aws.s3');
+    expect(rankServices(more, { q: 'nosql' })[0]?.service.key).toBe('aws.dynamodb');
+    expect(rankServices(more, { q: 'cache' })[0]?.service.key).toBe('aws.elasticache_redis');
+  });
+
   it('with no query returns everything sorted by name', () => {
     const names = rankServices(services, {}).map((r) => r.service.name);
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));

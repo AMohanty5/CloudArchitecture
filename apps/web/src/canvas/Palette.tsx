@@ -42,18 +42,36 @@ function matchesQuery(s: ServiceSummary, q: string): boolean {
   return !t || s.name.toLowerCase().includes(t) || s.key.includes(t) || (s.groupKind ?? '').includes(t);
 }
 
+/** Bold the matched substring of `text` against the search query. */
+function highlighted(text: string, q: string): React.ReactNode {
+  const t = q.trim().toLowerCase();
+  const i = t ? text.toLowerCase().indexOf(t) : -1;
+  if (i < 0) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <span style={{ fontWeight: 800, color: '#2563eb' }}>{text.slice(i, i + t.length)}</span>
+      {text.slice(i + t.length)}
+    </>
+  );
+}
+
 function PaletteTile({
   service,
   density,
   favorited,
   onToggleFavorite,
   onRecent,
+  query,
+  tag,
 }: {
   service: ServiceSummary;
   density: Density;
   favorited: boolean;
   onToggleFavorite: (key: string) => void;
   onRecent: (key: string) => void;
+  query?: string;
+  tag?: string;
 }): React.JSX.Element {
   const isGroup = Boolean(service.groupKind);
   const draggable = (service.abstractTypes?.length ?? 0) > 0 || isGroup;
@@ -84,13 +102,14 @@ function PaletteTile({
       <img src={service.iconUrl} width={icon} height={icon} alt="" style={{ borderRadius: 5, flexShrink: 0 }} />
       <div style={{ minWidth: 0, lineHeight: 1.2, flex: 1 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {shortName(service.name)}
+          {query ? highlighted(shortName(service.name), query) : shortName(service.name)}
         </div>
         {density !== 'compact' ? (
           <div style={{ fontSize: 11, color: NEUTRAL.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{service.name}</div>
         ) : null}
         {density === 'detailed' ? <div style={{ fontSize: 10, color: '#cbd5e1' }}>{service.key}</div> : null}
       </div>
+      {tag ? <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0, whiteSpace: 'nowrap' }}>{tag}</span> : null}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -142,8 +161,15 @@ export function Palette(): React.JSX.Element {
       return next;
     });
 
-  // Full catalog (always) so favorites/recents resolve regardless of search; sections filter client-side.
+  // Full catalog (always) for favorites + the domain sections; a separate ranked query
+  // (keyword/alias-aware, Day 81) drives the flat search results.
   const { data, isLoading } = useCatalogSearch('');
+  const searching = q.trim().length > 0;
+  const searchResults = useCatalogSearch(q);
+  const flatResults = useMemo(
+    () => [...SYNTHETIC_CONTAINERS.filter((s) => matchesQuery(s, q)), ...(searching ? (searchResults.data ?? []) : [])],
+    [q, searching, searchResults.data],
+  );
   const all = useMemo(() => [...SYNTHETIC_CONTAINERS, ...(data ?? [])], [data]);
   const byKey = useMemo(() => new Map(all.map((s) => [s.key, s])), [all]);
   const favSet = useMemo(() => new Set(favorites), [favorites]);
@@ -200,7 +226,19 @@ export function Palette(): React.JSX.Element {
 
       {isLoading ? <p style={{ color: '#94a3b8', fontSize: 13 }}>Loading…</p> : null}
 
-      {!q.trim() && pinned.length > 0 ? (
+      {searching ? (
+        <div>
+          {flatResults.length === 0 ? (
+            <p style={{ color: '#94a3b8', fontSize: 13 }}>No services match “{q.trim()}”.</p>
+          ) : (
+            flatResults.map((s) => (
+              <PaletteTile key={s.key} service={s} favorited={favSet.has(s.key)} query={q} tag={domainOf(s)} {...tileProps} />
+            ))
+          )}
+        </div>
+      ) : null}
+
+      {!searching && pinned.length > 0 ? (
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 2px', fontSize: 11, fontWeight: 700, letterSpacing: 0.2, color: '#64748b' }}>
             <span style={{ color: '#f59e0b' }}>★</span>
@@ -216,7 +254,7 @@ export function Palette(): React.JSX.Element {
         </div>
       ) : null}
 
-      {DOMAIN_ORDER.map((domain) => {
+      {!searching && DOMAIN_ORDER.map((domain) => {
         const items = byDomain.get(domain);
         if (!items || items.length === 0) return null; // hide empty domains
         const isOpen = !collapsed.has(domain);
