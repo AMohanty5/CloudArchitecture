@@ -817,20 +817,35 @@ testing doesn't show them).
 
 > **Phase 2 complete (Days 56–66):** the canvas reads like a reference architecture — design-token system, icon-forward nodes with hover metadata, demoted containers (washes + corner labels), public/private subnet lanes, full light/dark theme across every surface, desaturated theme-aware connectors, fitView framing + breathing room, a virtual Internet flow origin, an opt-in tier-ordered "Flow" layout, and themed overlays. Remaining: SVG-export parity (Backlog); the deep flow-rank-vs-nesting decoupling via a region/VPC backdrop layer (Backlog).
 
-### Phase 2B — Sidebar / palette experience (Days 69–77) ⬜  *(detail: `docs/sidebar-redesign.md`; can interleave with Phase 2)*
-Architecture-first toolbox to replace the flat service-catalog palette.
-- [ ] **69** Domain IA + collapsible sections + compact tiles + density modes (Compact/Comfortable/Detailed) — rewrite `Palette.tsx`.
-- [ ] **70** Favorites + auto-recents (localStorage) + hover-only metadata.
-- [ ] **71** Search upgrade — keywords/aliases in `ranking.ts` + flat highlighted results.
-- [ ] **72** Templates-in-sidebar + `mergeTemplate` (insert a scaffold into the current canvas).
-- [ ] **73** ⌘K / `/` command palette (insert-by-name, faster than drag).
-- [ ] **74** Context-aware SUGGESTED strip (derive from `/catalog/connection-rules` + curated boosts).
-- [ ] **75** Catalog expansion I — CAML taxonomy `contactcenter.*` / `ai.*` types + schema regen.
-- [ ] **76** Catalog expansion II — 🎧 Contact Center service YAMLs + icons + rules + templates (Connect, Connect+Bedrock).
-- [ ] **77** Catalog expansion III — 🤖 AI/GenAI (Bedrock/KB/Guardrails/SageMaker/vector store) + RAG template.
+### Phase 2C — Architecture composition & views (Days 69–78) ⬜  *(detail: `docs/canvas-composition.md`; sequenced before the sidebar)*
+From "nested resource cards" to "composed architecture" — the diagram communicates flow + intent in 5s.
+- [ ] **69** **Backdrop-layer rendering pipeline** — region/VPC/AZ/subnet drawn as backdrops computed from member bounding boxes (z-ordered behind nodes), no longer ELK parents. *Foundation; unblocks the rest. High value / high risk — build behind a flag, golden-tested.*
+- [ ] **70** **Layout engine v2** — lay out the flow graph (leaf nodes + communication edges only); derive backdrops afterward; minimize connector length; promote tier-ranked Flow to the archetype default.
+- [ ] **71** **AZ container layer** (`region ⊃ vpc ⊃ az ⊃ subnet`, AZ lighter than VPC) + synthetic Region/AZ palette items; re-scaffold multi-AZ templates.
+- [ ] **72** **Subnet role awareness** (web/app/data/shared/management/transit) → lane labels + tier ordering.
+- [ ] **73** **Network-link folding** — peering / TGW / VPN / Direct Connect fold from boxes into specialized labeled connectors between VPC backdrops.
+- [ ] **74** **Networking placement** — gateway endpoints at VPC level; NACL as a VPC-level construct with subnet associations (not a subnet child).
+- [ ] **75** **Category treatments** — observability **sidecars**, networking **overlays**, further card compaction (~36px), and **active-path highlight** (emphasise the selected/hovered flow, dim the rest).
+- [ ] **76** **Architecture layer bands** (EDGE / NETWORK / COMPUTE / DATA / SECURITY / OBS) as a view.
+- [ ] **77** **Architecture view system** — Resource / Architecture / Executive / Network views via a pure `applyView(model, view)` + toolbar switcher.
+- [ ] **78** Golden review (member-cohesion + max-edge-length assertions) + before/after + deploy.
 
-> Recommended order: ship the **sidebar UI on the existing 61 services first** (69–74,
-> high-impact, no catalog dependency), then the **catalog expansion** (75–77) which lights
+> **Risk note:** 69–70 are the deep backdrop decoupling deferred since Day 62 — highest value, highest risk. Build behind a flag, validate on templates with heavy golden tests, since layout can't be eyeballed in CI.
+
+### Phase 2D — Sidebar / palette experience (Days 79–87) ⬜  *(detail: `docs/sidebar-redesign.md`)*
+Architecture-first toolbox to replace the flat service-catalog palette.
+- [ ] **79** Domain IA + collapsible sections + compact tiles + density modes (Compact/Comfortable/Detailed) — rewrite `Palette.tsx`.
+- [ ] **80** Favorites + auto-recents (localStorage) + hover-only metadata.
+- [ ] **81** Search upgrade — keywords/aliases in `ranking.ts` + flat highlighted results.
+- [ ] **82** Templates-in-sidebar + `mergeTemplate` (insert a scaffold into the current canvas).
+- [ ] **83** ⌘K / `/` command palette (insert-by-name, faster than drag).
+- [ ] **84** Context-aware SUGGESTED strip (derive from `/catalog/connection-rules` + curated boosts).
+- [ ] **85** Catalog expansion I — CAML taxonomy `contactcenter.*` / `ai.*` types + schema regen.
+- [ ] **86** Catalog expansion II — 🎧 Contact Center service YAMLs + icons + rules + templates (Connect, Connect+Bedrock).
+- [ ] **87** Catalog expansion III — 🤖 AI/GenAI (Bedrock/KB/Guardrails/SageMaker/vector store) + RAG template.
+
+> Recommended order: ship the **sidebar UI on the existing 61 services first** (79–84,
+> high-impact, no catalog dependency), then the **catalog expansion** (85–87) which lights
 > up the 🎧/🤖 domains + the Connect/RAG templates. The two new domains render empty until then.
 
 ### Phase 3 — Validation & polish (Days 67–68) ⬜
