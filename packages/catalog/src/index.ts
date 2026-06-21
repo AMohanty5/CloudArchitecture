@@ -8,4 +8,6 @@
  */
 export { loadCatalog, CatalogError, groupServiceKey } from './loader.js';
 export { validateAgainstCatalog } from './validate.js';
+export { lintConnectionRules } from './lint.js';
+export type { LintFinding } from './lint.js';
 export type { Catalog, CatalogService, ConnectionRule, Provider } from './types.js';

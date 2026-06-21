@@ -18,4 +18,4 @@ properties:
   encrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
   inbound:
-    - { kinds: [dependency], from: [compute.container.orchestrator, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [dependency], from: [compute.container.orchestrator, compute.serverless.function] }

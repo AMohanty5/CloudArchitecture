@@ -15,5 +15,6 @@ properties:
   iops: { type: integer, minimum: 100, maximum: 256000 }
   encrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
+  # Block volumes attach to a VM; `compute.vm` covers plain EC2 and ASG via subtype descent.
   inbound:
-    - { kinds: [dependency], from: [compute.vm, compute.vm.autoscaling_group] }
+    - { kinds: [dependency], from: [compute.vm] }

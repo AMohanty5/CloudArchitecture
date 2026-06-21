@@ -13,4 +13,4 @@ properties:
   egressCount: { type: integer, minimum: 0, description: Number of outbound rules. }
 connectionRules:
   outbound:
-    - { kinds: [dependency], to: [compute.vm, compute.vm.autoscaling_group, compute.container.orchestrator.service, network.loadbalancer.l7, network.loadbalancer.l4] }
+    - { kinds: [dependency], to: [compute.vm, compute.container.orchestrator.service, network.loadbalancer.l7, network.loadbalancer.l4] }

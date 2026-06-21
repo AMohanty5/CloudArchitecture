@@ -14,5 +14,6 @@ properties:
   throughputMode: { type: string, enum: [bursting, elastic, provisioned], default: elastic }
   encrypted: { type: boolean, default: true, securityRelevant: true }
 connectionRules:
+  # NFS mounts: plain EC2/ASG (compute.vm), ECS/EKS tasks, Fargate tasks, and Lambda.
   inbound:
-    - { kinds: [data], protocols: [nfs], from: [compute.vm.autoscaling_group, compute.container.orchestrator.service, compute.serverless.function] }
+    - { kinds: [data], protocols: [nfs], from: [compute.vm, compute.container.orchestrator.service, compute.container.instance, compute.serverless.function] }

@@ -15,4 +15,4 @@ properties:
   platformVersion: { type: string, default: LATEST }
 connectionRules:
   inbound:
-    - { kinds: [dependency], from: [compute.container.orchestrator, compute.container.orchestrator.service] }
+    - { kinds: [dependency], from: [compute.container.orchestrator] }
