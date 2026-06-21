@@ -13,6 +13,7 @@ import type { SaveState } from '../lib/useEditor';
 import { useAllConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
 import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
 import type { Endpoint } from '../canvas/connections';
+import { groupRelationships } from '../canvas/relationships';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import type { CanvasTheme } from '../canvas/theme';
@@ -311,18 +312,30 @@ export function Editor() {
     [verdict, editor],
   );
 
-  // Drop onto a group nests inside it; drop onto a component nests in that component's group.
+  // Drop onto a group nests inside it. Drop a component-service onto a *component* attaches
+  // it (creates the classified relationship — EBS/SG/IAM fold in); falls back to nesting in
+  // that component's group when the pair can't connect. Drop on empty canvas = top level.
   const onDropService = useCallback(
     (service: ServiceLike, position: { x: number; y: number }, targetNodeId?: string) => {
-      const container = targetNodeId
-        ? groupsById.has(targetNodeId)
-          ? targetNodeId
-          : componentsById.get(targetNodeId)?.group
-        : undefined;
+      const targetComponent = targetNodeId ? componentsById.get(targetNodeId) : undefined;
+      if (targetComponent && !service.groupKind) {
+        const dropType = service.abstractTypes?.[0];
+        const targetEnd = endpointFor(targetComponent.id);
+        if (dropType && targetEnd) {
+          const v = evaluateConnection({ type: dropType, rules: rulesByService.get(service.key) }, targetEnd);
+          if (v.allowed) {
+            editor.addComponentLinkedTo(service, position, targetComponent.group, targetComponent.id, v.kinds[0]!, v.flip ?? false);
+            return;
+          }
+        }
+        editor.addComponent(service, position, targetComponent.group); // not connectable → just nest alongside
+        return;
+      }
+      const container = targetNodeId && groupsById.has(targetNodeId) ? targetNodeId : undefined;
       if (service.groupKind) editor.addGroup(service, position, container);
       else editor.addComponent(service, position, container);
     },
-    [groupsById, componentsById, editor],
+    [groupsById, componentsById, editor, endpointFor, rulesByService],
   );
 
   const deleteSelection = useCallback(() => {
@@ -400,6 +413,27 @@ export function Editor() {
 
   const selectedComponent = componentsById.get(selectedId ?? '');
   const selectedGroup = groupsById.get(selectedId ?? '');
+
+  // The selected component's relationships, grouped for the inspector panel (Day 54).
+  const relationshipItems = useMemo(() => {
+    if (!selectedComponent) return undefined;
+    const grouped = groupRelationships(
+      selectedComponent.id,
+      model?.connections ?? [],
+      (id) => componentsById.get(id)?.type,
+    );
+    const toItems = (rows: { connId: string; otherId: string; kind: string }[]) =>
+      rows.map((r) => {
+        const other = componentsById.get(r.otherId);
+        return { connId: r.connId, name: other?.name ?? r.otherId, service: other?.binding?.service, kind: r.kind };
+      });
+    return {
+      attachments: toItems(grouped.attachments),
+      security: toItems(grouped.security),
+      identity: toItems(grouped.identity),
+      communications: toItems(grouped.communications),
+    };
+  }, [selectedComponent, model, componentsById]);
   const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
 
   const groupParentOptions = useMemo(() => {
@@ -697,9 +731,11 @@ export function Editor() {
             component={selectedComponent}
             errors={errors}
             groups={groupOptions}
+            relationships={relationshipItems}
             onRename={(name) => selectedId && editor.rename(selectedId, name)}
             onSetProperty={(key, value) => selectedId && editor.setProperty(selectedId, key, value)}
             onMoveToGroup={(group) => selectedId && editor.moveToGroup(selectedId, group)}
+            onDetach={(connId) => editor.disconnect(connId)}
           />
         )}
       </div>

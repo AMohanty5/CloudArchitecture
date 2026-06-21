@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyRelationship, isFolded } from './relationships';
+import { classifyRelationship, groupRelationships, isFolded } from './relationships';
 
 describe('classifyRelationship', () => {
   it('classes runtime flows as communicates_with', () => {
@@ -37,5 +37,41 @@ describe('classifyRelationship', () => {
     expect(isFolded('secured_by')).toBe(true);
     expect(isFolded('assumes')).toBe(true);
     expect(isFolded('communicates_with')).toBe(false);
+  });
+});
+
+describe('groupRelationships', () => {
+  const types: Record<string, string> = {
+    ec2: 'compute.vm',
+    ebs: 'storage.block',
+    sg: 'network.firewall.network',
+    role: 'security.identity.principal',
+    s3: 'storage.object',
+  };
+  const conns = [
+    { id: 'c-ebs', from: 'ec2', to: 'ebs', kind: 'dependency' },
+    { id: 'c-sg', from: 'sg', to: 'ec2', kind: 'dependency' },
+    { id: 'c-role', from: 'role', to: 'ec2', kind: 'identity' },
+    { id: 'c-s3', from: 'ec2', to: 's3', kind: 'data' },
+  ];
+  const typeOf = (id: string): string | undefined => types[id];
+
+  it('buckets a component’s connections by relationship class', () => {
+    const g = groupRelationships('ec2', conns, typeOf);
+    expect(g.attachments.map((r) => r.otherId)).toEqual(['ebs']);
+    expect(g.security.map((r) => r.otherId)).toEqual(['sg']);
+    expect(g.identity.map((r) => r.otherId)).toEqual(['role']);
+    expect(g.communications.map((r) => r.otherId)).toEqual(['s3']);
+  });
+
+  it('ignores connections that do not touch the component, and group endpoints', () => {
+    expect(groupRelationships('s3', conns, typeOf).communications.map((r) => r.connId)).toEqual(['c-s3']);
+    // an endpoint with no resolvable type (a group) is skipped
+    expect(groupRelationships('ec2', [{ id: 'x', from: 'ec2', to: 'subnet', kind: 'dependency' }], typeOf)).toEqual({
+      attachments: [],
+      security: [],
+      identity: [],
+      communications: [],
+    });
   });
 });

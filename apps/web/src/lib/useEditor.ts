@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { client, apiBase } from './client';
 import { applyCommand, componentFromService, groupFromService, makeComponentId } from '../canvas/commands';
+import { makeConnectionId } from '../canvas/connections';
 import type { Command, EditableModel, ServiceLike } from '../canvas/commands';
 import { project } from '../canvas/projector';
 import type { CamlConnection, LayoutSidecar } from '../canvas/projector';
@@ -47,6 +48,7 @@ export interface EditorApi {
   tidyUp: (strategy?: LayoutStrategy) => Promise<void>;
   /** Add a component; `group` nests it (and skips the free-position sidecar entry). */
   addComponent: (service: ServiceLike, position: Position, group?: string) => void;
+  addComponentLinkedTo: (service: ServiceLike, position: Position, group: string | undefined, target: string, kind: string, flip: boolean) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
   rename: (componentId: string, name: string) => void;
   connect: (connection: CamlConnection) => void;
@@ -265,6 +267,30 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [apply],
   );
 
+  /**
+   * Add a component and immediately link it to an existing target in one atomic commit —
+   * the "drop EBS onto EC2 to attach it" gesture (Day 54). `flip` orients the connection
+   * (the canonical direction came from the catalog verdict). Renders folded by Day-53.
+   */
+  const addComponentLinkedTo = useCallback(
+    (service: ServiceLike, position: Position, group: string | undefined, target: string, kind: string, flip: boolean) => {
+      const componentId = makeComponentId(service.key);
+      const component = componentFromService(service, componentId);
+      if (!component) return;
+      if (group) component.group = group;
+      const connection = flip
+        ? { id: makeConnectionId(), from: target, to: componentId, kind }
+        : { id: makeConnectionId(), from: componentId, to: target, kind };
+      const next = [
+        { type: 'AddComponent', component } as Command,
+        { type: 'Connect', connection } as Command,
+      ].reduce((m, c) => applyCommand(m, c), modelRef.current!);
+      const nextLayout = group ? layoutRef.current : withPosition(layoutRef.current, componentId, position);
+      apply(next, nextLayout, undefined);
+    },
+    [apply],
+  );
+
   const addGroup = useCallback(
     (service: ServiceLike, position: Position, parent?: string) => {
       const groupId = makeComponentId(service.key);
@@ -407,6 +433,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     redo,
     tidyUp,
     addComponent,
+    addComponentLinkedTo,
     setProperty,
     rename,
     connect,

@@ -74,6 +74,43 @@ export function foldBucket(rel: RelationshipClass): FoldBucket | null {
   }
 }
 
+/** A connection seen from one component's perspective (for the inspector relationship panel). */
+export interface RelationshipRow {
+  connId: string;
+  otherId: string;
+  kind: string;
+}
+export interface GroupedRelationships {
+  attachments: RelationshipRow[];
+  security: RelationshipRow[];
+  identity: RelationshipRow[];
+  communications: RelationshipRow[];
+}
+
+/**
+ * Group a component's connections by relationship class for the inspector — folded
+ * relationships (attachments / security / identity) and communication links — so each can
+ * be listed and detached. Connections with a group endpoint (no resolvable type) are skipped.
+ */
+export function groupRelationships(
+  compId: string,
+  connections: ReadonlyArray<{ id: string; from: string; to: string; kind: string }>,
+  typeOf: (id: string) => string | undefined,
+): GroupedRelationships {
+  const out: GroupedRelationships = { attachments: [], security: [], identity: [], communications: [] };
+  for (const cn of connections) {
+    if (cn.from !== compId && cn.to !== compId) continue;
+    const fromT = typeOf(cn.from);
+    const toT = typeOf(cn.to);
+    if (!fromT || !toT) continue;
+    const row: RelationshipRow = { connId: cn.id, otherId: cn.from === compId ? cn.to : cn.from, kind: cn.kind };
+    const bucket = foldBucket(classifyRelationship(fromT, toT, cn.kind));
+    if (bucket) out[bucket].push(row);
+    else out.communications.push(row);
+  }
+  return out;
+}
+
 /**
  * Which endpoint of a folded edge is the *secondary* (the one folded into the other) —
  * the attachable storage, the security control, or the IAM principal. The other endpoint

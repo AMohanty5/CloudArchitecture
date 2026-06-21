@@ -4,14 +4,32 @@ import { PropertyForm } from './PropertyForm';
 import type { CamlComponent } from './projector';
 import type { CommitError } from '../lib/useEditor';
 
+/** One relationship row shown in the inspector (the other endpoint + the connection id). */
+export interface RelationshipItem {
+  connId: string;
+  name: string;
+  service?: string;
+  kind: string;
+}
+export interface RelationshipGroups {
+  attachments: RelationshipItem[];
+  security: RelationshipItem[];
+  identity: RelationshipItem[];
+  communications: RelationshipItem[];
+}
+
 interface InspectorProps {
   component: CamlComponent | undefined;
   errors: CommitError[];
   /** Groups available as containers for the MoveToGroup picker. */
   groups: Array<{ id: string; name: string; kind: string }>;
+  /** The selected component's relationships, grouped by class (Day 54). */
+  relationships?: RelationshipGroups;
   onRename: (name: string) => void;
   onSetProperty: (key: string, value: unknown) => void;
   onMoveToGroup: (group: string | undefined) => void;
+  /** Detach a relationship by its connection id (un-folds an attachment / removes a line). */
+  onDetach?: (connId: string) => void;
 }
 
 const META_LABEL: React.CSSProperties = { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: '#94a3b8' };
@@ -21,8 +39,48 @@ function isFieldError(e: CommitError): boolean {
   return Boolean(e.path && e.path.includes('.properties.'));
 }
 
-/** Selection inspector: identity + the schema-driven property form (blueprint doc 06). */
-export function Inspector({ component, errors, groups, onRename, onSetProperty, onMoveToGroup }: InspectorProps): React.JSX.Element {
+/** A relationship section (Attachments / Security / Identity / Communicates with). */
+function RelationshipSection({
+  title,
+  glyph,
+  items,
+  onDetach,
+}: {
+  title: string;
+  glyph: string;
+  items: RelationshipItem[];
+  onDetach?: (connId: string) => void;
+}): React.JSX.Element | null {
+  if (items.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ ...META_LABEL, marginBottom: 4 }}>{title}</div>
+      {items.map((it) => (
+        <div key={it.connId} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0' }}>
+          {it.service ? (
+            <img src={`/api/v1/catalog/icons/${it.service}`} width={16} height={16} alt="" style={{ borderRadius: 4, flexShrink: 0 }} />
+          ) : (
+            <span aria-hidden style={{ fontSize: 13, width: 16, textAlign: 'center', flexShrink: 0 }}>{glyph}</span>
+          )}
+          <span style={{ fontSize: 12.5, color: '#334155', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</span>
+          <span style={{ fontSize: 9, color: '#94a3b8', flexShrink: 0 }}>{it.kind}</span>
+          {onDetach ? (
+            <button
+              onClick={() => onDetach(it.connId)}
+              title="Detach"
+              style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Selection inspector: identity + relationships + the schema-driven property form (doc 06). */
+export function Inspector({ component, errors, groups, relationships, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
   const service = useCatalogService(component?.binding?.service);
   const [name, setName] = useState(component?.name ?? '');
 
@@ -83,6 +141,17 @@ export function Inspector({ component, errors, groups, onRename, onSetProperty, 
           {e.message}
         </div>
       ))}
+
+      {relationships &&
+      relationships.attachments.length + relationships.security.length + relationships.identity.length + relationships.communications.length > 0 ? (
+        <>
+          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '8px 0 12px' }} />
+          <RelationshipSection title="Attachments" glyph="▣" items={relationships.attachments} onDetach={onDetach} />
+          <RelationshipSection title="Security" glyph="🛡" items={relationships.security} onDetach={onDetach} />
+          <RelationshipSection title="Identity" glyph="🔐" items={relationships.identity} onDetach={onDetach} />
+          <RelationshipSection title="Communicates with" glyph="→" items={relationships.communications} onDetach={onDetach} />
+        </>
+      ) : null}
 
       <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '8px 0 14px' }} />
       <div style={{ ...META_LABEL, marginBottom: 10 }}>Properties</div>
