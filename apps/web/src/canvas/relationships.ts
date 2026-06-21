@@ -56,3 +56,35 @@ export function classifyRelationship(fromType: string, toType: string, kind: str
 export function isFolded(rel: RelationshipClass): boolean {
   return rel !== 'communicates_with';
 }
+
+/** Visual bucket a folded relationship renders into on its owner node. */
+export type FoldBucket = 'attachments' | 'security' | 'identity';
+
+/** Map a folded class to its render bucket; null for communicates_with (drawn as a line). */
+export function foldBucket(rel: RelationshipClass): FoldBucket | null {
+  switch (rel) {
+    case 'attached_to':
+      return 'attachments';
+    case 'secured_by':
+      return 'security';
+    case 'assumes':
+      return 'identity';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Which endpoint of a folded edge is the *secondary* (the one folded into the other) —
+ * the attachable storage, the security control, or the IAM principal. The other endpoint
+ * is the owner the fold renders onto. Returns null when neither side qualifies (the caller
+ * then leaves the edge as a line).
+ */
+export function secondarySide(fromType: string, toType: string, rel: RelationshipClass): 'from' | 'to' | null {
+  const test =
+    rel === 'attached_to' ? isAttachable : rel === 'secured_by' ? isSecurityControl : rel === 'assumes' ? isPrincipal : null;
+  if (!test) return null;
+  if (test(fromType)) return 'from';
+  if (test(toType)) return 'to';
+  return null;
+}

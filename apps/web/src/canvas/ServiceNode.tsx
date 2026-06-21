@@ -5,8 +5,43 @@ import { DIFF_COLOR } from './diffView';
 import type { DiffStatus } from './diffView';
 import { SEVERITY_COLOR } from './validationView';
 import { roleLabel } from './roleLabels';
-import { FONT, NEUTRAL, NODE, RADIUS, SHADOW } from './theme';
+import { FOLD, FONT, NEUTRAL, NODE, RADIUS, SHADOW } from './theme';
+import type { FoldItem } from './projector';
 import type { Severity } from '../lib/queries';
+
+/** A small catalog icon (attachment rows / chips), with a neutral placeholder fallback. */
+function SmallIcon({ service, size }: { service?: string; size: number }): React.JSX.Element {
+  return service ? (
+    <img src={`/api/v1/catalog/icons/${service}`} width={size} height={size} alt="" style={{ borderRadius: 4, flexShrink: 0 }} />
+  ) : (
+    <span style={{ width: size, height: size, borderRadius: 4, background: '#f1f5f9', flexShrink: 0 }} />
+  );
+}
+
+/** A security/identity badge chip folded onto a node (Day 53). */
+function Chip({ glyph, label }: { glyph: string; label: string }): React.JSX.Element {
+  return (
+    <span
+      title={label}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        maxWidth: 82,
+        padding: '1px 6px',
+        borderRadius: 6,
+        background: '#f8fafc',
+        border: '1px solid #e5e7eb',
+        fontSize: 9.5,
+        color: NEUTRAL.subtle,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span aria-hidden style={{ fontSize: 9 }}>{glyph}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+    </span>
+  );
+}
 
 /** Compact architecture-block geometry — kept in sync with the projector's NODE_W / NODE_H. */
 const NODE_W = NODE.width;
@@ -64,7 +99,19 @@ function FindingDot({ severity }: { severity: Severity }) {
 
 /** A component node: compact icon + name + role (AWS-reference style). Memoized + zoom-LOD'd. */
 function ServiceNodeImpl({ data, selected }: NodeProps) {
-  const d = data as { name?: string; type?: string; service?: string; diffStatus?: DiffStatus; findingSeverity?: Severity };
+  const d = data as {
+    name?: string;
+    type?: string;
+    service?: string;
+    diffStatus?: DiffStatus;
+    findingSeverity?: Severity;
+    attachments?: FoldItem[];
+    security?: FoldItem[];
+    identity?: FoldItem[];
+  };
+  const attachments = d.attachments ?? [];
+  const security = d.security ?? [];
+  const identity = d.identity ?? [];
   const diffColor = d.diffStatus ? DIFF_COLOR[d.diffStatus] : undefined;
   const findingColor = d.findingSeverity ? SEVERITY_COLOR[d.findingSeverity] : undefined;
   // Boolean selector → this node only re-renders when it crosses the LOD threshold.
@@ -75,8 +122,8 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
 
   const shell: React.CSSProperties = {
     position: 'relative',
-    width: NODE_W,
-    height: NODE_H,
+    width: '100%',
+    height: '100%', // fill the projector-sized node box (taller when it carries folds)
     boxSizing: 'border-box',
     background: '#ffffff',
     border,
@@ -84,6 +131,7 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     borderRadius: RADIUS.node,
     boxShadow: selected ? SHADOW.nodeSelected : SHADOW.node,
     fontFamily: FONT,
+    overflow: 'hidden',
   };
 
   if (lowDetail) {
@@ -96,31 +144,51 @@ function ServiceNodeImpl({ data, selected }: NodeProps) {
     );
   }
 
+  const hasBadges = security.length > 0 || identity.length > 0;
   return (
-    <div style={{ ...shell, display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px' }}>
+    <div style={{ ...shell, display: 'flex', flexDirection: 'column' }}>
       {d.findingSeverity ? <FindingDot severity={d.findingSeverity} /> : null}
       <NodeHandles />
-      {d.service ? (
-        <img
-          src={`/api/v1/catalog/icons/${d.service}`}
-          width={NODE.iconSize}
-          height={NODE.iconSize}
-          alt=""
-          style={{ borderRadius: 7, flexShrink: 0 }}
-        />
-      ) : (
-        <div style={{ width: NODE.iconSize, height: NODE.iconSize, borderRadius: 7, background: '#f1f5f9', flexShrink: 0 }} />
-      )}
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.text, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {d.name}
-        </div>
-        {role ? (
-          <div style={{ fontSize: 9.5, color: NEUTRAL.muted, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {role}
+      {/* Header: icon + name + role (the dominant part). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 9px', height: NODE_H, boxSizing: 'border-box', flexShrink: 0 }}>
+        {d.service ? (
+          <img src={`/api/v1/catalog/icons/${d.service}`} width={NODE.iconSize} height={NODE.iconSize} alt="" style={{ borderRadius: 7, flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: NODE.iconSize, height: NODE.iconSize, borderRadius: 7, background: '#f1f5f9', flexShrink: 0 }} />
+        )}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.text, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {d.name}
           </div>
-        ) : null}
+          {role ? (
+            <div style={{ fontSize: 9.5, color: NEUTRAL.muted, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {role}
+            </div>
+          ) : null}
+        </div>
       </div>
+      {/* ATTACHED_TO: each attached resource as a compartment row inside the owner. */}
+      {attachments.map((a) => (
+        <div
+          key={a.id}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, height: FOLD.compartmentH, padding: '0 9px', boxSizing: 'border-box', borderTop: '1px dashed #e5e7eb', flexShrink: 0 }}
+        >
+          <SmallIcon service={a.service} size={16} />
+          <span style={{ fontSize: 11, color: NEUTRAL.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{a.name}</span>
+          <span style={{ fontSize: 8.5, color: NEUTRAL.muted, textTransform: 'uppercase', letterSpacing: 0.3, flexShrink: 0 }}>attached</span>
+        </div>
+      ))}
+      {/* SECURED_BY + ASSUMES: badge chips, never lines. */}
+      {hasBadges ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, height: FOLD.badgeRowH, padding: '0 9px', boxSizing: 'border-box', borderTop: '1px solid #f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
+          {security.map((s) => (
+            <Chip key={s.id} glyph="🛡" label={s.name} />
+          ))}
+          {identity.map((i) => (
+            <Chip key={i.id} glyph="🔐" label={i.name} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

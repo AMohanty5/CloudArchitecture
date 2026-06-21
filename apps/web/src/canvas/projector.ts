@@ -6,7 +6,9 @@
  */
 
 import { edgeStyle } from './connections';
-import { NODE } from './theme';
+import { classifyRelationship, foldBucket, secondarySide } from './relationships';
+import type { FoldBucket } from './relationships';
+import { FOLD, NODE } from './theme';
 
 export interface CamlComponent {
   id: string;
@@ -43,6 +45,19 @@ export interface ProjectableModel {
   components?: CamlComponent[];
   connections?: CamlConnection[];
   groups?: CamlGroup[];
+}
+
+/** A resource folded into an owner node (an attachment row, or a security/identity badge). */
+export interface FoldItem {
+  id: string;
+  name: string;
+  type: string;
+  service?: string;
+}
+interface FoldSink {
+  attachments: FoldItem[];
+  security: FoldItem[];
+  identity: FoldItem[];
 }
 
 /**
@@ -106,6 +121,53 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
   const componentsByGroup = new Map<string | undefined, CamlComponent[]>();
   for (const c of model.components ?? []) bucket(componentsByGroup, c.group, c);
 
+  // ---- Fold pre-pass (Day 53) ----------------------------------------------------------
+  // Classify every connection; fold non-communication edges (attach/secure/assume) into
+  // their owner node and suppress the secondary's standalone node + the edge. Only
+  // communication edges survive as lines. See docs/aws-relationship-model.md.
+  const componentsById = new Map((model.components ?? []).map((c) => [c.id, c]));
+  const folds = new Map<string, FoldSink>();
+  const suppressed = new Set<string>();
+  const foldedConnIds = new Set<string>();
+  {
+    interface FoldEdge { id: string; secId: string; ownerId: string; bucket: FoldBucket }
+    const foldEdges: FoldEdge[] = [];
+    const connCount = new Map<string, number>(); // total connections touching a component
+    const secondaryCount = new Map<string, number>(); // folds where the component is the secondary
+    for (const cn of model.connections ?? []) {
+      const a = componentsById.get(cn.from);
+      const b = componentsById.get(cn.to);
+      if (a) connCount.set(a.id, (connCount.get(a.id) ?? 0) + 1);
+      if (b) connCount.set(b.id, (connCount.get(b.id) ?? 0) + 1);
+      if (!a || !b) continue; // a group endpoint (e.g. NACL→subnet) — folding handled later
+      const bkt = foldBucket(classifyRelationship(a.type, b.type, cn.kind));
+      if (!bkt) continue; // communicates_with → stays an edge
+      const side = secondarySide(a.type, b.type, classifyRelationship(a.type, b.type, cn.kind));
+      if (!side) continue;
+      const secId = side === 'from' ? cn.from : cn.to;
+      const ownerId = side === 'from' ? cn.to : cn.from;
+      foldEdges.push({ id: cn.id, secId, ownerId, bucket: bkt });
+      secondaryCount.set(secId, (secondaryCount.get(secId) ?? 0) + 1);
+    }
+    // Suppress a secondary only when *every* connection it has is a fold with it as the
+    // secondary — i.e. it is purely an attachment/control/principal (EBS, SG, IAM role),
+    // never also an owner or a communication endpoint (else keep its node + draw the line).
+    for (const fe of foldEdges) {
+      if (secondaryCount.get(fe.secId) !== connCount.get(fe.secId)) continue;
+      const sec = componentsById.get(fe.secId)!;
+      suppressed.add(fe.secId);
+      foldedConnIds.add(fe.id);
+      let sink = folds.get(fe.ownerId);
+      if (!sink) { sink = { attachments: [], security: [], identity: [] }; folds.set(fe.ownerId, sink); }
+      sink[fe.bucket].push({ id: sec.id, name: sec.name, type: sec.type, service: sec.binding?.service });
+    }
+  }
+  const ownerHeight = (id: string): number => {
+    const f = folds.get(id);
+    if (!f) return NODE_H;
+    return NODE_H + f.attachments.length * FOLD.compartmentH + (f.security.length + f.identity.length > 0 ? FOLD.badgeRowH : 0);
+  };
+
   const nodes: ProjectedNode[] = [];
   // componentId → section group it is rendered inside as a row (its node is not emitted).
   const rowifiedToGroup = new Map<string, string>();
@@ -120,7 +182,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
     for (const g of groupsByParent.get(parentId) ?? []) {
       y += GAP;
       const section = isSectionGroup(g.id, groupsByParent, componentsByGroup, g.kind);
-      const rows = section ? (componentsByGroup.get(g.id) ?? []) : [];
+      const rows = section ? (componentsByGroup.get(g.id) ?? []).filter((c) => !suppressed.has(c.id)) : [];
       const node: ProjectedNode = {
         id: g.id,
         type: 'group',
@@ -149,17 +211,26 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
     }
 
     for (const c of componentsByGroup.get(parentId) ?? []) {
+      if (suppressed.has(c.id)) continue; // folded into an owner node
       y += GAP;
+      const h = ownerHeight(c.id);
+      const f = folds.get(c.id);
       nodes.push({
         id: c.id,
         type: 'service',
         parentId,
         extent: parentId ? 'parent' : undefined,
         position: { x: startX, y },
-        data: { name: c.name, type: c.type, service: c.binding?.service, provider: c.binding?.provider },
-        style: { width: NODE_W, height: NODE_H },
+        data: {
+          name: c.name,
+          type: c.type,
+          service: c.binding?.service,
+          provider: c.binding?.provider,
+          ...(f ? { attachments: f.attachments, security: f.security, identity: f.identity } : {}),
+        },
+        style: { width: NODE_W, height: h },
       });
-      y += NODE_H;
+      y += h;
       maxRight = Math.max(maxRight, startX + NODE_W);
     }
 
@@ -186,6 +257,7 @@ export function project(model: ProjectableModel, layout?: LayoutSidecar): Projec
   const edges: ProjectedEdge[] = [];
   const seen = new Set<string>();
   for (const c of model.connections ?? []) {
+    if (foldedConnIds.has(c.id)) continue; // attach/secure/assume — folded into a node, no line
     const source = rowifiedToGroup.get(c.from) ?? c.from;
     const target = rowifiedToGroup.get(c.to) ?? c.to;
     if (source === target) continue; // intra-section

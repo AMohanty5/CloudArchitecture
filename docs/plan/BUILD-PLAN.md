@@ -798,7 +798,7 @@ testing doesn't show them).
 
 ### Phase 1 — Semantic relationships & interaction (Days 52–55)
 - [x] **52** ✅ (2026-06-21) `classifyRelationship()` engine (`relationships.ts`, 6 tests) + connect-bug fixes: **4-side handles + `ConnectionMode.Loose`** (Blocker C — vertical neighbours now connect from facing edges), **bulk `/catalog/connection-rules` prefetch** via `useAllConnectionRules` (Blocker B — a just-dropped service is connectable instantly). *Deferred to Day 53 (where they belong with the composite render): handles on tier-panel rows (Blocker A) + drop-onto-node folding.*
-- [ ] **53** Composite `ServiceNode` — attachment compartments + security/identity badges; projector folds non-COMMUNICATES_WITH edges into their owner; **drop-onto-node creates the classified (folded) relationship**; tier-row handles (Blocker A).
+- [x] **53** ✅ (2026-06-21) Composite `ServiceNode` — attachment **compartments** + security/identity **badges**; projector **fold pre-pass** classifies every edge, folds attach/secure/assume into the owner node (sizing it taller), suppresses the secondary's node + the edge, so **only COMMUNICATES_WITH edges draw lines** (4 projector tests: the test2 case folds EBS/SG/role into EC2, leaving only EC2→S3). *Deferred: drop-onto-node folding + on-canvas detach → Day 54 (inspector panels); tier-row handles (Blocker A) → backlog; SVG-export parity for folds → Day 66.*
 - [ ] **54** Inspector relationship panels (Attach / Secure / Assume / Communicates) + VPC endpoints (Gateway + Interface/PrivateLink).
 - [ ] **55** Multi-subnet authoring (reliable drop-into-container, add-subnet, move between subnets) + NACL→subnet chip.
 

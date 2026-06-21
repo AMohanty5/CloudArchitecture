@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { project } from './projector';
 import { generateLargeModel } from './fixtures';
-import type { ProjectableModel } from './projector';
+import type { FoldItem, ProjectableModel } from './projector';
 
 const threeTier: ProjectableModel = {
   groups: [
@@ -90,6 +90,50 @@ describe('project', () => {
       const { edges } = project(sectioned);
       expect(edges).toHaveLength(1); // a-db + b-db → orchestration→data (data), deduped
       expect(edges[0]).toMatchObject({ source: 'orchestration', target: 'data', data: { kind: 'data' } });
+    });
+  });
+
+  describe('relationship folding (Day 53)', () => {
+    // The test2 scenario: EC2 with an attached EBS, a securing SG, an assumed role, and a
+    // data link to S3. EBS/SG/role fold into EC2; only the EC2→S3 line survives.
+    const folded: ProjectableModel = {
+      groups: [{ id: 'sub', kind: 'subnet', name: 'Subnet' }],
+      components: [
+        { id: 'ec2', name: 'App', type: 'compute.vm', binding: { provider: 'aws', service: 'aws.ec2' }, group: 'sub' },
+        { id: 'ebs', name: 'Data vol', type: 'storage.block', binding: { provider: 'aws', service: 'aws.ebs' }, group: 'sub' },
+        { id: 'sg', name: 'sg-web', type: 'network.firewall.network', binding: { provider: 'aws', service: 'aws.security_group' }, group: 'sub' },
+        { id: 'role', name: 'AppRole', type: 'security.identity.principal', binding: { provider: 'aws', service: 'aws.iam_role' }, group: 'sub' },
+        { id: 's3', name: 'Bucket', type: 'storage.object', binding: { provider: 'aws', service: 'aws.s3' } },
+      ],
+      connections: [
+        { id: 'c-ebs', from: 'ec2', to: 'ebs', kind: 'dependency' }, // attach
+        { id: 'c-sg', from: 'sg', to: 'ec2', kind: 'dependency' }, // secure
+        { id: 'c-role', from: 'role', to: 'ec2', kind: 'identity' }, // assume
+        { id: 'c-s3', from: 'ec2', to: 's3', kind: 'data' }, // communicate
+      ],
+    };
+
+    it('suppresses folded secondaries (EBS/SG/role) and keeps owners (EC2/S3)', () => {
+      const ids = project(folded).nodes.filter((n) => n.type === 'service').map((n) => n.id).sort();
+      expect(ids).toEqual(['ec2', 's3']);
+    });
+
+    it('folds attachment/security/identity onto the owner node data', () => {
+      const ec2 = project(folded).nodes.find((n) => n.id === 'ec2')!;
+      expect((ec2.data.attachments as FoldItem[]).map((a) => a.id)).toEqual(['ebs']);
+      expect((ec2.data.security as FoldItem[]).map((s) => s.id)).toEqual(['sg']);
+      expect((ec2.data.identity as FoldItem[]).map((i) => i.id)).toEqual(['role']);
+    });
+
+    it('grows the owner node height by a compartment + a badge row', () => {
+      const ec2 = project(folded).nodes.find((n) => n.id === 'ec2')!;
+      expect(ec2.style!.height).toBe(54 + 22 + 26); // NODE_H + 1×compartmentH + badgeRowH
+    });
+
+    it('draws only the communication edge (EC2→S3), folding the rest', () => {
+      const { edges } = project(folded);
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toMatchObject({ id: 'c-s3', source: 'ec2', target: 's3' });
     });
   });
 

@@ -8,6 +8,14 @@
 /** Compact architecture-block geometry. */
 export const NODE = { width: 172, height: 54, iconSize: 30, radius: 10 } as const;
 
+/**
+ * Composite-node fold geometry (Day 53): an owner node grows by one `compartmentH` per
+ * attached resource (EBS/EFS rendered inside it) and one `badgeRowH` when it carries any
+ * security/identity badge. Shared by the projector (sizing) and ServiceNode (render) so
+ * the laid-out box matches the painted content.
+ */
+export const FOLD = { compartmentH: 22, badgeRowH: 26 } as const;
+
 /** Corner radii. */
 export const RADIUS = { node: 10, group: 12, chip: 8 } as const;
 
