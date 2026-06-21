@@ -841,12 +841,27 @@ Architecture-first toolbox to replace the flat service-catalog palette.
 - [ ] **83** ⌘K / `/` command palette (insert-by-name, faster than drag).
 - [ ] **84** Context-aware SUGGESTED strip (derive from `/catalog/connection-rules` + curated boosts).
 - [ ] **85** Catalog expansion I — CAML taxonomy `contactcenter.*` / `ai.*` types + schema regen.
-- [ ] **86** Catalog expansion II — 🎧 Contact Center service YAMLs + icons + rules + templates (Connect, Connect+Bedrock).
+- [ ] **86** Catalog expansion II — 🎧 Contact Center: now a **full domain** → see **Phase 3A** (`docs/contact-center-domain.md`); Day 85's taxonomy mechanics feed it.
 - [ ] **87** Catalog expansion III — 🤖 AI/GenAI (Bedrock/KB/Guardrails/SageMaker/vector store) + RAG template.
 
 > Recommended order: ship the **sidebar UI on the existing 61 services first** (79–84,
 > high-impact, no catalog dependency), then the **catalog expansion** (85–87) which lights
 > up the 🎧/🤖 domains + the Connect/RAG templates. The two new domains render empty until then.
+
+### Phase 3A — Amazon Connect / Contact Center & Voice-AI domain (Days 88–97) ⬜  *(detail: `docs/contact-center-domain.md`)*
+Model contact centers semantically (Connect Instance is a container like a VPC); compose Connect + Lex/Bedrock/LiveKit/Pipecat/RAG architectures incl. real-time voice-AI media pipelines and contact-flow workflows. Reuses Phase-2C composition + Phase-2D catalog mechanics. **Largest single domain in the plan.**
+- [ ] **88** Taxonomy + schema — `groupKind: connect`; `contactcenter.*`/`channel.*`/`telephony.*`/`voiceai.*` types; connection kinds `route`/`invoke`/`stream`; regen CAML types; `edgeStyle`/legend.
+- [ ] **89** Relationship classes — extend `classifyRelationship`/`foldBucket` for ROUTES_TO/TRANSFERS_TO/INVOKES/STREAMS_AUDIO_TO/USES_KNOWLEDGE_BASE/AUTHENTICATES_WITH/ANALYZES/GENERATES_EVENTS/PUBLISHES_TO/SUBSCRIBES_TO + render styles.
+- [ ] **90** Catalog — Core Connect (instance group + flow/queue/routing/agent/workspace/quick-connect/hours/prompts/customer-profiles/contact-lens/voice-id/wisdom/tasks/cases).
+- [ ] **91** Catalog — Telephony + Channels (PSTN/DID/SIP/carrier/SBC/voice-gateway/livekit-sip + voice/chat/SMS/WhatsApp/email/webrtc/mobile/web entry nodes).
+- [ ] **92** Catalog — AI + Voice-AI (Lex/Bedrock/Kendra/KB/Transcribe/Polly/Comprehend + LiveKit/Pipecat/STT/TTS/LLM/VAD/RAG/vector-db; `generic`/thirdparty provider).
+- [ ] **93** Connect container + composition — Connect-as-backdrop, channel entry nodes, telephony + `stream` media-pipeline connectors, CC layered auto-layout + `tierRank` tiers.
+- [ ] **94** Contact Flow workflow view — drill-in flowchart editor (flowblocks + branch/error edges). *Largest piece; could split out.*
+- [ ] **95** Templates — the 11 CC architectures (Basic, +Lex, +Bedrock, +KB, +LiveKit, +Pipecat, +RAG, Agent Assist, Voice Bot, Omnichannel, Enterprise) via `mergeTemplate`.
+- [ ] **96** Views — Telephony / AI-Voice / Executive contact-center views (`applyView`).
+- [ ] **97** Golden review (lint new rules + CC-template golden tests) + deploy.
+
+> **Risk:** the **Contact Flow workflow view** (94) is effectively a second editor. Recommend shipping the **model + composition (88–93)** first — a Connect architecture that lays out and reads correctly — then the flow drill-in (94) and templates/views (95–96).
 
 ### Phase 3 — Validation & polish (Days 67–68) ⬜
 - [x] **67** ✅ (2026-06-21) Relationship/connectivity validation — 3 advisory pack rules: **SEC-006** (IAM role grants a resource but no compute assumes it — the dangling-grant version of the IAM→S3 guidance), **OPS-002** (orphan attachment — a free-floating EBS/SG/role), **NET-001** (interface endpoint not in a subnet; gateway endpoints exempt). +6 tests (24 validation). *Deferred (need a routing/reachability model we don't have yet): no-NAT-route, unreachable-instance → backlog.*
