@@ -10,13 +10,14 @@ import { DiffPanel } from '../canvas/DiffPanel';
 import { ValidationPanel } from '../canvas/ValidationPanel';
 import { useEditor } from '../lib/useEditor';
 import type { SaveState } from '../lib/useEditor';
-import { useAllConnectionRules, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
+import { useAllConnectionRules, useCatalogSearch, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
 import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
 import type { Endpoint } from '../canvas/connections';
 import { groupRelationships } from '../canvas/relationships';
 import { applyView, VIEW_LABEL } from '../canvas/views';
 import type { ArchView } from '../canvas/views';
 import { CommandPalette } from '../canvas/CommandPalette';
+import { suggestFor } from '../canvas/suggestions';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import type { CanvasTheme } from '../canvas/theme';
@@ -500,6 +501,27 @@ export function Editor() {
       communications: toItems(grouped.communications),
     };
   }, [selectedComponent, model, componentsById]);
+
+  // Context-aware suggestions (Day 84): services that can attach to the selected resource.
+  const catalog = useCatalogSearch('');
+  const catalogByKey = useMemo(() => new Map((catalog.data ?? []).map((s) => [s.key, s])), [catalog.data]);
+  const suggestionItems = useMemo(() => {
+    if (!selectedComponent) return undefined;
+    const services = (catalog.data ?? [])
+      .filter((s) => (s.abstractTypes?.length ?? 0) > 0)
+      .map((s) => ({ key: s.key, type: s.abstractTypes![0]!, rules: rulesByService.get(s.key) }));
+    const exclude = new Set<string>();
+    if (selectedComponent.binding?.service) exclude.add(selectedComponent.binding.service);
+    for (const cn of model?.connections ?? []) {
+      if (cn.from !== selectedComponent.id && cn.to !== selectedComponent.id) continue;
+      const other = componentsById.get(cn.from === selectedComponent.id ? cn.to : cn.from);
+      if (other?.binding?.service) exclude.add(other.binding.service);
+    }
+    const selRules = rulesByService.get(selectedComponent.binding?.service ?? '');
+    return suggestFor({ type: selectedComponent.type, rules: selRules }, services, exclude)
+      .map((k) => catalogByKey.get(k))
+      .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  }, [selectedComponent, catalog.data, rulesByService, catalogByKey, model, componentsById]);
   const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
 
   const groupParentOptions = useMemo(() => {
@@ -862,6 +884,11 @@ export function Editor() {
             errors={errors}
             groups={groupOptions}
             relationships={relationshipItems}
+            suggestions={suggestionItems}
+            onSuggest={(s) => {
+              const full = catalogByKey.get(s.key);
+              if (full && selectedId) onDropService(full, cmdkPos(), selectedId);
+            }}
             onRename={(name) => selectedId && editor.rename(selectedId, name)}
             onSetProperty={(key, value) => selectedId && editor.setProperty(selectedId, key, value)}
             onMoveToGroup={(group) => selectedId && editor.moveToGroup(selectedId, group)}

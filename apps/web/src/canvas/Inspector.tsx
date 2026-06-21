@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useCatalogService } from '../lib/queries';
 import { PropertyForm } from './PropertyForm';
+import { shortName } from './domains';
 import type { CamlComponent } from './projector';
 import type { CommitError } from '../lib/useEditor';
+
+/** A suggested service to attach to the selected resource (Day 84). */
+export interface SuggestionItem {
+  key: string;
+  name: string;
+  iconUrl: string;
+}
 
 /** One relationship row shown in the inspector (the other endpoint + the connection id). */
 export interface RelationshipItem {
@@ -26,6 +34,9 @@ interface InspectorProps {
   groups: Array<{ id: string; name: string; kind: string }>;
   /** The selected component's relationships, grouped by class (Day 54). */
   relationships?: RelationshipGroups;
+  /** Suggested services to attach (Day 84). */
+  suggestions?: SuggestionItem[];
+  onSuggest?: (s: SuggestionItem) => void;
   onRename: (name: string) => void;
   onSetProperty: (key: string, value: unknown) => void;
   onMoveToGroup: (group: string | undefined) => void;
@@ -81,7 +92,7 @@ function RelationshipSection({
 }
 
 /** Selection inspector: identity + relationships + the schema-driven property form (doc 06). */
-export function Inspector({ component, errors, groups, relationships, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
+export function Inspector({ component, errors, groups, relationships, suggestions, onSuggest, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
   const service = useCatalogService(component?.binding?.service);
   const [name, setName] = useState(component?.name ?? '');
 
@@ -152,6 +163,27 @@ export function Inspector({ component, errors, groups, relationships, onRename, 
           <RelationshipSection title="Identity" glyph="🔐" items={relationships.identity} onDetach={onDetach} />
           <RelationshipSection title="Observability" glyph="📊" items={relationships.sidecar} onDetach={onDetach} />
           <RelationshipSection title="Communicates with" glyph="→" items={relationships.communications} onDetach={onDetach} />
+        </>
+      ) : null}
+
+      {suggestions && suggestions.length > 0 ? (
+        <>
+          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '8px 0 8px' }} />
+          <div style={{ ...META_LABEL, marginBottom: 6 }}>✦ Suggested</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 4 }}>
+            {suggestions.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => onSuggest?.(s)}
+                title={`Attach ${s.name}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px 3px 5px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11.5, color: '#334155', cursor: 'pointer' }}
+              >
+                <img src={s.iconUrl} width={14} height={14} alt="" style={{ borderRadius: 3 }} />
+                {shortName(s.name)}
+                <span style={{ color: '#2563eb', fontWeight: 700 }}>+</span>
+              </button>
+            ))}
+          </div>
         </>
       ) : null}
 
