@@ -79,6 +79,8 @@ export interface ProjectedNode {
   parentId?: string;
   extent?: 'parent';
   style?: { width: number; height: number };
+  /** Stacking order. Backdrop containers are negative (behind nodes); default 0. */
+  zIndex?: number;
 }
 export interface ProjectedEdge {
   id: string;

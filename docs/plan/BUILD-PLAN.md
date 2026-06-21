@@ -819,7 +819,7 @@ testing doesn't show them).
 
 ### Phase 2C — Architecture composition & views (Days 69–78) ⬜  *(detail: `docs/canvas-composition.md`; sequenced before the sidebar)*
 From "nested resource cards" to "composed architecture" — the diagram communicates flow + intent in 5s.
-- [ ] **69** **Backdrop-layer rendering pipeline** — region/VPC/AZ/subnet drawn as backdrops computed from member bounding boxes (z-ordered behind nodes), no longer ELK parents. *Foundation; unblocks the rest. High value / high risk — build behind a flag, golden-tested.*
+- [x] **69** ✅ (2026-06-21) **Backdrop engine** (`backdrops.ts`) — pure `computeBackdrops(model, positions)` turns region/VPC/AZ/subnet into background rectangles computed from their members' absolute laid-out positions: outer containers enclose inner (padding grows toward the root) and sit behind nodes (`zIndex < 0`). Foundation only — **zero change to the live render** (existing nesting path untouched); Day 70 lays out flat + feeds positions here behind a flag. 5 golden tests (125 web) + `ProjectedNode.zIndex` added.
 - [ ] **70** **Layout engine v2** — lay out the flow graph (leaf nodes + communication edges only); derive backdrops afterward; minimize connector length; promote tier-ranked Flow to the archetype default.
 - [ ] **71** **AZ container layer** (`region ⊃ vpc ⊃ az ⊃ subnet`, AZ lighter than VPC) + synthetic Region/AZ palette items; re-scaffold multi-AZ templates.
 - [ ] **72** **Subnet role awareness** (web/app/data/shared/management/transit) → lane labels + tier ordering.
