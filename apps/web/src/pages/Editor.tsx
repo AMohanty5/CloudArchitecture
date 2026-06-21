@@ -14,6 +14,8 @@ import { useAllConnectionRules, useCommits, useDiff, useCommitModel, fetchCommit
 import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
 import type { Endpoint } from '../canvas/connections';
 import { groupRelationships } from '../canvas/relationships';
+import { applyView, VIEW_LABEL } from '../canvas/views';
+import type { ArchView } from '../canvas/views';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import type { CanvasTheme } from '../canvas/theme';
@@ -159,6 +161,8 @@ export function Editor() {
       return next;
     });
   }, []);
+  // Architecture view (Day 77): Resource (editable) vs read-only abstractions.
+  const [view, setView] = useState<ArchView>('resource');
   // Architecture-layers view (Day 76): category bands instead of infra nesting.
   const [layersView, setLayersView] = useState(() => {
     try {
@@ -608,6 +612,18 @@ export function Editor() {
         >
           ▦ Layers
         </button>
+        <select
+          value={view}
+          onChange={(e) => setView(e.target.value as ArchView)}
+          title="Architecture view (non-Resource views are read-only)"
+          style={{ marginLeft: 4, padding: '4px 6px', borderRadius: 6, border: '1px solid #e2e8f0', background: view === 'resource' ? '#fff' : '#eff6ff', color: view === 'resource' ? '#334155' : '#2563eb', cursor: 'pointer', fontSize: 13 }}
+        >
+          {(Object.keys(VIEW_LABEL) as ArchView[]).map((v) => (
+            <option key={v} value={v}>
+              👁 {VIEW_LABEL[v]}
+            </option>
+          ))}
+        </select>
         <button
           onClick={() => setHistoryOpen((v) => !v)}
           title="History & diff"
@@ -740,18 +756,18 @@ export function Editor() {
             <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} title={archName} subtitle="Comparing commits" canvasTheme={canvasTheme} />
           ) : model ? (
             <Canvas
-              model={model as ProjectableModel}
-              layout={layout}
-              title={archName}
-              onDropService={onDropService}
+              model={view === 'resource' ? (model as ProjectableModel) : applyView(model as ProjectableModel, view)}
+              layout={view === 'resource' ? layout : {}}
+              title={view === 'resource' ? archName : `${archName} · ${VIEW_LABEL[view]} view`}
+              onDropService={view === 'resource' ? onDropService : undefined}
               invalidGroupIds={invalidGroupIds}
               selectedId={selectedId}
               onSelect={editor.select}
               selectedEdgeId={selectedEdgeId}
               onSelectEdge={editor.selectEdge}
-              evaluate={evaluate}
-              onConnect={onConnect}
-              onNodeMove={editor.moveNode}
+              evaluate={view === 'resource' ? evaluate : undefined}
+              onConnect={view === 'resource' ? onConnect : undefined}
+              onNodeMove={view === 'resource' ? editor.moveNode : undefined}
               showEdgeLabels={showLabels}
               canvasTheme={canvasTheme}
               compose={compose}
