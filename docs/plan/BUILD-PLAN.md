@@ -815,6 +815,22 @@ testing doesn't show them).
 - [ ] **65** Lightweight SG/route/endpoint indicators (chips) + legend/typography polish.
 - [ ] **66** Golden-image review — re-render `test2` + all templates, before/after, export parity, CTO-deck pass.
 
+### Phase 2B — Sidebar / palette experience (Days 69–77) ⬜  *(detail: `docs/sidebar-redesign.md`; can interleave with Phase 2)*
+Architecture-first toolbox to replace the flat service-catalog palette.
+- [ ] **69** Domain IA + collapsible sections + compact tiles + density modes (Compact/Comfortable/Detailed) — rewrite `Palette.tsx`.
+- [ ] **70** Favorites + auto-recents (localStorage) + hover-only metadata.
+- [ ] **71** Search upgrade — keywords/aliases in `ranking.ts` + flat highlighted results.
+- [ ] **72** Templates-in-sidebar + `mergeTemplate` (insert a scaffold into the current canvas).
+- [ ] **73** ⌘K / `/` command palette (insert-by-name, faster than drag).
+- [ ] **74** Context-aware SUGGESTED strip (derive from `/catalog/connection-rules` + curated boosts).
+- [ ] **75** Catalog expansion I — CAML taxonomy `contactcenter.*` / `ai.*` types + schema regen.
+- [ ] **76** Catalog expansion II — 🎧 Contact Center service YAMLs + icons + rules + templates (Connect, Connect+Bedrock).
+- [ ] **77** Catalog expansion III — 🤖 AI/GenAI (Bedrock/KB/Guardrails/SageMaker/vector store) + RAG template.
+
+> Recommended order: ship the **sidebar UI on the existing 61 services first** (69–74,
+> high-impact, no catalog dependency), then the **catalog expansion** (75–77) which lights
+> up the 🎧/🤖 domains + the Connect/RAG templates. The two new domains render empty until then.
+
 ### Phase 3 — Validation & polish (Days 67–68) ⬜
 - [ ] **67** Connectivity-doctor + relationship validation — grant-not-path hint (IAM→resource line), orphan-attachment, endpoint-not-in-subnet, no-NAT-route, unreachable instance.
 - [ ] **68** Full e2e regression of the three reported scenarios + the new visuals on a deployed build; **deploy to EC2**.
