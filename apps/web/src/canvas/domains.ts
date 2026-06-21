@@ -64,3 +64,11 @@ export function domainOf(service: { abstractTypes?: string[]; groupKind?: string
 export function shortName(name: string): string {
   return name.replace(/^(amazon|aws)\s+/i, '');
 }
+
+/** Default pinned favorites on first run. */
+export const FAVORITE_DEFAULTS: readonly string[] = ['aws.ec2', 'aws.s3', 'aws.lambda', 'aws.rds', 'aws.vpc'];
+
+/** Most-recently-used list (LRU): move `key` to the front, dedupe, cap the length (Day 80). */
+export function pushRecent(recents: readonly string[], key: string, cap = 8): string[] {
+  return [key, ...recents.filter((k) => k !== key)].slice(0, cap);
+}

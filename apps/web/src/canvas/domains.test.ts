@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { domainOf, shortName, DOMAIN_ORDER } from './domains';
+import { domainOf, shortName, DOMAIN_ORDER, pushRecent } from './domains';
 
 describe('domainOf', () => {
   it('routes groupKind + TGW/peering to Architecture Containers', () => {
@@ -34,5 +34,11 @@ describe('domainOf', () => {
 
   it('every domain has an order slot', () => {
     expect(new Set(DOMAIN_ORDER).size).toBe(DOMAIN_ORDER.length);
+  });
+
+  it('pushRecent is an LRU: front-loads, dedupes, caps', () => {
+    expect(pushRecent(['a', 'b'], 'c')).toEqual(['c', 'a', 'b']);
+    expect(pushRecent(['a', 'b', 'c'], 'b')).toEqual(['b', 'a', 'c']); // moves to front, no dup
+    expect(pushRecent(['a', 'b', 'c'], 'd', 3)).toEqual(['d', 'a', 'b']); // capped at 3
   });
 });

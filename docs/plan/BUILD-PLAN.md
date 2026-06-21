@@ -837,7 +837,7 @@ From "nested resource cards" to "composed architecture" — the diagram communic
 ### Phase 2D — Sidebar / palette experience (Days 79–87) ⬜  *(detail: `docs/sidebar-redesign.md`)*
 Architecture-first toolbox to replace the flat service-catalog palette.
 - [x] **79** ✅ (2026-06-22) **Architecture-first sidebar** — `domains.ts` `domainOf` maps each service to one of 9 domains (🏗 Containers · 🌐 Edge · 💻 Compute · 🗄 Data · 📨 Integration · 🔐 Security · 📈 Observability · 🎧 Contact Center · 🤖 AI); rewrote `Palette.tsx` into **collapsible domain sections** (count + chevron, empty domains hidden) with **compact draggable tiles** and a **Compact/Comfortable/Detailed density toggle** (persisted, default Compact; short names strip "Amazon/AWS"). +5 tests (172 web).
-- [ ] **80** Favorites + auto-recents (localStorage) + hover-only metadata.
+- [x] **80** ✅ (2026-06-22) **Favorites + auto-recents** — a ★ on every tile pins/unpins (localStorage `cac:favorites`, seeded EC2/S3/Lambda/RDS/VPC); dragging a tile pushes it to an LRU `cac:recents` (cap 8, pure `pushRecent`). A top **FAVORITES** section (pinned then recents, 2-col compact grid) appears when not searching; the palette now loads the full catalog and filters client-side so favorites resolve regardless of query. Metadata stays hover-only (title). +1 test (173 web).
 - [ ] **81** Search upgrade — keywords/aliases in `ranking.ts` + flat highlighted results.
 - [ ] **82** Templates-in-sidebar + `mergeTemplate` (insert a scaffold into the current canvas).
 - [ ] **83** ⌘K / `/` command palette (insert-by-name, faster than drag).
