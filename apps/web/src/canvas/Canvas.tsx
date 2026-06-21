@@ -209,19 +209,25 @@ function Flow({
     [nodes, selectedId, invalidGroupIds, diffStatus, findingSeverityById],
   );
   const styledEdges = useMemo(
-    () =>
-      edges.map((e) => {
+    () => {
+      const conn = backdrop.connector;
+      // Desaturate to the theme's connector palette: only the request path (traffic) and
+      // data flows keep an accent; everything else is neutral, distinguished by dash. Edges
+      // never dominate, and they adapt to dark mode (visual-redesign §4).
+      const connectorColor = (kind: string): string =>
+        kind === 'traffic' ? conn.traffic : kind === 'data' ? conn.data : conn.neutral;
+      return edges.map((e) => {
         const ds = diffStatus?.[e.id];
-        const stroke = ds ? DIFF_COLOR[ds] : (e.style?.stroke ?? '#94a3b8');
+        const stroke = ds ? DIFF_COLOR[ds] : connectorColor(e.data.kind);
         const active = e.id === selectedEdgeId || Boolean(ds);
-        const marker = { type: MarkerType.ArrowClosed, color: stroke, width: 16, height: 16 };
+        const marker = { type: MarkerType.ArrowClosed, color: stroke, width: 11, height: 11 };
         return {
           ...e,
-          // Clean reference look: orthogonal routing + arrowheads; labels are opt-in.
+          // Clean reference look: orthogonal routing + small arrowheads; labels are opt-in.
           type: 'smoothstep',
           label: showEdgeLabels ? e.label : undefined,
-          labelStyle: { fontSize: 10, fill: NEUTRAL.subtle, fontFamily: FONT },
-          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.9 },
+          labelStyle: { fontSize: 10, fill: backdrop.muted, fontFamily: FONT },
+          labelBgStyle: { fill: backdrop.nodeSurface, fillOpacity: 0.9 },
           labelBgPadding: [4, 2] as [number, number],
           labelBgBorderRadius: 4,
           markerEnd: marker,
@@ -231,11 +237,12 @@ function Flow({
             ...e.style,
             stroke,
             ...(ds ? { strokeDasharray: ds === 'removed' ? '4 4' : undefined } : {}),
-            strokeWidth: active ? 2.5 : 1.75,
+            strokeWidth: active ? 2.5 : 1.5,
           },
         };
-      }),
-    [edges, selectedEdgeId, diffStatus, showEdgeLabels],
+      });
+    },
+    [edges, selectedEdgeId, diffStatus, showEdgeLabels, backdrop],
   );
   // Connector kinds present in the model → drives the legend's Connections section.
   const presentKinds = useMemo(() => new Set(edges.map((e) => e.data.kind)), [edges]);

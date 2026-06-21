@@ -139,12 +139,14 @@ export const CATEGORY_COLOR: Record<string, string> = {
 };
 
 /** Connector kinds → line style + label, mirroring `edgeStyle` in connections.ts. */
+// Only the request path (traffic) and data flows carry an accent; the rest are neutral,
+// told apart by dash pattern, so connectors never dominate (visual-redesign §4).
 export const CONNECTOR_KINDS: Array<{ kind: string; label: string; color: string; dash?: string }> = [
   { kind: 'traffic', label: 'Traffic', color: '#2563eb' },
   { kind: 'data', label: 'Data', color: '#059669', dash: '6 4' },
-  { kind: 'async', label: 'Async / event', color: '#7c3aed', dash: '2 4' },
-  { kind: 'replication', label: 'Replication', color: '#0891b2', dash: '6 4' },
-  { kind: 'dependency', label: 'Dependency', color: '#64748b', dash: '1 5' },
+  { kind: 'async', label: 'Async / event', color: '#94a3b8', dash: '2 4' },
+  { kind: 'replication', label: 'Replication', color: '#94a3b8', dash: '6 4' },
+  { kind: 'dependency', label: 'Dependency', color: '#94a3b8', dash: '1 5' },
   { kind: 'peering', label: 'Peering', color: '#94a3b8' },
   { kind: 'identity', label: 'Identity', color: '#94a3b8' },
 ];
