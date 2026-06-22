@@ -40,6 +40,8 @@ interface InspectorProps {
   onSuggest?: (s: SuggestionItem) => void;
   /** Curated playbook for the selected resource (Day 104). */
   advisor?: AdvisorView;
+  /** Insert a named pattern fragment by id (Day 105). */
+  onInsertPattern?: (id: string) => void;
   onRename: (name: string) => void;
   onSetProperty: (key: string, value: unknown) => void;
   onMoveToGroup: (group: string | undefined) => void;
@@ -95,7 +97,7 @@ function RelationshipSection({
 }
 
 /** Selection inspector: identity + relationships + the schema-driven property form (doc 06). */
-export function Inspector({ component, errors, groups, relationships, suggestions, onSuggest, advisor, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
+export function Inspector({ component, errors, groups, relationships, suggestions, onSuggest, advisor, onInsertPattern, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
   const service = useCatalogService(component?.binding?.service);
   const [name, setName] = useState(component?.name ?? '');
 
@@ -203,7 +205,20 @@ export function Inspector({ component, errors, groups, relationships, suggestion
           {advisor.patterns.length > 0 ? (
             <div style={{ marginBottom: 6 }}>
               <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 2 }}>Common patterns</div>
-              <div style={{ fontSize: 12.5, color: '#334155' }}>{advisor.patterns.join(' · ')}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {advisor.patterns.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => onInsertPattern?.(p.id)}
+                    disabled={!onInsertPattern}
+                    title={`Insert the ${p.label} pattern`}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', fontSize: 11.5, color: '#334155', cursor: onInsertPattern ? 'pointer' : 'default' }}
+                  >
+                    {p.label}
+                    <span style={{ color: '#2563eb', fontWeight: 700 }}>+</span>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
           {advisor.antiPatterns.length > 0 ? (

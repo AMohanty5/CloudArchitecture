@@ -1,10 +1,13 @@
 import type { ConnectionRules } from '../lib/queries';
+import { PATTERNS_BY_ID } from './patterns';
 
 /**
  * Architecture Advisor (Day 104, docs/architecture-intelligence.md §9). When a resource is
  * selected, surface its curated playbook from the catalog `knowledge` metadata: the targets it
  * should connect to, the named patterns it participates in, and the anti-patterns to avoid.
- * Pure + deterministic; complements the ✦ Suggested chips (valid targets, Day 84).
+ * Pure + deterministic; complements the ✦ Suggested chips (valid targets, Day 84). Common
+ * patterns resolve against the insertable pattern library (Day 105) — only known, insertable
+ * ones are shown, each carrying its id so the inspector can drop it in.
  */
 
 export interface AdvisorView {
@@ -12,16 +15,8 @@ export interface AdvisorView {
   recommended: string[];
   /** Anti-patterns: the discouraged target (display name) + why. */
   antiPatterns: { to: string; reason: string }[];
-  /** Humanized common-pattern labels. */
-  patterns: string[];
-}
-
-/** "event-fanout" → "Event Fanout". */
-export function humanizePattern(id: string): string {
-  return id
-    .split('-')
-    .map((w) => (w ? w[0]!.toUpperCase() + w.slice(1) : w))
-    .join(' ');
+  /** Insertable common patterns (library id + label). */
+  patterns: { id: string; label: string }[];
 }
 
 /**
@@ -37,7 +32,10 @@ export function buildAdvisor(
   if (!k) return null;
   const recommended = (k.recommendedTargets ?? []).map(nameForType);
   const antiPatterns = (k.antiPatterns ?? []).map((a) => ({ to: nameForType(a.to), reason: a.reason }));
-  const patterns = (k.recommendedPatterns ?? []).map(humanizePattern);
+  const patterns = (k.recommendedPatterns ?? [])
+    .map((id) => PATTERNS_BY_ID.get(id))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p))
+    .map((p) => ({ id: p.id, label: p.label }));
   if (recommended.length === 0 && antiPatterns.length === 0 && patterns.length === 0) return null;
   return { recommended, antiPatterns, patterns };
 }

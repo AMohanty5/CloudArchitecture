@@ -22,6 +22,7 @@ import type { ArchView } from '../canvas/views';
 import { CommandPalette } from '../canvas/CommandPalette';
 import { suggestFor } from '../canvas/suggestions';
 import { buildAdvisor } from '../canvas/advisor';
+import { PATTERNS_BY_ID } from '../canvas/patterns';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import type { CanvasTheme } from '../canvas/theme';
@@ -568,6 +569,14 @@ export function Editor() {
     const rules = rulesByService.get(selectedComponent.binding?.service ?? '');
     return buildAdvisor(rules, (type) => typeName.get(type) ?? type);
   }, [selectedComponent, rulesByService, typeName]);
+  const insertPattern = useCallback(
+    (id: string) => {
+      const p = PATTERNS_BY_ID.get(id);
+      if (!p) return;
+      editor.paste({ __caml: 'fragment-v1', components: p.fragment.components, connections: p.fragment.connections, groups: [] });
+    },
+    [editor],
+  );
 
   // Architecture-advisor recommendation panel (Day 100/101): a rejected connection drag that
   // has an intermediary path opens a structured "Suggested architectures" panel; Insert
@@ -985,6 +994,7 @@ export function Editor() {
             relationships={relationshipItems}
             suggestions={suggestionItems}
             advisor={advisorView ?? undefined}
+            onInsertPattern={insertPattern}
             onSuggest={(s) => {
               const full = catalogByKey.get(s.key);
               if (full && selectedId) onDropService(full, cmdkPos(), selectedId);
