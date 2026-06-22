@@ -234,6 +234,99 @@ describe('validateModel — ARC-001 anti-pattern connection (Phase 3B)', () => {
   });
 });
 
+describe('validateModel — NET-003 invalid container nesting', () => {
+  const g = (id: string, kind: string, parent?: string) => ({ id, kind, name: id, ...(parent ? { parent } : {}) });
+  it('flags a VPC nested in another VPC, and a subnet inside a subnet', () => {
+    const m = doc({ components: [], groups: [g('vpc', 'network'), g('vpc2', 'network', 'vpc'), g('sub', 'subnet', 'vpc'), g('sub2', 'subnet', 'sub')] });
+    const out = ids(m);
+    expect(out).toContain('NET-003:vpc2');
+    expect(out).toContain('NET-003:sub2');
+    expect(out).not.toContain('NET-003:sub');
+  });
+  it('does not flag a VPC under a region or a subnet under a VPC', () => {
+    const m = doc({ components: [], groups: [g('reg', 'region'), g('vpc', 'network', 'reg'), g('sub', 'subnet', 'vpc')] });
+    expect(ids(m).some((x) => x.startsWith('NET-003'))).toBe(false);
+  });
+});
+
+describe('validateModel — NET-004/005 gateway placement', () => {
+  const comp = (id: string, type: string, group?: string): Component => ({ id, type, name: id, ...(group ? { group } : {}) });
+  const subnet = (id: string, isPublic: boolean) => ({ id, kind: 'subnet', name: id, properties: { public: isPublic } });
+  it('flags an Internet Gateway inside a subnet (NET-004)', () => {
+    const m = doc({ groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }, { id: 'sub', kind: 'subnet', name: 'Sub', parent: 'vpc' }], components: [comp('igw', 'network.gateway.internet', 'sub')] });
+    expect(ids(m)).toContain('NET-004:igw');
+  });
+  it('flags a Transit Gateway inside a VPC (NET-004)', () => {
+    const m = doc({ groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }], components: [comp('tgw', 'network.gateway.transit', 'vpc')] });
+    expect(ids(m)).toContain('NET-004:tgw');
+  });
+  it('flags a NAT gateway in a private subnet but not in a public one (NET-005)', () => {
+    const priv = doc({ groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }, subnet('sub', false)], components: [comp('nat', 'network.gateway.nat', 'sub')] });
+    const pub = doc({ groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }, subnet('sub', true)], components: [comp('nat', 'network.gateway.nat', 'sub')] });
+    expect(ids(priv)).toContain('NET-005:nat');
+    expect(ids(pub)).not.toContain('NET-005:nat');
+  });
+});
+
+describe('validateModel — NET-006 regional service inside a VPC', () => {
+  const inVpc = (type: string): CamlDocument =>
+    doc({ groups: [{ id: 'vpc', kind: 'network', name: 'VPC' }, { id: 'sub', kind: 'subnet', name: 'Sub', parent: 'vpc' }], components: [{ id: 'x', type, name: 'X', group: 'sub' }] });
+  it('flags S3 / EventBridge / DynamoDB placed inside a VPC', () => {
+    expect(ids(inVpc('storage.object'))).toContain('NET-006:x');
+    expect(ids(inVpc('messaging.eventbus'))).toContain('NET-006:x');
+    expect(ids(inVpc('database.keyvalue'))).toContain('NET-006:x');
+  });
+  it('does not flag in-VPC services (RDS, ElastiCache, ALB)', () => {
+    expect(ids(inVpc('database.relational'))).not.toContain('NET-006:x');
+    expect(ids(inVpc('database.cache'))).not.toContain('NET-006:x');
+    expect(ids(inVpc('network.loadbalancer.l7'))).not.toContain('NET-006:x');
+  });
+  it('does not flag a regional service grouped under a region (not a VPC)', () => {
+    const m = doc({ groups: [{ id: 'reg', kind: 'region', name: 'us-east-1' }], components: [{ id: 'x', type: 'storage.object', name: 'S3', group: 'reg' }] });
+    expect(ids(m)).not.toContain('NET-006:x');
+  });
+});
+
+describe('validateModel — SEC-007 security group on an unsupported target', () => {
+  const sg: Component = { id: 'sg', type: 'network.firewall.network', name: 'SG', binding: { provider: 'aws', service: 'aws.security_group' } };
+  it('flags a security group associated with S3 / EventBridge', () => {
+    const s3 = doc({ components: [sg, { id: 's3', type: 'storage.object', name: 'Bucket' }], connections: [{ id: 'c', from: 'sg', to: 's3', kind: 'dependency' }] });
+    expect(ids(s3)).toContain('SEC-007:s3');
+  });
+  it('does not flag a security group on an EC2 instance', () => {
+    const ec2 = doc({ components: [sg, { id: 'ec2', type: 'compute.vm', name: 'App' }], connections: [{ id: 'c', from: 'sg', to: 'ec2', kind: 'dependency' }] });
+    expect(ids(ec2)).not.toContain('SEC-007:ec2');
+  });
+});
+
+describe('validateModel — test2 governance repro (all placement rules together)', () => {
+  // A faithful slice of the reported `test2`: nested VPC, IGW in a private subnet, RDS VPC,
+  // S3 dropped into a VPC, and a security group wired to S3.
+  const model = doc({
+    groups: [
+      { id: 'vpc-a', kind: 'network', name: 'VPC A' },
+      { id: 'sub-app', kind: 'subnet', name: 'App', parent: 'vpc-a', properties: { public: false } },
+      { id: 'vpc-b', kind: 'network', name: 'VPC B' },
+      { id: 'vpc-nested', kind: 'network', name: 'Nested VPC', parent: 'vpc-b' }, // F1
+      { id: 'sub-igw', kind: 'subnet', name: 'IGW subnet', parent: 'vpc-b', properties: { public: false } },
+    ],
+    components: [
+      { id: 'ec2', type: 'compute.vm', name: 'EC2', group: 'sub-app' },
+      { id: 'igw', type: 'network.gateway.internet', name: 'Internet Gateway', group: 'sub-igw' }, // F2
+      { id: 's3', type: 'storage.object', name: 'S3', group: 'sub-app' }, // F (regional in VPC)
+      { id: 'sg', type: 'network.firewall.network', name: 'Security Group', binding: { provider: 'aws', service: 'aws.security_group' } },
+    ],
+    connections: [{ id: 'sg-s3', from: 'sg', to: 's3', kind: 'dependency' }], // SG on S3
+  });
+  it('surfaces every placement violation', () => {
+    const out = ids(model);
+    expect(out).toContain('NET-003:vpc-nested'); // nested VPC
+    expect(out).toContain('NET-004:igw'); // IGW in a subnet
+    expect(out).toContain('NET-006:s3'); // S3 inside a VPC
+    expect(out).toContain('SEC-007:s3'); // SG attached to S3
+  });
+});
+
 describe('validateModel — report shape', () => {
   const model = doc({
     requirements: [{ id: 'r', kind: 'availability', statement: 'HA' }],

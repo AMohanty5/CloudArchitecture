@@ -49,4 +49,42 @@ describe('containmentViolations', () => {
   it('flags an AZ that is not inside a network', () => {
     expect(violatingGroupIds({ groups: [{ id: 'az', kind: 'zone', name: 'AZ' }] }).has('az')).toBe(true);
   });
+
+  it('flags a VPC nested inside another VPC (the test2 repro)', () => {
+    const model: ProjectableModel = {
+      groups: [
+        { id: 'outer', kind: 'network', name: 'Outer VPC' },
+        { id: 'inner', kind: 'network', name: 'Inner VPC', parent: 'outer' },
+      ],
+    };
+    const v = containmentViolations(model);
+    expect(v).toHaveLength(1);
+    expect(v[0]).toMatchObject({ groupId: 'inner' });
+    expect(v[0]!.message).toMatch(/VPC cannot be nested inside a network/);
+  });
+
+  it('flags a VPC nested inside a subnet, and a subnet inside a subnet', () => {
+    const model: ProjectableModel = {
+      groups: [
+        { id: 'vpc', kind: 'network', name: 'VPC' },
+        { id: 'sub', kind: 'subnet', name: 'Subnet', parent: 'vpc' },
+        { id: 'vpc2', kind: 'network', name: 'Bad VPC', parent: 'sub' },
+        { id: 'sub2', kind: 'subnet', name: 'Bad Subnet', parent: 'sub' },
+      ],
+    };
+    const ids = violatingGroupIds(model);
+    expect(ids.has('vpc2')).toBe(true); // VPC inside a subnet
+    expect(ids.has('sub2')).toBe(true); // subnet inside a subnet
+    expect(ids.has('sub')).toBe(false); // the valid subnet-in-VPC is fine
+  });
+
+  it('still accepts a VPC grouped under a region', () => {
+    const model: ProjectableModel = {
+      groups: [
+        { id: 'reg', kind: 'region', name: 'us-east-1' },
+        { id: 'vpc', kind: 'network', name: 'VPC', parent: 'reg' },
+      ],
+    };
+    expect(containmentViolations(model)).toEqual([]);
+  });
 });

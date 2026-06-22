@@ -254,6 +254,155 @@ const NET_002: Rule = {
   },
 };
 
+// ---- Placement / topology rules (Phase 3B follow-up — AWS hard constraints) ----
+// These encode constructs AWS cannot build, surfaced after the fact for models committed
+// before the canvas guards existed (the `test2` repro) or via the API/AI.
+
+/** A VPC-external regional/global service that must NOT live inside a VPC/subnet. */
+const isVpcExternalService = (c: Component): boolean =>
+  c.type.startsWith('storage.object') ||
+  c.type.startsWith('storage.archive') ||
+  c.type === 'messaging.eventbus' ||
+  c.type === 'messaging.topic' ||
+  c.type === 'messaging.queue' ||
+  c.type.startsWith('observability.') ||
+  c.type.startsWith('network.dns') ||
+  c.type.startsWith('network.cdn') ||
+  c.type === 'database.keyvalue' ||
+  c.type.startsWith('security.keys') ||
+  c.type.startsWith('security.secrets') ||
+  c.type.startsWith('security.identity') ||
+  c.type.startsWith('integration.');
+
+const NET_003: Rule = {
+  id: 'NET-003',
+  title: 'Invalid container nesting',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    // AWS network containers cannot be arbitrarily nested: a VPC is top-level (optionally
+    // grouped under a region), and a subnet lives directly in a VPC — never a VPC inside a
+    // VPC/subnet, nor a subnet inside a subnet (doc: AWS placement rules).
+    const out: Finding[] = [];
+    for (const g of ctx.groups) {
+      if (!g.parent) continue;
+      const parent = ctx.groupsById.get(g.parent);
+      if (!parent) continue;
+      if (g.kind === 'network' && parent.kind !== 'region') {
+        out.push(
+          finding(NET_003, 'high', g.id, `${g.name} (VPC) is nested inside ${parent.name} (${parent.kind}); AWS does not support VPCs inside another VPC/subnet.`, {
+            remediation: 'Make it a separate VPC and connect via VPC Peering, Transit Gateway, or PrivateLink.',
+          }),
+        );
+      } else if (g.kind === 'subnet' && parent.kind === 'subnet') {
+        out.push(
+          finding(NET_003, 'high', g.id, `${g.name} (subnet) is nested inside subnet ${parent.name}; subnets cannot contain subnets.`, {
+            remediation: 'Place the subnet directly in the VPC (or under an Availability Zone band).',
+          }),
+        );
+      }
+    }
+    return out;
+  },
+};
+
+const NET_004: Rule = {
+  id: 'NET-004',
+  title: 'Gateway is placed at the wrong level',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    // IGW / VPN gateway attach at the VPC level (never inside a subnet); a Transit Gateway
+    // lives outside the VPC entirely (it attaches to VPCs, it is not contained by one).
+    const out: Finding[] = [];
+    for (const c of ctx.components) {
+      const inSubnet = ctx.enclosingGroupOfKind(c.id, 'subnet');
+      const inVpc = ctx.enclosingGroupOfKind(c.id, 'network');
+      if ((c.type.startsWith('network.gateway.internet') || c.type.startsWith('network.gateway.vpn')) && inSubnet) {
+        out.push(
+          finding(NET_004, 'high', c.id, `${c.name} is inside subnet "${inSubnet.name}"; an Internet/VPN gateway attaches at the VPC level, not inside a subnet.`, {
+            remediation: 'Attach the gateway to the VPC; route a public subnet’s 0.0.0.0/0 to it.',
+          }),
+        );
+      }
+      if (c.type.startsWith('network.gateway.transit') && inVpc) {
+        out.push(
+          finding(NET_004, 'high', c.id, `${c.name} (Transit Gateway) is inside VPC "${inVpc.name}"; a Transit Gateway lives outside VPCs and attaches to them.`, {
+            remediation: 'Move the Transit Gateway out of the VPC; connect VPCs to it as attachments.',
+          }),
+        );
+      }
+    }
+    return out;
+  },
+};
+
+const NET_005: Rule = {
+  id: 'NET-005',
+  title: 'NAT gateway is not in a public subnet',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    // A NAT gateway provides outbound-only internet for private subnets and must itself sit
+    // in a PUBLIC subnet (it needs a route to the IGW).
+    const out: Finding[] = [];
+    for (const c of ctx.components.filter((x) => x.type.startsWith('network.gateway.nat'))) {
+      const subnet = ctx.enclosingGroupOfKind(c.id, 'subnet');
+      if (!subnet) {
+        out.push(finding(NET_005, 'high', c.id, `${c.name} (NAT gateway) is not inside a subnet; it must sit in a public subnet.`, { remediation: 'Place the NAT gateway in a public subnet.' }));
+      } else if (subnet.properties?.public !== true) {
+        out.push(finding(NET_005, 'high', c.id, `${c.name} (NAT gateway) is in private subnet "${subnet.name}"; a NAT gateway must sit in a public subnet.`, { remediation: 'Move the NAT gateway to a public subnet (one with a route to the Internet Gateway).' }));
+      }
+    }
+    return out;
+  },
+};
+
+const NET_006: Rule = {
+  id: 'NET-006',
+  title: 'Regional service placed inside a VPC',
+  category: 'operations',
+  evaluate(ctx: RuleContext): Finding[] {
+    // S3 / EventBridge / CloudWatch / Route53 / DynamoDB / SNS / SQS / KMS / … are regional or
+    // global services that are not inside a VPC; access from a VPC is via an endpoint or NAT.
+    return ctx.components
+      .filter((c) => isVpcExternalService(c) && ctx.enclosingGroupOfKind(c.id, 'network'))
+      .map((c) => {
+        const vpc = ctx.enclosingGroupOfKind(c.id, 'network')!;
+        return finding(NET_006, 'high', c.id, `${c.name} is a regional/global service but is placed inside VPC "${vpc.name}".`, {
+          remediation: 'Move it outside the VPC; reach it from the VPC via a VPC endpoint (interface/gateway) or NAT egress.',
+        });
+      });
+  },
+};
+
+const SEC_007: Rule = {
+  id: 'SEC-007',
+  title: 'Security group attached to an unsupported resource',
+  category: 'security',
+  evaluate(ctx: RuleContext): Finding[] {
+    // Security groups attach to ENIs (EC2/RDS/LB/interface endpoints) — never to regional
+    // services (S3/EventBridge/CloudWatch/Route53) or a Transit Gateway.
+    const out: Finding[] = [];
+    const seen = new Set<string>();
+    for (const cn of ctx.connections) {
+      if (cn.kind !== 'dependency') continue;
+      const a = ctx.componentsById.get(cn.from);
+      const b = ctx.componentsById.get(cn.to);
+      if (!a || !b) continue;
+      const [sg, other] = isNetworkFirewall(a) ? [a, b] : isNetworkFirewall(b) ? [b, a] : [undefined, undefined];
+      if (!sg || !other) continue;
+      const unsupported = isVpcExternalService(other) || other.type.startsWith('network.gateway.transit');
+      if (unsupported && !seen.has(`${sg.id}->${other.id}`)) {
+        seen.add(`${sg.id}->${other.id}`);
+        out.push(
+          finding(SEC_007, 'medium', other.id, `Security group "${sg.name}" is associated with ${other.name}, which does not take a security group.`, {
+            remediation: 'Remove the association; security groups attach to ENIs (EC2/RDS/load balancers/interface endpoints).',
+          }),
+        );
+      }
+    }
+    return out;
+  },
+};
+
 const OPS_001: Rule = {
   id: 'OPS-001',
   title: 'Critical component has no monitoring',
@@ -314,5 +463,5 @@ export function antiPatternRule(knowledgeByService: ReadonlyMap<string, Connecti
   };
 }
 
-export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, SEC_006, REL_001, REL_007, OPS_001, OPS_002, NET_001, NET_002];
+export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, SEC_006, SEC_007, REL_001, REL_007, OPS_001, OPS_002, NET_001, NET_002, NET_003, NET_004, NET_005, NET_006];
 export { PACK_VERSION };
