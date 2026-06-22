@@ -13,6 +13,7 @@ import type { SaveState } from '../lib/useEditor';
 import { useAllConnectionRules, useCatalogSearch, useCommits, useDiff, useCommitModel, fetchCommitModel, useValidation } from '../lib/queries';
 import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
 import type { Endpoint } from '../canvas/connections';
+import { buildRulesGraph, assessConnection } from '../canvas/pathfinder';
 import { groupRelationships } from '../canvas/relationships';
 import { applyView, VIEW_LABEL } from '../canvas/views';
 import type { ArchView } from '../canvas/views';
@@ -337,6 +338,19 @@ export function Editor() {
   // Prefetch every service's rules in one request so a just-dropped palette item is
   // connectable immediately (Day 52 / Blocker B — no per-service drag-time fetch race).
   const rulesByService = useAllConnectionRules();
+  const catalog = useCatalogSearch('');
+  // Rules graph for intermediary path-finding (Day 98/99): a rejected direct connection gets
+  // a "route via X" suggestion instead of a bare "invalid" (docs/architecture-intelligence.md).
+  const rulesGraph = useMemo(() => {
+    const services = (catalog.data ?? [])
+      .filter((s) => (s.abstractTypes?.length ?? 0) > 0)
+      .map((s) => ({ key: s.key, type: s.abstractTypes![0]!, rules: rulesByService.get(s.key) }));
+    return buildRulesGraph(services);
+  }, [catalog.data, rulesByService]);
+  const nameOf = useCallback(
+    (key: string) => (catalog.data ?? []).find((s) => s.key === key)?.name ?? key,
+    [catalog.data],
+  );
   const violations = useMemo(() => containmentViolations(model ?? {}), [model]);
   const invalidGroupIds = useMemo(() => violatingGroupIds(model ?? {}), [model]);
 
@@ -364,7 +378,20 @@ export function Editor() {
     },
     [endpointFor],
   );
-  const evaluate = useCallback((source: string, target: string): ConnectVerdict => verdict(source, target), [verdict]);
+  // Drag-time verdict for the canvas hint: a direct rule → allowed; otherwise the rich
+  // assessment turns a rejection into a "route via X" suggestion (Day 99). Drawing the edge
+  // still uses the plain `verdict` (needs-intermediary can't be one straight line).
+  const evaluate = useCallback(
+    (source: string, target: string): ConnectVerdict => {
+      if (source === target) return { allowed: false, reason: 'A node cannot connect to itself' };
+      const from = endpointFor(source);
+      const to = endpointFor(target);
+      if (!from || !to) return { allowed: false, reason: 'Unknown endpoint' };
+      const a = assessConnection(from, to, rulesGraph, nameOf);
+      return a.status === 'supported' ? { allowed: true } : { allowed: false, reason: a.reason };
+    },
+    [endpointFor, rulesGraph, nameOf],
+  );
 
   const onConnect = useCallback(
     (source: string, target: string) => {
@@ -503,7 +530,6 @@ export function Editor() {
   }, [selectedComponent, model, componentsById]);
 
   // Context-aware suggestions (Day 84): services that can attach to the selected resource.
-  const catalog = useCatalogSearch('');
   const catalogByKey = useMemo(() => new Map((catalog.data ?? []).map((s) => [s.key, s])), [catalog.data]);
   const suggestionItems = useMemo(() => {
     if (!selectedComponent) return undefined;
