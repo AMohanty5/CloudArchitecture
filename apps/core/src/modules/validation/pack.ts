@@ -1,4 +1,5 @@
-import type { Component } from '@cac/caml';
+import type { Component, Connection } from '@cac/caml';
+import type { ConnectionKnowledge } from '@cac/catalog';
 import type { Finding, Rule, RuleContext } from './engine';
 
 /**
@@ -273,6 +274,45 @@ const OPS_001: Rule = {
     return out;
   },
 };
+
+/**
+ * ARC-001 — anti-pattern connection (Phase 3B / Day 103). A flow connection (traffic/data/
+ * async) whose *source* service's curated `knowledge.antiPatterns` flags the *target*'s type
+ * is a discouraged architecture: e.g. an event router or monitoring source wired straight to
+ * storage, or an identity used as a data path. The catalog rejects most of these at draw-time,
+ * but a model committed via the API/AI can still contain one — this is the server-side catch.
+ *
+ * Identity/peering/dependency edges are intentionally exempt (a role→resource *grant* edge is
+ * correct modeling); only flow kinds are checked.
+ */
+const ARC_001_META = { id: 'ARC-001', title: 'Connection is a discouraged architecture pattern', category: 'operations' } as const;
+const FLOW_KINDS = new Set<Connection['kind']>(['traffic', 'data', 'async']);
+const typeSatisfies = (ruleType: string, type: string): boolean => type === ruleType || type.startsWith(`${ruleType}.`);
+
+export function antiPatternRule(knowledgeByService: ReadonlyMap<string, ConnectionKnowledge>): Rule {
+  return {
+    ...ARC_001_META,
+    evaluate(ctx: RuleContext): Finding[] {
+      const out: Finding[] = [];
+      for (const cn of ctx.connections) {
+        if (!FLOW_KINDS.has(cn.kind)) continue;
+        const src = ctx.componentsById.get(cn.from);
+        const tgt = ctx.componentsById.get(cn.to);
+        if (!src || !tgt) continue;
+        const antiPatterns = src.binding?.service ? knowledgeByService.get(src.binding.service)?.antiPatterns : undefined;
+        const match = antiPatterns?.find((ap) => typeSatisfies(ap.to, tgt.type));
+        if (match) {
+          out.push(
+            finding(ARC_001_META, 'medium', cn.id, `${src.name} → ${tgt.name}: ${match.reason}`, {
+              remediation: 'Route through the recommended intermediary (e.g. a function), or remove the direct connection.',
+            }),
+          );
+        }
+      }
+      return out;
+    },
+  };
+}
 
 export const V1_PACK: readonly Rule[] = [SEC_001, SEC_002, SEC_004, SEC_005, SEC_006, REL_001, REL_007, OPS_001, OPS_002, NET_001, NET_002];
 export { PACK_VERSION };

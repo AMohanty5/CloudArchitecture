@@ -213,6 +213,27 @@ describe('validateModel — OPS-001 monitoring gap (severity modulated)', () => 
   });
 });
 
+describe('validateModel — ARC-001 anti-pattern connection (Phase 3B)', () => {
+  const eb: Component = { id: 'eb', type: 'messaging.eventbus', name: 'Bus', binding: { provider: 'aws', service: 'aws.eventbridge' } };
+  const s3: Component = { id: 's3', type: 'storage.object', name: 'Bucket', binding: { provider: 'aws', service: 'aws.s3' } };
+  const knowledge = new Map([
+    ['aws.eventbridge', { antiPatterns: [{ to: 'storage.object', reason: "Event routers don't write to storage directly." }] }],
+  ]);
+  const ebToS3 = (kind: 'async' | 'identity') => doc({ components: [eb, s3], connections: [{ id: 'c', from: 'eb', to: 's3', kind }] });
+
+  it('fires on a flow connection the source service flags as an anti-pattern', () => {
+    const findings = validateModel(ebToS3('async'), knowledge).findings;
+    const arc = findings.find((f) => f.ruleId === 'ARC-001');
+    expect(arc).toMatchObject({ targetId: 'c', severity: 'medium' });
+    expect(arc!.message).toContain("don't write to storage");
+  });
+
+  it('does not fire without the knowledge map (back-compat), nor on non-flow kinds', () => {
+    expect(validateModel(ebToS3('async')).findings.some((f) => f.ruleId === 'ARC-001')).toBe(false);
+    expect(validateModel(ebToS3('identity'), knowledge).findings.some((f) => f.ruleId === 'ARC-001')).toBe(false);
+  });
+});
+
 describe('validateModel — report shape', () => {
   const model = doc({
     requirements: [{ id: 'r', kind: 'availability', statement: 'HA' }],

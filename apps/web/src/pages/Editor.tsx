@@ -21,6 +21,7 @@ import { applyView, VIEW_LABEL } from '../canvas/views';
 import type { ArchView } from '../canvas/views';
 import { CommandPalette } from '../canvas/CommandPalette';
 import { suggestFor } from '../canvas/suggestions';
+import { buildAdvisor } from '../canvas/advisor';
 import { LAYOUT_PRESETS, DEFAULT_STRATEGY } from '../canvas/layout';
 import type { LayoutStrategy } from '../canvas/layout';
 import type { CanvasTheme } from '../canvas/theme';
@@ -552,6 +553,22 @@ export function Editor() {
   }, [selectedComponent, catalog.data, rulesByService, catalogByKey, model, componentsById]);
   const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
 
+  // Architecture Advisor (Day 104): the selected resource's curated playbook (recommended
+  // targets / common patterns / anti-patterns) from the catalog `knowledge` metadata.
+  const typeName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of catalog.data ?? []) {
+      const t = s.abstractTypes?.[0];
+      if (t && !m.has(t)) m.set(t, s.name);
+    }
+    return m;
+  }, [catalog.data]);
+  const advisorView = useMemo(() => {
+    if (!selectedComponent) return null;
+    const rules = rulesByService.get(selectedComponent.binding?.service ?? '');
+    return buildAdvisor(rules, (type) => typeName.get(type) ?? type);
+  }, [selectedComponent, rulesByService, typeName]);
+
   // Architecture-advisor recommendation panel (Day 100/101): a rejected connection drag that
   // has an intermediary path opens a structured "Suggested architectures" panel; Insert
   // materializes the path (Day 101). Lives only in the editable Resource view.
@@ -967,6 +984,7 @@ export function Editor() {
             groups={groupOptions}
             relationships={relationshipItems}
             suggestions={suggestionItems}
+            advisor={advisorView ?? undefined}
             onSuggest={(s) => {
               const full = catalogByKey.get(s.key);
               if (full && selectedId) onDropService(full, cmdkPos(), selectedId);

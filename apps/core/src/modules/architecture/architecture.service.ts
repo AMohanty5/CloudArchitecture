@@ -12,6 +12,8 @@ import type { CamlDocument, ModelDiff } from '@cac/caml';
 import { validateAgainstCatalog } from '@cac/catalog';
 import type { Catalog } from '@cac/catalog';
 import { CATALOG } from '../catalog/api';
+import { validateModel, knowledgeByService } from '../validation/api';
+import type { ValidationReport } from '../validation/api';
 import { ArchitectureRepository } from './architecture.repository';
 import { computeStats } from './stats';
 import type { CommitDto, CreateArchitectureDto } from './dto';
@@ -161,6 +163,15 @@ export class ArchitectureService {
     const commit = await this.repo.getCommit(architectureId, head);
     if (!commit) throw new NotFoundException('head commit not found');
     return { model: commit.model, hash: head };
+  }
+
+  /**
+   * Advisory validation of the branch head (doc 16 pack + the Phase-3B anti-pattern rule).
+   * Reads the catalog `knowledge` metadata so ARC-001 can flag discouraged connections.
+   */
+  async validateBranch(architectureId: string, branch: string): Promise<{ commit: string } & ValidationReport> {
+    const { model, hash } = await this.getModel(architectureId, branch);
+    return { commit: hash, ...validateModel(model, knowledgeByService(this.catalog)) };
   }
 
   /** The layout sidecar (positions/sizes) stored on the branch head commit. */

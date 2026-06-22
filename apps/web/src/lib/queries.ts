@@ -98,9 +98,24 @@ export interface ConnectionRule {
   from?: string[];
   to?: string[];
 }
+/** A discouraged-but-legal target (advisor anti-pattern, Phase 3B). */
+export interface AntiPattern {
+  to: string;
+  reason: string;
+}
+
+/** Architecture-intelligence metadata (Phase 3B) attached to a service's connection rules. */
+export interface ConnectionKnowledge {
+  recommendedTargets?: string[];
+  requiresIntermediary?: Record<string, string[]>;
+  antiPatterns?: AntiPattern[];
+  recommendedPatterns?: string[];
+}
+
 export interface ConnectionRules {
   inbound?: ConnectionRule[];
   outbound?: ConnectionRule[];
+  knowledge?: ConnectionKnowledge;
 }
 
 /** Full catalog service incl. the property JSON Schema (GET /catalog/services/{key}). */

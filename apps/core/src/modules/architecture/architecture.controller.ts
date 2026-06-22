@@ -5,7 +5,6 @@ import { CommitDto, CreateArchitectureDto } from './dto';
 import { renderSvg } from '../diagram/api';
 import { generateTerraform, zipFiles } from '../iac/api';
 import { renderHld, buildArtifacts } from '../artifact/api';
-import { validateModel } from '../validation/api';
 
 interface HttpReq {
   headers: Record<string, string | string[] | undefined>;
@@ -130,8 +129,7 @@ export class ArchitectureController {
   @Get(':id/branches/:branch/validate')
   @ApiOkResponse({ description: 'Advisory validation findings (doc 16 rule pack) for the branch head model. Read-only — never blocks a commit.' })
   async validate(@Param('id') id: string, @Param('branch') branch: string): Promise<unknown> {
-    const { model, hash } = await this.service.getModel(id, branch);
-    return { commit: hash, ...validateModel(model) };
+    return this.service.validateBranch(id, branch);
   }
 
   @Get(':id/commits')

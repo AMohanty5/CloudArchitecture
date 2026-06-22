@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCatalogService } from '../lib/queries';
 import { PropertyForm } from './PropertyForm';
 import { shortName } from './domains';
+import type { AdvisorView } from './advisor';
 import type { CamlComponent } from './projector';
 import type { CommitError } from '../lib/useEditor';
 
@@ -37,6 +38,8 @@ interface InspectorProps {
   /** Suggested services to attach (Day 84). */
   suggestions?: SuggestionItem[];
   onSuggest?: (s: SuggestionItem) => void;
+  /** Curated playbook for the selected resource (Day 104). */
+  advisor?: AdvisorView;
   onRename: (name: string) => void;
   onSetProperty: (key: string, value: unknown) => void;
   onMoveToGroup: (group: string | undefined) => void;
@@ -92,7 +95,7 @@ function RelationshipSection({
 }
 
 /** Selection inspector: identity + relationships + the schema-driven property form (doc 06). */
-export function Inspector({ component, errors, groups, relationships, suggestions, onSuggest, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
+export function Inspector({ component, errors, groups, relationships, suggestions, onSuggest, advisor, onRename, onSetProperty, onMoveToGroup, onDetach }: InspectorProps): React.JSX.Element {
   const service = useCatalogService(component?.binding?.service);
   const [name, setName] = useState(component?.name ?? '');
 
@@ -184,6 +187,36 @@ export function Inspector({ component, errors, groups, relationships, suggestion
               </button>
             ))}
           </div>
+        </>
+      ) : null}
+
+      {advisor ? (
+        <>
+          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '8px 0 8px' }} />
+          <div style={{ ...META_LABEL, marginBottom: 6 }}>◆ Advisor</div>
+          {advisor.recommended.length > 0 ? (
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 2 }}>Recommended</div>
+              <div style={{ fontSize: 12.5, color: '#334155' }}>{advisor.recommended.map(shortName).join(' · ')}</div>
+            </div>
+          ) : null}
+          {advisor.patterns.length > 0 ? (
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 2 }}>Common patterns</div>
+              <div style={{ fontSize: 12.5, color: '#334155' }}>{advisor.patterns.join(' · ')}</div>
+            </div>
+          ) : null}
+          {advisor.antiPatterns.length > 0 ? (
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 2 }}>Anti-patterns</div>
+              {advisor.antiPatterns.map((a, i) => (
+                <div key={i} style={{ fontSize: 12, color: '#b45309', display: 'flex', gap: 5, marginBottom: 2 }}>
+                  <span aria-hidden style={{ color: '#dc2626', flexShrink: 0 }}>✗</span>
+                  <span title={a.reason} style={{ minWidth: 0 }}>direct {shortName(a.to)} — {a.reason}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </>
       ) : null}
 

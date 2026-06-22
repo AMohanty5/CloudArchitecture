@@ -10,4 +10,4 @@ export { loadCatalog, CatalogError, groupServiceKey } from './loader.js';
 export { validateAgainstCatalog } from './validate.js';
 export { lintConnectionRules } from './lint.js';
 export type { LintFinding } from './lint.js';
-export type { Catalog, CatalogService, ConnectionRule, Provider } from './types.js';
+export type { Catalog, CatalogService, ConnectionRule, ConnectionKnowledge, AntiPattern, Provider } from './types.js';
