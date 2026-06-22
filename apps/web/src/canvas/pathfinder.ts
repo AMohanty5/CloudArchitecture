@@ -1,4 +1,5 @@
-import { evaluateConnection, type Endpoint } from './connections';
+import { evaluateConnection, makeConnectionId, type Endpoint } from './connections';
+import { componentFromService, makeComponentId, type Command, type ServiceLike } from './commands';
 import type { ConnectionRules } from '../lib/queries';
 
 /**
@@ -187,4 +188,48 @@ export function findIntermediaryPaths(
       kind: step.kind,
     })),
   );
+}
+
+export interface PathInsertion {
+  /** AddComponent (per intermediary) + Connect (per hop) — apply in order as one undoable step. */
+  commands: Command[];
+  /** Ids of the newly-created intermediary components (for layout placement). */
+  insertedIds: string[];
+}
+
+/**
+ * Materialize an intermediary `path` (the output of `findIntermediaryPaths`) as a list of
+ * commands (Day 101, docs/architecture-intelligence.md §6). The last step is the *existing*
+ * target — only the steps before it are inserted as new components; then the chain
+ * `source → I₁ → … → target` is wired with each step's kind. Pure: id minting is the only
+ * non-determinism (as elsewhere in the command bus). Returns null if a service can't be resolved.
+ */
+export function buildPathInsertion(
+  sourceId: string,
+  targetId: string,
+  path: PathStep[],
+  serviceFor: (serviceKey: string) => ServiceLike | undefined,
+): PathInsertion | null {
+  if (path.length === 0) return null;
+  const commands: Command[] = [];
+  const insertedIds: string[] = [];
+  let prev = sourceId;
+  for (let i = 0; i < path.length; i++) {
+    const step = path[i]!;
+    const isTarget = i === path.length - 1;
+    let nodeId: string;
+    if (isTarget) {
+      nodeId = targetId; // the connection's existing endpoint — never re-created
+    } else {
+      const service = serviceFor(step.serviceKey);
+      const component = service ? componentFromService(service, makeComponentId(step.serviceKey)) : null;
+      if (!component) return null;
+      commands.push({ type: 'AddComponent', component });
+      insertedIds.push(component.id);
+      nodeId = component.id;
+    }
+    commands.push({ type: 'Connect', connection: { id: makeConnectionId(), from: prev, to: nodeId, kind: step.kind } });
+    prev = nodeId;
+  }
+  return { commands, insertedIds };
 }

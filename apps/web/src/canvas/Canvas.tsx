@@ -61,6 +61,8 @@ interface CanvasProps {
   /** Catalog verdict for a candidate edge; when provided, the canvas allows drawing connections. */
   evaluate?: (source: string, target: string) => ConnectVerdict;
   onConnect?: (source: string, target: string) => void;
+  /** Called when a connection drag ends on a target the rules reject — drives the recommendation panel (Day 100). */
+  onRejectedConnect?: (source: string, target: string) => void;
   /** Diff overlay: element/connection id → change status (added/removed/modified). */
   diffStatus?: Record<string, DiffStatus>;
   /** Validation overlay: element id → worst finding severity (Day 26). */
@@ -178,6 +180,7 @@ function Flow({
   onSelectEdge,
   evaluate,
   onConnect,
+  onRejectedConnect,
   diffStatus,
   findingSeverityById,
   registerExporter,
@@ -369,12 +372,17 @@ function Flow({
     [onDropService, screenToFlowPosition],
   );
 
+  // The last source→target pair the rules rejected during the current drag; on drag-end an
+  // un-consumed rejection opens the recommendation panel (Day 100).
+  const rejectedRef = useRef<{ source: string; target: string } | null>(null);
+
   // Drag-time validation: blocks invalid drops and surfaces the catalog reason as a hint.
   const isValidConnection = useCallback(
     (c: Connection | Edge): boolean => {
       if (!evaluate || !c.source || !c.target) return false;
       const v = evaluate(c.source, c.target);
       showHint(v.allowed ? null : (v.reason ?? 'Invalid connection'));
+      rejectedRef.current = v.allowed ? null : { source: c.source, target: c.target };
       return v.allowed;
     },
     [evaluate],
@@ -383,10 +391,19 @@ function Flow({
   const handleConnect = useCallback(
     (c: Connection) => {
       showHint(null);
+      rejectedRef.current = null; // a valid edge was drawn — no suggestion needed
       if (onConnect && c.source && c.target) onConnect(c.source, c.target);
     },
     [onConnect],
   );
+
+  // On drag-end, an un-consumed rejection (dropped on an incompatible target) opens the
+  // structured "Suggested architectures" panel instead of leaving only the transient hint.
+  const handleConnectEnd = useCallback(() => {
+    const r = rejectedRef.current;
+    rejectedRef.current = null;
+    if (r && onRejectedConnect) onRejectedConnect(r.source, r.target);
+  }, [onRejectedConnect]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', ...themeVars }} onDragOver={editable ? onDragOver : undefined} onDrop={editable ? onDrop : undefined}>
@@ -421,7 +438,11 @@ function Flow({
         connectionMode={ConnectionMode.Loose}
         isValidConnection={connectable ? isValidConnection : undefined}
         onConnect={connectable ? handleConnect : undefined}
-        onConnectStart={() => showHint(null)}
+        onConnectStart={() => {
+          showHint(null);
+          rejectedRef.current = null;
+        }}
+        onConnectEnd={connectable ? handleConnectEnd : undefined}
         deleteKeyCode={null}
         panActivationKeyCode="Space"
         onlyRenderVisibleElements

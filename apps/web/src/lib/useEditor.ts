@@ -10,6 +10,8 @@ import type { LayoutStrategy } from '../canvas/layout';
 import { canRedo as canRedoFn, canUndo as canUndoFn, initHistory, record, redo as redoFn, undo as undoFn } from '../canvas/history';
 import type { History } from '../canvas/history';
 import { remapFragment } from '../canvas/clipboard';
+import { buildPathInsertion } from '../canvas/pathfinder';
+import type { PathStep } from '../canvas/pathfinder';
 import type { CamlFragment } from '../canvas/clipboard';
 
 export type SaveState = 'loading' | 'saving' | 'saved' | 'conflict' | 'error';
@@ -49,6 +51,8 @@ export interface EditorApi {
   /** Add a component; `group` nests it (and skips the free-position sidecar entry). */
   addComponent: (service: ServiceLike, position: Position, group?: string) => void;
   addComponentLinkedTo: (service: ServiceLike, position: Position, group: string | undefined, target: string, kind: string, flip: boolean) => void;
+  /** Insert a recommended intermediary path (source → I₁ → … → target) as one undoable command (Day 101). */
+  insertPath: (sourceId: string, targetId: string, path: PathStep[], serviceFor: (serviceKey: string) => ServiceLike | undefined) => void;
   setProperty: (componentId: string, key: string, value: unknown) => void;
   rename: (componentId: string, name: string) => void;
   connect: (connection: CamlConnection) => void;
@@ -291,6 +295,26 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     [apply],
   );
 
+  /**
+   * Insert a recommended intermediary path (Day 101): create each missing intermediary and
+   * wire `source → … → target`, all in one undoable commit. The new nodes cascade off the
+   * source so they don't stack on the origin (a tidy-up cleans them up afterwards).
+   */
+  const insertPath = useCallback(
+    (sourceId: string, targetId: string, path: PathStep[], serviceFor: (serviceKey: string) => ServiceLike | undefined) => {
+      const plan = buildPathInsertion(sourceId, targetId, path, serviceFor);
+      if (!plan) return;
+      const nextModel = plan.commands.reduce((m, c) => applyCommand(m, c), modelRef.current!);
+      const base = layoutRef.current.positions?.[sourceId] ?? { x: 80, y: 80 };
+      let nextLayout = layoutRef.current;
+      plan.insertedIds.forEach((id, i) => {
+        nextLayout = withPosition(nextLayout, id, { x: base.x + (i + 1) * 96, y: base.y + (i + 1) * 48 });
+      });
+      apply(nextModel, nextLayout, undefined);
+    },
+    [apply],
+  );
+
   const addGroup = useCallback(
     (service: ServiceLike, position: Position, parent?: string) => {
       const groupId = makeComponentId(service.key);
@@ -434,6 +458,7 @@ export function useEditor(id: string, branch = 'main'): EditorApi {
     tidyUp,
     addComponent,
     addComponentLinkedTo,
+    insertPath,
     setProperty,
     rename,
     connect,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { assessConnection, buildRulesGraph, findIntermediaryPaths } from './pathfinder';
-import type { GraphService } from './pathfinder';
+import { assessConnection, buildPathInsertion, buildRulesGraph, findIntermediaryPaths } from './pathfinder';
+import type { GraphService, PathStep } from './pathfinder';
+import type { ServiceLike } from './commands';
 import type { ConnectionRules } from '../lib/queries';
 
 const r = (x: ConnectionRules): ConnectionRules => x;
@@ -137,5 +138,36 @@ describe('assessConnection', () => {
   it('without a graph, a non-direct connection is unsupported (no path search)', () => {
     const a = assessConnection(ep('aws.eventbridge'), ep('aws.s3'));
     expect(a.status).toBe('unsupported');
+  });
+});
+
+describe('buildPathInsertion', () => {
+  // EventBridge → S3 routed via Lambda: [Lambda(intermediary), S3(existing target)].
+  const path: PathStep[] = [
+    { type: 'compute.serverless.function', serviceKey: 'aws.lambda', kind: 'async' },
+    { type: 'storage.object', serviceKey: 'aws.s3', kind: 'data' },
+  ];
+  const serviceFor = (key: string): ServiceLike | undefined =>
+    key === 'aws.lambda' ? { key, name: 'Lambda', provider: 'aws', abstractTypes: ['compute.serverless.function'] } : undefined;
+
+  it('inserts only the intermediaries and wires source → I → target', () => {
+    const plan = buildPathInsertion('eventbridge-1', 's3-1', path, serviceFor)!;
+    expect(plan).not.toBeNull();
+
+    const adds = plan.commands.filter((c) => c.type === 'AddComponent');
+    expect(adds).toHaveLength(1); // S3 already exists — only Lambda is created
+    expect(plan.insertedIds).toHaveLength(1);
+    const lambdaId = plan.insertedIds[0]!;
+
+    const connects = plan.commands.filter((c) => c.type === 'Connect').map((c) => (c as { connection: { from: string; to: string; kind: string } }).connection);
+    expect(connects).toEqual([
+      { id: expect.any(String), from: 'eventbridge-1', to: lambdaId, kind: 'async' },
+      { id: expect.any(String), from: lambdaId, to: 's3-1', kind: 'data' },
+    ]);
+  });
+
+  it('returns null when an intermediary service cannot be resolved', () => {
+    expect(buildPathInsertion('a', 'b', path, () => undefined)).toBeNull();
+    expect(buildPathInsertion('a', 'b', [], serviceFor)).toBeNull();
   });
 });

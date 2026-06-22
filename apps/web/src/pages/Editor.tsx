@@ -14,6 +14,8 @@ import { useAllConnectionRules, useCatalogSearch, useCommits, useDiff, useCommit
 import { evaluateConnection, groupEndpointType, makeConnectionId } from '../canvas/connections';
 import type { Endpoint } from '../canvas/connections';
 import { buildRulesGraph, assessConnection } from '../canvas/pathfinder';
+import type { PathStep, ConnectionAssessment } from '../canvas/pathfinder';
+import { RecommendationPanel } from '../canvas/RecommendationPanel';
 import { groupRelationships } from '../canvas/relationships';
 import { applyView, VIEW_LABEL } from '../canvas/views';
 import type { ArchView } from '../canvas/views';
@@ -550,6 +552,45 @@ export function Editor() {
   }, [selectedComponent, catalog.data, rulesByService, catalogByKey, model, componentsById]);
   const selectedEdge = model?.connections?.find((c) => c.id === selectedEdgeId);
 
+  // Architecture-advisor recommendation panel (Day 100/101): a rejected connection drag that
+  // has an intermediary path opens a structured "Suggested architectures" panel; Insert
+  // materializes the path (Day 101). Lives only in the editable Resource view.
+  const [recommendation, setRecommendation] = useState<{ source: string; target: string; assessment: ConnectionAssessment } | null>(null);
+  const onRejectedConnect = useCallback(
+    (source: string, target: string) => {
+      const from = endpointFor(source);
+      const to = endpointFor(target);
+      if (!from || !to) return setRecommendation(null);
+      const a = assessConnection(from, to, rulesGraph, nameOf);
+      // Only needs-intermediary has paths to suggest; unsupported already showed its reason.
+      setRecommendation(a.status === 'needs-intermediary' ? { source, target, assessment: a } : null);
+    },
+    [endpointFor, rulesGraph, nameOf],
+  );
+  const serviceFor = useCallback(
+    (key: string) => {
+      const s = catalogByKey.get(key);
+      return s ? { key: s.key, name: s.name, provider: s.provider, abstractTypes: s.abstractTypes, groupKind: s.groupKind } : undefined;
+    },
+    [catalogByKey],
+  );
+  const insertRecommendation = useCallback(
+    (path: PathStep[]) => {
+      if (!recommendation) return;
+      editor.insertPath(recommendation.source, recommendation.target, path, serviceFor);
+      setRecommendation(null);
+    },
+    [recommendation, editor, serviceFor],
+  );
+  // Clear the panel on any selection change (incl. pane click → undefined).
+  const handleSelect = useCallback(
+    (id: string | undefined) => {
+      setRecommendation(null);
+      editor.select(id);
+    },
+    [editor],
+  );
+
   const groupParentOptions = useMemo(() => {
     if (!selectedGroup) return [];
     const forbidden = descendantGroupIds(groups, selectedGroup.id);
@@ -840,7 +881,7 @@ export function Editor() {
             }
           />
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           {diffActive && diffView ? (
             <Canvas model={diffView.model} layout={{}} diffStatus={diffView.status} title={archName} subtitle="Comparing commits" canvasTheme={canvasTheme} />
           ) : model ? (
@@ -851,11 +892,12 @@ export function Editor() {
               onDropService={view === 'resource' ? onDropService : undefined}
               invalidGroupIds={invalidGroupIds}
               selectedId={selectedId}
-              onSelect={editor.select}
+              onSelect={handleSelect}
               selectedEdgeId={selectedEdgeId}
               onSelectEdge={editor.selectEdge}
               evaluate={view === 'resource' ? evaluate : undefined}
               onConnect={view === 'resource' ? onConnect : undefined}
+              onRejectedConnect={view === 'resource' ? onRejectedConnect : undefined}
               onNodeMove={view === 'resource' ? editor.moveNode : undefined}
               showEdgeLabels={showLabels}
               canvasTheme={canvasTheme}
@@ -863,6 +905,20 @@ export function Editor() {
               layers={layersView}
               findingSeverityById={findingSeverityById}
               registerExporter={(api) => (exporterRef.current = api)}
+            />
+          ) : null}
+          {recommendation && !diffActive && view === 'resource' ? (
+            <RecommendationPanel
+              sourceName={componentsById.get(recommendation.source)?.name ?? 'Source'}
+              reason={recommendation.assessment.status === 'needs-intermediary' ? recommendation.assessment.reason : ''}
+              options={
+                recommendation.assessment.status === 'needs-intermediary'
+                  ? [recommendation.assessment.path, ...recommendation.assessment.alternatives]
+                  : []
+              }
+              nameOf={nameOf}
+              onInsert={insertRecommendation}
+              onDismiss={() => setRecommendation(null)}
             />
           ) : null}
         </div>
