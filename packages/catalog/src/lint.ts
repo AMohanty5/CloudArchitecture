@@ -17,9 +17,9 @@ import type { Catalog, CatalogService, ConnectionRule } from './types.js';
 
 export interface LintFinding {
   severity: 'error' | 'warning';
-  code: 'dangling-target' | 'redundant-subtype';
+  code: 'dangling-target' | 'redundant-subtype' | 'dangling-knowledge';
   service: string;
-  direction: 'inbound' | 'outbound';
+  direction: 'inbound' | 'outbound' | 'knowledge';
   message: string;
 }
 
@@ -82,6 +82,34 @@ function lintRule(
   }
 }
 
+/**
+ * Lint the `knowledge` block (Phase 3B): every abstract type it names — recommendedTargets,
+ * requiresIntermediary keys + values, and antiPatterns `to` — must be a type the catalog can
+ * actually provide, else the curated guidance silently points at nothing. `recommendedPatterns`
+ * are pattern-library ids (not types), so they're not checked here.
+ */
+function lintKnowledge(svc: CatalogService, providable: Set<string>, out: LintFinding[]): void {
+  const k = svc.connectionRules?.knowledge;
+  if (!k) return;
+  const refs: string[] = [
+    ...(k.recommendedTargets ?? []),
+    ...Object.keys(k.requiresIntermediary ?? {}),
+    ...Object.values(k.requiresIntermediary ?? {}).flat(),
+    ...(k.antiPatterns ?? []).map((a) => a.to),
+  ];
+  for (const ref of refs) {
+    if (!isLive(ref, providable)) {
+      out.push({
+        severity: 'error',
+        code: 'dangling-knowledge',
+        service: svc.key,
+        direction: 'knowledge',
+        message: `${svc.key} knowledge references "${ref}", which no catalog service provides`,
+      });
+    }
+  }
+}
+
 /** Lint every service's connection rules. Returns findings sorted deterministically. */
 export function lintConnectionRules(catalog: Catalog): LintFinding[] {
   const providable = providableTypes(catalog);
@@ -89,6 +117,7 @@ export function lintConnectionRules(catalog: Catalog): LintFinding[] {
   for (const svc of catalog.servicesByKey.values()) {
     for (const rule of svc.connectionRules?.inbound ?? []) lintRule(rule, 'inbound', svc, providable, findings);
     for (const rule of svc.connectionRules?.outbound ?? []) lintRule(rule, 'outbound', svc, providable, findings);
+    lintKnowledge(svc, providable, findings);
   }
   findings.sort(
     (a, b) =>

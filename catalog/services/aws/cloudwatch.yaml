@@ -18,3 +18,11 @@ connectionRules:
     - { kinds: [dependency], from: [compute.vm, compute.container.orchestrator.service, compute.serverless.function, database.relational, network.loadbalancer.l7] }
   outbound:
     - { kinds: [async], to: [messaging.topic] }
+  # Architecture-intelligence metadata (Phase 3B / docs/architecture-intelligence.md §1).
+  knowledge:
+    recommendedTargets: [messaging.topic]
+    requiresIntermediary:
+      storage.object: [compute.serverless.function]
+    antiPatterns:
+      - { to: storage.object, reason: "CloudWatch can't write to S3 directly — use a Logs subscription to a function (or Firehose)." }
+    recommendedPatterns: [alarm-fanout]

@@ -84,6 +84,47 @@ describe('lintConnectionRules', () => {
     expect(findings[0]).toMatchObject({ severity: 'warning', code: 'redundant-subtype', service: 'aws.sg' });
   });
 
+  it('flags a knowledge block that references a type no service provides', () => {
+    const cat = catalogOf([
+      svc('aws.eventbridge', {
+        abstractTypes: ['messaging.eventbus'],
+        connectionRules: {
+          outbound: [{ kinds: ['async'], to: ['compute.serverless.function'] }],
+          knowledge: {
+            recommendedTargets: ['compute.serverless.function'],
+            requiresIntermediary: { 'storage.object': ['compute.serverless.function'] },
+            antiPatterns: [{ to: 'storage.nope', reason: 'typo' }],
+          },
+        },
+      }),
+      svc('aws.lambda', { abstractTypes: ['compute.serverless.function'] }),
+      svc('aws.s3', { abstractTypes: ['storage.object'] }),
+    ]);
+    const findings = lintConnectionRules(cat);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ severity: 'error', code: 'dangling-knowledge', service: 'aws.eventbridge', direction: 'knowledge' });
+    expect(findings[0]!.message).toContain('storage.nope');
+  });
+
+  it('accepts a knowledge block whose every type resolves', () => {
+    const cat = catalogOf([
+      svc('aws.eventbridge', {
+        abstractTypes: ['messaging.eventbus'],
+        connectionRules: {
+          knowledge: {
+            recommendedTargets: ['compute.serverless.function'],
+            requiresIntermediary: { 'storage.object': ['compute.serverless.function'] },
+            antiPatterns: [{ to: 'storage.object', reason: 'route through compute' }],
+            recommendedPatterns: ['event-to-store'],
+          },
+        },
+      }),
+      svc('aws.lambda', { abstractTypes: ['compute.serverless.function'] }),
+      svc('aws.s3', { abstractTypes: ['storage.object'] }),
+    ]);
+    expect(lintConnectionRules(cat)).toHaveLength(0);
+  });
+
   it('the shipped catalog has no dangling targets and no redundant subtypes', () => {
     const findings = lintConnectionRules(loadCatalog(catalogRoot));
     expect(findings.filter((f) => f.severity === 'error')).toEqual([]);

@@ -39,7 +39,8 @@
       "additionalProperties": false,
       "properties": {
         "inbound": { "type": "array", "items": { "$ref": "#/$defs/ConnectionRule" } },
-        "outbound": { "type": "array", "items": { "$ref": "#/$defs/ConnectionRule" } }
+        "outbound": { "type": "array", "items": { "$ref": "#/$defs/ConnectionRule" } },
+        "knowledge": { "$ref": "#/$defs/ConnectionKnowledge" }
       }
     },
     "costDimensions": { "type": "array" },
@@ -62,6 +63,41 @@
         "to": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["kinds"]
+    },
+    "ConnectionKnowledge": {
+      "type": "object",
+      "description": "Architecture-intelligence metadata (Phase 3B): curated guidance layered over the rules graph.",
+      "additionalProperties": false,
+      "properties": {
+        "recommendedTargets": {
+          "type": "array",
+          "description": "Abstract types this service most commonly connects to (the advisor's 'Recommended').",
+          "items": { "type": "string" }
+        },
+        "requiresIntermediary": {
+          "type": "object",
+          "description": "Target abstract type -> the intermediary types that bridge it (the canonical path).",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "antiPatterns": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/AntiPattern" }
+        },
+        "recommendedPatterns": {
+          "type": "array",
+          "description": "Pattern-library ids (Day 105) this service participates in.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "AntiPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "to": { "type": "string", "description": "The discouraged target abstract type." },
+        "reason": { "type": "string" }
+      },
+      "required": ["to", "reason"]
     }
   }
 }

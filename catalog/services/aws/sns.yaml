@@ -16,3 +16,11 @@ connectionRules:
     - { kinds: [async], from: [compute.serverless.function, compute.vm] }
   outbound:
     - { kinds: [async], to: [messaging.queue, compute.serverless.function] }
+  # Architecture-intelligence metadata (Phase 3B / docs/architecture-intelligence.md §1).
+  knowledge:
+    recommendedTargets: [messaging.queue, compute.serverless.function]
+    requiresIntermediary:
+      storage.object: [compute.serverless.function]
+    antiPatterns:
+      - { to: storage.object, reason: "A topic fans out notifications — it doesn't persist. Subscribe a function (or queue + consumer) that writes to storage." }
+    recommendedPatterns: [event-fanout]

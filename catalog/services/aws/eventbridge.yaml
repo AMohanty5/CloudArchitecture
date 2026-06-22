@@ -17,3 +17,14 @@ connectionRules:
     - { kinds: [async], from: [compute.serverless.function, compute.container.orchestrator.service, integration.scheduler] }
   outbound:
     - { kinds: [async], to: [compute.serverless.function, messaging.queue, messaging.topic, integration.workflow] }
+  # Architecture-intelligence metadata (Phase 3B / docs/architecture-intelligence.md §1).
+  knowledge:
+    recommendedTargets: [compute.serverless.function, integration.workflow]
+    requiresIntermediary:
+      storage.object: [compute.serverless.function, integration.etl]
+      database.relational: [compute.serverless.function]
+      database.keyvalue: [compute.serverless.function]
+    antiPatterns:
+      - { to: storage.object, reason: "Event routers don't write to storage directly — route through a function or Firehose." }
+      - { to: database.relational, reason: "Persist through compute (a Lambda/consumer), not directly from the bus." }
+    recommendedPatterns: [event-fanout, event-to-store]

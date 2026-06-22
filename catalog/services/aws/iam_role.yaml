@@ -15,3 +15,10 @@ connectionRules:
     - { kinds: [identity], from: [security.identity] }
   outbound:
     - { kinds: [identity], to: [compute.serverless.function, compute.container.orchestrator.service, compute.vm, storage.object, database.relational] }
+  # Architecture-intelligence metadata (Phase 3B / docs/architecture-intelligence.md §1).
+  knowledge:
+    recommendedTargets: [compute.serverless.function, compute.vm, compute.container.orchestrator.service]
+    antiPatterns:
+      - { to: storage.object, reason: "An IAM role grants access — it doesn't move data. Connect the compute that assumes it to the resource." }
+      - { to: database.relational, reason: "A role is a permission, not a data path; wire the assuming workload to the database." }
+    recommendedPatterns: [assume-role]
