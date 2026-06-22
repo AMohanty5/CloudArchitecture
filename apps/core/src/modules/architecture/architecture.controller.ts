@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ArchitectureService } from './architecture.service';
-import { CommitDto, CreateArchitectureDto } from './dto';
+import { CommitDto, CreateArchitectureDto, DuplicateArchitectureDto, UpdateArchitectureDto } from './dto';
 import { renderSvg } from '../diagram/api';
 import { generateTerraform, zipFiles } from '../iac/api';
 import { renderHld, buildArtifacts } from '../artifact/api';
@@ -29,6 +29,25 @@ export class ArchitectureController {
   @ApiOkResponse({ description: 'Created with a default `main` branch and an empty initial commit.' })
   create(@Body() body: CreateArchitectureDto) {
     return this.service.create(body);
+  }
+
+  @Patch(':id')
+  @ApiOkResponse({ description: 'Update metadata (rename / description / lifecycle). 409 on a duplicate name.' })
+  update(@Param('id') id: string, @Body() body: UpdateArchitectureDto) {
+    return this.service.update(id, body);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOkResponse({ description: 'Delete the architecture and all its history.' })
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
+
+  @Post(':id/duplicate')
+  @ApiOkResponse({ description: 'Copy the head model into a new architecture.' })
+  duplicate(@Param('id') id: string, @Body() body: DuplicateArchitectureDto) {
+    return this.service.duplicate(id, body.name);
   }
 
   @Post(':id/branches/:branch/commits')

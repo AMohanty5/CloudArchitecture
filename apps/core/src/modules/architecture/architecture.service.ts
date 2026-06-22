@@ -42,24 +42,33 @@ export class ArchitectureService {
       defaultBranch: r.default_branch,
       lifecycle: r.lifecycle,
       createdAt: r.created_at,
+      updatedAt: r.updated_at,
     }));
   }
 
   async create(input: CreateArchitectureDto): Promise<{ id: string; defaultBranch: string; head: string }> {
-    const id = randomUUID();
     const camlId = `arch_${randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
-    const branch = 'main';
     const model: CamlDocument = { camlVersion: '1.0', id: camlId, name: input.name, components: [] };
-    const hash = hashModel(model);
+    return this.seed(input.name, model, { description: input.description, workspaceId: input.workspaceId, catalogVersion: input.catalogVersion });
+  }
 
+  /** Insert a new architecture with `model` as its initial commit (shared by create + duplicate). */
+  private async seed(
+    name: string,
+    model: CamlDocument,
+    opts: { description?: string; workspaceId?: string; catalogVersion?: string } = {},
+  ): Promise<{ id: string; defaultBranch: string; head: string }> {
+    const id = randomUUID();
+    const branch = 'main';
+    const hash = hashModel(model);
     await this.repo.withTransaction(async (client) => {
       await this.repo.insertArchitecture(client, {
         id,
-        name: input.name,
-        description: input.description,
-        workspaceId: input.workspaceId,
+        name,
+        description: opts.description,
+        workspaceId: opts.workspaceId,
         defaultBranch: branch,
-        catalogVersion: input.catalogVersion ?? 'dev',
+        catalogVersion: opts.catalogVersion ?? 'dev',
       });
       await this.repo.insertCommit(client, {
         hash,
@@ -74,8 +83,41 @@ export class ArchitectureService {
       });
       await this.repo.insertBranch(client, { architectureId: id, name: branch, headHash: hash });
     });
-
     return { id, defaultBranch: branch, head: hash };
+  }
+
+  /** Patch metadata (rename / description / lifecycle). 404 if absent, 409 on a duplicate name. */
+  async update(
+    id: string,
+    fields: { name?: string; description?: string; lifecycle?: string },
+  ): Promise<{ id: string; name: string; lifecycle: string }> {
+    if (fields.name === undefined && fields.description === undefined && fields.lifecycle === undefined) {
+      throw new BadRequestException('no updatable fields provided');
+    }
+    try {
+      const row = await this.repo.updateArchitecture(id, fields);
+      if (!row) throw new NotFoundException(`architecture ${id} not found`);
+      return { id: row.id, name: row.name, lifecycle: row.lifecycle };
+    } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === '23505') {
+        throw new ConflictException(`an architecture named "${fields.name}" already exists`);
+      }
+      throw err;
+    }
+  }
+
+  /** Delete an architecture and all its history. 404 if absent. */
+  async remove(id: string): Promise<void> {
+    const ok = await this.repo.deleteArchitecture(id);
+    if (!ok) throw new NotFoundException(`architecture ${id} not found`);
+  }
+
+  /** Copy an architecture's current head model into a brand-new architecture. */
+  async duplicate(id: string, name: string): Promise<{ id: string; defaultBranch: string; head: string }> {
+    const trimmed = name?.trim();
+    if (!trimmed) throw new BadRequestException('a name is required');
+    const { model } = await this.getModel(id, 'main');
+    return this.seed(trimmed, { ...model, name: trimmed });
   }
 
   async commit(
@@ -131,7 +173,9 @@ export class ArchitectureService {
         stats: computeStats(model),
         layout: body.layout ?? null,
       });
-      return this.repo.moveBranchHead(client, architectureId, branch, head, hash);
+      const ok = await this.repo.moveBranchHead(client, architectureId, branch, head, hash);
+      if (ok) await this.repo.touchArchitecture(client, architectureId);
+      return ok;
     });
     if (!moved) {
       throw new ConflictException({ title: 'Parent moved', detail: 'a concurrent commit moved the branch head' });

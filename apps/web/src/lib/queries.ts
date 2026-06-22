@@ -9,6 +9,7 @@ export interface ArchitectureSummary {
   defaultBranch: string;
   lifecycle: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 /** Create a new architecture (default `main` branch + empty initial commit). */

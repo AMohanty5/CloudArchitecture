@@ -51,6 +51,93 @@
         ]
       }
     },
+    "/architectures/{id}": {
+      "patch": {
+        "operationId": "ArchitectureController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateArchitectureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Update metadata (rename / description / lifecycle). 409 on a duplicate name."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      },
+      "delete": {
+        "operationId": "ArchitectureController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete the architecture and all its history."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/duplicate": {
+      "post": {
+        "operationId": "ArchitectureController_duplicate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateArchitectureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Copy the head model into a new architecture."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
     "/architectures/{id}/branches/{branch}/commits": {
       "post": {
         "operationId": "ArchitectureController_commit",
@@ -116,6 +203,206 @@
         "responses": {
           "200": {
             "description": "Resolved head model. ETag = head commit hash; supports If-None-Match (304)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/layout": {
+      "get": {
+        "operationId": "ArchitectureController_getLayout",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Layout sidecar (positions/sizes) for the branch head model. ETag = head commit hash."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/export.svg": {
+      "get": {
+        "operationId": "ArchitectureController_exportSvg",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "theme",
+            "required": false,
+            "in": "query",
+            "description": "light (default) | dark",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Presentation-ready SVG of the branch head model (true vectors)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/export.tf.zip": {
+      "get": {
+        "operationId": "ArchitectureController_exportTerraform",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Terraform bundle for the branch head model, packaged as a .zip (doc 03 §3.9)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/export.hld.md": {
+      "get": {
+        "operationId": "ArchitectureController_exportHld",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "High-Level Design document (markdown) for the branch head model (doc 03)."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/export.bundle.zip": {
+      "get": {
+        "operationId": "ArchitectureController_exportBundle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "theme",
+            "required": false,
+            "in": "query",
+            "description": "light (default) | dark — applied to the diagram",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Everything for the branch head model — diagram + HLD + Terraform — as a single .zip."
+          }
+        },
+        "tags": [
+          "architectures"
+        ]
+      }
+    },
+    "/architectures/{id}/branches/{branch}/validate": {
+      "get": {
+        "operationId": "ArchitectureController_validate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branch",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Advisory validation findings (doc 16 rule pack) for the branch head model. Read-only — never blocks a commit."
           }
         },
         "tags": [
@@ -264,6 +551,20 @@
         ]
       }
     },
+    "/catalog/connection-rules": {
+      "get": {
+        "operationId": "CatalogController_connectionRules",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Every service connection-rule set keyed by catalog key — prefetched by the canvas for drag-time validation."
+          }
+        },
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/catalog/services/{key}": {
       "get": {
         "operationId": "CatalogController_detail",
@@ -302,11 +603,137 @@
         ],
         "responses": {
           "200": {
-            "description": "Placeholder SVG icon for a service (real icon packs are a Backlog item)."
+            "description": "AWS category-tinted SVG icon for a service (official icon packs are a Backlog item)."
           }
         },
         "tags": [
           "catalog"
+        ]
+      }
+    },
+    "/ai/generate": {
+      "post": {
+        "operationId": "AiController_generate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Start a generation job (doc 07). Returns a job id; stream stages from /ai/jobs/{id}/stream."
+          }
+        },
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/jobs/{id}/stream": {
+      "get": {
+        "operationId": "AiController_stream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream of pipeline stage + token-accounting events for a job."
+          }
+        },
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/jobs/{id}/proposal": {
+      "get": {
+        "operationId": "AiController_proposal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The generated model held for review (the proposal), for the accept/reject diff UI."
+          }
+        },
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/jobs/{id}/accept": {
+      "post": {
+        "operationId": "AiController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accept the proposal: commit the model through the write path and return its architecture id."
+          }
+        },
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/jobs/{id}/reject": {
+      "post": {
+        "operationId": "AiController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reject the proposal: discard the held model."
+          }
+        },
+        "tags": [
+          "ai"
         ]
       }
     }
@@ -348,6 +775,35 @@
           "name"
         ]
       },
+      "UpdateArchitectureDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Rename the architecture."
+          },
+          "description": {
+            "type": "string",
+            "description": "Update the description."
+          },
+          "lifecycle": {
+            "type": "string",
+            "description": "Lifecycle status: draft | in_review | approved | published | archived | template."
+          }
+        }
+      },
+      "DuplicateArchitectureDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name for the duplicated architecture."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "CommitDto": {
         "type": "object",
         "properties": {
@@ -378,6 +834,27 @@
         "required": [
           "expectedParent",
           "message"
+        ]
+      },
+      "GenerateDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Natural-language description of the architecture to generate."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Target cloud provider (defaults to aws).",
+            "enum": [
+              "aws",
+              "azure",
+              "gcp"
+            ]
+          }
+        },
+        "required": [
+          "prompt"
         ]
       }
     }

@@ -33,14 +33,17 @@ function ScoreChip({ id, branch, inView }: { id: string; branch: string; inView:
   );
 }
 
+export type CardAction = 'rename' | 'duplicate' | 'archive' | 'delete';
+
 interface CardProps {
   arch: ArchitectureSummary;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onOpen: (id: string) => void;
+  onAction: (action: CardAction, arch: ArchitectureSummary) => void;
 }
 
-export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen }: CardProps) {
+export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, onAction }: CardProps) {
   const navigate = useNavigate();
   const [ref, inView] = useInView<HTMLDivElement>();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -126,12 +129,13 @@ export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen }:
                   <button onClick={() => { onToggleFavorite(arch.id); setMenuOpen(false); }} style={menuItemStyle}>
                     {isFavorite ? '★ Unfavorite' : '☆ Favorite'}
                   </button>
-                  {/* Rename / Duplicate / Delete land in P1 (need PATCH/DELETE/duplicate endpoints). */}
-                  {(['Rename', 'Duplicate', 'Delete'] as const).map((label) => (
-                    <div key={label} title="Coming soon" style={{ ...menuItemStyle, color: '#cbd5e1', cursor: 'default' }}>
-                      {label} <span style={{ fontSize: 10 }}>soon</span>
-                    </div>
-                  ))}
+                  <button onClick={() => { onAction('rename', arch); setMenuOpen(false); }} style={menuItemStyle}>Rename</button>
+                  <button onClick={() => { onAction('duplicate', arch); setMenuOpen(false); }} style={menuItemStyle}>Duplicate</button>
+                  {arch.lifecycle !== 'archived' ? (
+                    <button onClick={() => { onAction('archive', arch); setMenuOpen(false); }} style={menuItemStyle}>Archive</button>
+                  ) : null}
+                  <div style={{ borderTop: '1px solid #eef2f7', margin: '4px 0' }} />
+                  <button onClick={() => { onAction('delete', arch); setMenuOpen(false); }} style={{ ...menuItemStyle, color: '#dc2626' }}>Delete…</button>
                 </div>
               </>
             ) : null}

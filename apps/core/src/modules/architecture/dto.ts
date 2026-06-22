@@ -15,6 +15,22 @@ export class CreateArchitectureDto {
   catalogVersion?: string;
 }
 
+export class UpdateArchitectureDto {
+  @ApiPropertyOptional({ description: 'Rename the architecture.' })
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Update the description.' })
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Lifecycle status: draft | in_review | approved | published | archived | template.' })
+  lifecycle?: string;
+}
+
+export class DuplicateArchitectureDto {
+  @ApiProperty({ description: 'Name for the duplicated architecture.' })
+  name!: string;
+}
+
 export class CommitDto {
   @ApiProperty({ description: 'Optimistic lock — the commit hash this change is based on. 409 if the head moved.' })
   expectedParent!: string;

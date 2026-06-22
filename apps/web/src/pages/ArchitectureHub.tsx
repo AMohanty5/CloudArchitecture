@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createArchitecture, createArchitectureFromTemplate, useArchitectures } from '../lib/queries';
+import type { ArchitectureSummary } from '../lib/queries';
+import { deleteArchitecture, duplicateArchitecture, renameArchitecture, setArchitectureLifecycle } from '../lib/archActions';
 import { TEMPLATES } from '../canvas/templates';
 import { AiConsole } from './AiConsole';
-import { ArchitectureCard } from './ArchitectureCard';
+import { ArchitectureCard, type CardAction } from './ArchitectureCard';
+import { ConfirmDeleteDialog, TextPromptDialog } from './ArchDialogs';
 import {
   deriveMetrics,
   filterSortArchitectures,
@@ -15,11 +18,18 @@ import {
 } from '../lib/useArchHub';
 
 const SORTS: { value: SortKey; label: string }[] = [
+  { value: 'modified-desc', label: 'Last modified' },
   { value: 'created-desc', label: 'Newest' },
   { value: 'created-asc', label: 'Oldest' },
   { value: 'name-asc', label: 'Name A–Z' },
   { value: 'name-desc', label: 'Name Z–A' },
 ];
+
+type Dialog =
+  | { kind: 'rename'; arch: ArchitectureSummary }
+  | { kind: 'duplicate'; arch: ArchitectureSummary }
+  | { kind: 'delete'; arch: ArchitectureSummary }
+  | null;
 
 const selectStyle: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', color: '#334155' };
 
@@ -33,7 +43,42 @@ export function ArchitectureHub() {
   const [creating, setCreating] = useState(false);
   const [seeding, setSeeding] = useState<string | null>(null);
   const [filter, setFilter] = useState<HubFilter>({ query: '', status: 'all', favoritesOnly: false });
-  const [sort, setSort] = useState<SortKey>('created-desc');
+  const [sort, setSort] = useState<SortKey>('modified-desc');
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [busy, setBusy] = useState(false);
+  const [dialogError, setDialogError] = useState<string | undefined>(undefined);
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['architectures'] });
+
+  const handleAction = (action: CardAction, arch: ArchitectureSummary): void => {
+    setDialogError(undefined);
+    if (action === 'archive') {
+      void (async () => {
+        try {
+          await setArchitectureLifecycle(arch.id, 'archived');
+          await refresh();
+        } catch {
+          /* surfaced on next load */
+        }
+      })();
+      return;
+    }
+    setDialog({ kind: action, arch });
+  };
+
+  const runDialog = async (fn: () => Promise<void>): Promise<void> => {
+    setBusy(true);
+    setDialogError(undefined);
+    try {
+      await fn();
+      await refresh();
+      setDialog(null);
+    } catch (e) {
+      setDialogError(e instanceof Error ? e.message : 'Action failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const all = data ?? [];
   const metrics = useMemo(() => deriveMetrics(all), [all]);
@@ -171,10 +216,52 @@ export function ArchitectureHub() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
           {visible.map((a) => (
-            <ArchitectureCard key={a.id} arch={a} isFavorite={favorites.has(a.id)} onToggleFavorite={toggleFavorite} onOpen={recordOpen} />
+            <ArchitectureCard key={a.id} arch={a} isFavorite={favorites.has(a.id)} onToggleFavorite={toggleFavorite} onOpen={recordOpen} onAction={handleAction} />
           ))}
         </div>
       )}
+
+      {dialog?.kind === 'rename' ? (
+        <TextPromptDialog
+          title="Rename architecture"
+          label="Name"
+          initial={dialog.arch.name}
+          confirmLabel="Rename"
+          busy={busy}
+          error={dialogError}
+          onCancel={() => setDialog(null)}
+          onConfirm={(name) => void runDialog(() => renameArchitecture(dialog.arch.id, name).then(() => undefined))}
+        />
+      ) : null}
+      {dialog?.kind === 'duplicate' ? (
+        <TextPromptDialog
+          title="Duplicate architecture"
+          label="Name for the copy"
+          initial={`Copy of ${dialog.arch.name}`}
+          confirmLabel="Duplicate"
+          busy={busy}
+          error={dialogError}
+          onCancel={() => setDialog(null)}
+          onConfirm={(name) =>
+            void runDialog(async () => {
+              const res = await duplicateArchitecture(dialog.arch.id, name);
+              if (res?.id) {
+                recordOpen(res.id);
+                navigate(`/architectures/${res.id}`);
+              }
+            })
+          }
+        />
+      ) : null}
+      {dialog?.kind === 'delete' ? (
+        <ConfirmDeleteDialog
+          name={dialog.arch.name}
+          busy={busy}
+          error={dialogError}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => void runDialog(() => deleteArchitecture(dialog.arch.id).then(() => undefined))}
+        />
+      ) : null}
     </main>
   );
 }

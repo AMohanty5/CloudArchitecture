@@ -107,10 +107,48 @@ export class ArchitectureRepository {
 
   async listArchitectures(): Promise<ArchitectureRow[]> {
     const res = await this.pool.query<ArchitectureRow>(
-      `SELECT id, name, description, default_branch, lifecycle, created_at
-       FROM architectures ORDER BY created_at DESC`,
+      `SELECT id, name, description, default_branch, lifecycle, created_at, updated_at
+       FROM architectures ORDER BY updated_at DESC`,
     );
     return res.rows;
+  }
+
+  /** Bump last-activity (called after a successful commit). */
+  async touchArchitecture(client: PoolClient, id: string): Promise<void> {
+    await client.query('UPDATE architectures SET updated_at = now() WHERE id = $1', [id]);
+  }
+
+  /**
+   * Patch a subset of an architecture's metadata (name/description/lifecycle). Returns the
+   * updated row, or null if no such architecture. Bumps `updated_at`. A duplicate name raises
+   * the UNIQUE(workspace_id, name) violation (Postgres 23505), surfaced as a 409 by the service.
+   */
+  async updateArchitecture(
+    id: string,
+    fields: { name?: string; description?: string | null; lifecycle?: string },
+  ): Promise<ArchitectureRow | null> {
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    if (fields.name !== undefined) sets.push(`name = $${params.push(fields.name)}`);
+    if (fields.description !== undefined) sets.push(`description = $${params.push(fields.description)}`);
+    if (fields.lifecycle !== undefined) sets.push(`lifecycle = $${params.push(fields.lifecycle)}`);
+    sets.push('updated_at = now()');
+    const res = await this.pool.query<ArchitectureRow>(
+      `UPDATE architectures SET ${sets.join(', ')} WHERE id = $${params.push(id)}
+       RETURNING id, name, description, default_branch, lifecycle, created_at, updated_at`,
+      params,
+    );
+    return res.rows[0] ?? null;
+  }
+
+  /** Delete an architecture and all its commits + branches. Returns false if it didn't exist. */
+  async deleteArchitecture(id: string): Promise<boolean> {
+    return this.withTransaction(async (client) => {
+      await client.query('DELETE FROM model_commits WHERE architecture_id = $1', [id]);
+      await client.query('DELETE FROM branches WHERE architecture_id = $1', [id]);
+      const res = await client.query('DELETE FROM architectures WHERE id = $1', [id]);
+      return (res.rowCount ?? 0) > 0;
+    });
   }
 
   async getBranchHead(architectureId: string, name: string): Promise<string | null> {
@@ -171,6 +209,7 @@ export interface ArchitectureRow {
   default_branch: string;
   lifecycle: string;
   created_at: Date;
+  updated_at: Date;
 }
 
 export interface CommitMetaRow {

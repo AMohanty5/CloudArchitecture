@@ -36,6 +36,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/architectures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ArchitectureController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["ArchitectureController_update"];
+        trace?: never;
+    };
+    "/architectures/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchitectureController_duplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/architectures/{id}/branches/{branch}/commits": {
         parameters: {
             query?: never;
@@ -60,6 +92,102 @@ export interface paths {
             cookie?: never;
         };
         get: operations["ArchitectureController_getModel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/architectures/{id}/branches/{branch}/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ArchitectureController_getLayout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/architectures/{id}/branches/{branch}/export.svg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ArchitectureController_exportSvg"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/architectures/{id}/branches/{branch}/export.tf.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ArchitectureController_exportTerraform"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/architectures/{id}/branches/{branch}/export.hld.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ArchitectureController_exportHld"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/architectures/{id}/branches/{branch}/export.bundle.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ArchitectureController_exportBundle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/architectures/{id}/branches/{branch}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ArchitectureController_validate"];
         put?: never;
         post?: never;
         delete?: never;
@@ -132,6 +260,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/connection-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogController_connectionRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog/services/{key}": {
         parameters: {
             query?: never;
@@ -164,6 +308,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiController_generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/jobs/{id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AiController_stream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/jobs/{id}/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AiController_proposal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/jobs/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/jobs/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -177,6 +401,18 @@ export interface components {
             /** @description Catalog version to pin (defaults to "dev"). */
             catalogVersion?: string;
         };
+        UpdateArchitectureDto: {
+            /** @description Rename the architecture. */
+            name?: string;
+            /** @description Update the description. */
+            description?: string;
+            /** @description Lifecycle status: draft | in_review | approved | published | archived | template. */
+            lifecycle?: string;
+        };
+        DuplicateArchitectureDto: {
+            /** @description Name for the duplicated architecture. */
+            name: string;
+        };
         CommitDto: {
             /** @description Optimistic lock — the commit hash this change is based on. 409 if the head moved. */
             expectedParent: string;
@@ -188,6 +424,15 @@ export interface components {
             patch?: string[];
             /** @description Layout sidecar — positions/sizes, excluded from the content hash. */
             layout?: Record<string, never>;
+        };
+        GenerateDto: {
+            /** @description Natural-language description of the architecture to generate. */
+            prompt: string;
+            /**
+             * @description Target cloud provider (defaults to aws).
+             * @enum {string}
+             */
+            provider?: "aws" | "azure" | "gcp";
         };
     };
     responses: never;
@@ -256,6 +501,74 @@ export interface operations {
             };
         };
     };
+    ArchitectureController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delete the architecture and all its history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateArchitectureDto"];
+            };
+        };
+        responses: {
+            /** @description Update metadata (rename / description / lifecycle). 409 on a duplicate name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_duplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateArchitectureDto"];
+            };
+        };
+        responses: {
+            /** @description Copy the head model into a new architecture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ArchitectureController_commit: {
         parameters: {
             query?: never;
@@ -294,6 +607,138 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Resolved head model. ETag = head commit hash; supports If-None-Match (304). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_getLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Layout sidecar (positions/sizes) for the branch head model. ETag = head commit hash. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_exportSvg: {
+        parameters: {
+            query?: {
+                /** @description light (default) | dark */
+                theme?: unknown;
+            };
+            header?: never;
+            path: {
+                id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Presentation-ready SVG of the branch head model (true vectors). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_exportTerraform: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Terraform bundle for the branch head model, packaged as a .zip (doc 03 §3.9). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_exportHld: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description High-Level Design document (markdown) for the branch head model (doc 03). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_exportBundle: {
+        parameters: {
+            query?: {
+                /** @description light (default) | dark — applied to the diagram */
+                theme?: unknown;
+            };
+            header?: never;
+            path: {
+                id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Everything for the branch head model — diagram + HLD + Terraform — as a single .zip. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ArchitectureController_validate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                branch: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Advisory validation findings (doc 16 rule pack) for the branch head model. Read-only — never blocks a commit. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -391,6 +836,24 @@ export interface operations {
             };
         };
     };
+    CatalogController_connectionRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every service connection-rule set keyed by catalog key — prefetched by the canvas for drag-time validation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CatalogController_detail: {
         parameters: {
             query?: never;
@@ -422,7 +885,113 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Placeholder SVG icon for a service (real icon packs are a Backlog item). */
+            /** @description AWS category-tinted SVG icon for a service (official icon packs are a Backlog item). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_generate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateDto"];
+            };
+        };
+        responses: {
+            /** @description Start a generation job (doc 07). Returns a job id; stream stages from /ai/jobs/{id}/stream. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_stream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-Sent Events stream of pipeline stage + token-accounting events for a job. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_proposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The generated model held for review (the proposal), for the accept/reject diff UI. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateDto"];
+            };
+        };
+        responses: {
+            /** @description Accept the proposal: commit the model through the write path and return its architecture id. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiController_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reject the proposal: discard the held model. */
             200: {
                 headers: {
                     [name: string]: unknown;

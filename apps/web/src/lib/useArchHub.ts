@@ -55,7 +55,7 @@ export function useArchScore(id: string, branch: string, enabled: boolean) {
 }
 
 // ---- Filter / sort / search (pure) ----
-export type SortKey = 'created-desc' | 'created-asc' | 'name-asc' | 'name-desc';
+export type SortKey = 'modified-desc' | 'modified-asc' | 'created-desc' | 'created-asc' | 'name-asc' | 'name-desc';
 export interface HubFilter {
   query: string;
   status: string; // 'all' | a lifecycle value
@@ -77,6 +77,7 @@ export function filterSortArchitectures(
   });
   const byName = (a: ArchitectureSummary, b: ArchitectureSummary) => a.name.localeCompare(b.name);
   const byCreated = (a: ArchitectureSummary, b: ArchitectureSummary) => a.createdAt.localeCompare(b.createdAt);
+  const byModified = (a: ArchitectureSummary, b: ArchitectureSummary) => (a.updatedAt ?? a.createdAt).localeCompare(b.updatedAt ?? b.createdAt);
   return [...matched].sort((a, b) => {
     switch (sort) {
       case 'name-asc':
@@ -85,8 +86,12 @@ export function filterSortArchitectures(
         return byName(b, a);
       case 'created-asc':
         return byCreated(a, b);
+      case 'created-desc':
+        return byCreated(b, a);
+      case 'modified-asc':
+        return byModified(a, b);
       default:
-        return byCreated(b, a); // created-desc (newest first)
+        return byModified(b, a); // modified-desc (most-recently-touched first)
     }
   });
 }

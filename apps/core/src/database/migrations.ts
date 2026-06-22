@@ -102,4 +102,15 @@ export const migrations: Migration[] = [
         ON catalog_services (version, provider);
     `,
   },
+  {
+    id: '0003_architecture_updated_at',
+    sql: /* sql */ `
+      -- Last-activity timestamp for the Architecture Hub (sort-by-modified). Touched on
+      -- every commit; backfilled to created_at for existing rows.
+      ALTER TABLE architectures ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+      UPDATE architectures SET updated_at = created_at WHERE updated_at < created_at;
+      CREATE INDEX IF NOT EXISTS architectures_updated_idx
+        ON architectures (workspace_id, updated_at DESC);
+    `,
+  },
 ];
