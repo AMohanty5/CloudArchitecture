@@ -115,6 +115,40 @@ export function toggleInSet(set: ReadonlySet<string>, id: string): Set<string> {
   return next;
 }
 
+// ---- Bulk selection (P2) ----
+export interface SelectionStats {
+  count: number; // total selected (across all loaded items)
+  allVisibleSelected: boolean; // every currently-visible item is selected
+  someVisibleSelected: boolean; // ≥1 but not all visible selected (indeterminate header checkbox)
+}
+
+/** Header-checkbox + counter state for the visible (filtered) set. Pure. */
+export function selectionStats(visibleIds: readonly string[], selected: ReadonlySet<string>): SelectionStats {
+  const inView = visibleIds.reduce((n, id) => n + (selected.has(id) ? 1 : 0), 0);
+  return {
+    count: selected.size,
+    allVisibleSelected: visibleIds.length > 0 && inView === visibleIds.length,
+    someVisibleSelected: inView > 0 && inView < visibleIds.length,
+  };
+}
+
+/** Drop selected ids that are no longer present (e.g. after a bulk delete). Returns the same ref when unchanged. Pure. */
+export function pruneSelection(selected: ReadonlySet<string>, presentIds: readonly string[]): Set<string> {
+  const present = new Set(presentIds);
+  const kept = [...selected].filter((id) => present.has(id));
+  return kept.length === selected.size ? (selected as Set<string>) : new Set(kept);
+}
+
+/** Multi-select state for the Hub grid (selection lives in memory only, not persisted). */
+export function useSelection() {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const toggle = useCallback((id: string) => setSelected((s) => toggleInSet(s, id)), []);
+  const clear = useCallback(() => setSelected((s) => (s.size === 0 ? s : new Set())), []);
+  const selectMany = useCallback((ids: readonly string[]) => setSelected(new Set(ids)), []);
+  const pruneTo = useCallback((ids: readonly string[]) => setSelected((s) => pruneSelection(s, ids)), []);
+  return { selected, toggle, clear, selectMany, pruneTo };
+}
+
 /** Push `id` to the front of an LRU recents list (dedup, capped). Pure. */
 export function pushRecent(list: readonly string[], id: string, cap = RECENT_CAP): string[] {
   return [id, ...list.filter((x) => x !== id)].slice(0, cap);
@@ -141,6 +175,16 @@ export function useArchPrefs() {
     });
   }, []);
 
+  const addFavorites = useCallback((ids: readonly string[]) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      if (next.size === prev.size) return prev;
+      localStorage.setItem(FAV_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
   const recordOpen = useCallback((id: string) => {
     setRecents((prev) => {
       const next = pushRecent(prev, id);
@@ -149,7 +193,7 @@ export function useArchPrefs() {
     });
   }, []);
 
-  return { favorites, toggleFavorite, recents, recordOpen };
+  return { favorites, toggleFavorite, addFavorites, recents, recordOpen };
 }
 
 // ---- Misc UI helpers ----

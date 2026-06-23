@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createArchitecture, createArchitectureFromTemplate, useArchitectures } from '../lib/queries';
@@ -7,12 +7,14 @@ import { deleteArchitecture, duplicateArchitecture, renameArchitecture, setArchi
 import { TEMPLATES } from '../canvas/templates';
 import { AiConsole } from './AiConsole';
 import { ArchitectureCard, type CardAction } from './ArchitectureCard';
-import { ConfirmDeleteDialog, TextPromptDialog } from './ArchDialogs';
+import { ConfirmBulkDeleteDialog, ConfirmDeleteDialog, TextPromptDialog } from './ArchDialogs';
 import {
   deriveMetrics,
   filterSortArchitectures,
   lifecycleMeta,
+  selectionStats,
   useArchPrefs,
+  useSelection,
   type HubFilter,
   type SortKey,
 } from '../lib/useArchHub';
@@ -32,12 +34,14 @@ type Dialog =
   | null;
 
 const selectStyle: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', color: '#334155' };
+const bulkBtn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, border: '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
 
 export function ArchitectureHub() {
   const { data, isLoading, isError } = useArchitectures();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { favorites, toggleFavorite, recents, recordOpen } = useArchPrefs();
+  const { favorites, toggleFavorite, addFavorites, recents, recordOpen } = useArchPrefs();
+  const { selected, toggle: toggleSelect, clear: clearSelection, selectMany, pruneTo } = useSelection();
 
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -47,6 +51,9 @@ export function ArchitectureHub() {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState<string | undefined>(undefined);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | undefined>(undefined);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['architectures'] });
 
@@ -85,6 +92,31 @@ export function ArchitectureHub() {
   const visible = useMemo(() => filterSortArchitectures(all, filter, sort, favorites), [all, filter, sort, favorites]);
   const recentItems = useMemo(() => recents.map((id) => all.find((a) => a.id === id)).filter((a): a is NonNullable<typeof a> => Boolean(a)).slice(0, 6), [recents, all]);
   const statuses = useMemo(() => Object.keys(metrics.byStatus).sort(), [metrics]);
+  const visibleIds = useMemo(() => visible.map((a) => a.id), [visible]);
+  const sel = useMemo(() => selectionStats(visibleIds, selected), [visibleIds, selected]);
+
+  // Drop selections whose architecture no longer exists (e.g. after a bulk delete elsewhere).
+  useEffect(() => { pruneTo(all.map((a) => a.id)); }, [all, pruneTo]);
+
+  const toggleSelectAll = () => (sel.allVisibleSelected ? clearSelection() : selectMany(visibleIds));
+
+  const runBulk = async (apply: (id: string) => Promise<unknown>, after?: () => void): Promise<void> => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    setBulkError(undefined);
+    const results = await Promise.allSettled(ids.map(apply));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    await refresh();
+    setBulkBusy(false);
+    setBulkDeleting(false);
+    if (failed > 0) {
+      setBulkError(`${failed} of ${ids.length} failed`);
+    } else {
+      clearSelection();
+      after?.();
+    }
+  };
 
   const onCreate = async (): Promise<void> => {
     const trimmed = name.trim();
@@ -214,12 +246,42 @@ export function ArchitectureHub() {
       ) : visible.length === 0 ? (
         <p style={{ color: '#94a3b8', padding: '24px 0', textAlign: 'center' }}>No architectures match your filters.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-          {visible.map((a) => (
-            <ArchitectureCard key={a.id} arch={a} isFavorite={favorites.has(a.id)} onToggleFavorite={toggleFavorite} onOpen={recordOpen} onAction={handleAction} />
-          ))}
-        </div>
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 12.5, color: '#64748b' }}>
+            <input
+              type="checkbox"
+              aria-label="Select all"
+              checked={sel.allVisibleSelected}
+              ref={(el) => { if (el) el.indeterminate = sel.someVisibleSelected; }}
+              onChange={toggleSelectAll}
+              style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#2563eb' }}
+            />
+            <button onClick={toggleSelectAll} style={{ border: 'none', background: 'none', color: '#64748b', fontSize: 12.5, cursor: 'pointer', padding: 0 }}>
+              {sel.allVisibleSelected ? 'Clear selection' : `Select all ${visible.length}`}
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+            {visible.map((a) => (
+              <ArchitectureCard key={a.id} arch={a} isFavorite={favorites.has(a.id)} onToggleFavorite={toggleFavorite} onOpen={recordOpen} onAction={handleAction} selected={selected.has(a.id)} onToggleSelect={toggleSelect} />
+            ))}
+          </div>
+        </>
       )}
+
+      {/* Bulk action bar */}
+      {sel.count > 0 ? (
+        <div style={{ position: 'sticky', bottom: 16, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, margin: '18px auto 0', maxWidth: 720, padding: '10px 14px', borderRadius: 12, background: '#0f172a', color: '#fff', boxShadow: '0 12px 32px rgba(15,23,42,0.32)' }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600 }}>{sel.count} selected</span>
+          {bulkError ? <span style={{ fontSize: 12.5, color: '#fca5a5' }}>{bulkError}</span> : null}
+          <span style={{ flex: 1 }} />
+          <button disabled={bulkBusy} onClick={() => { addFavorites([...selected]); clearSelection(); }} style={bulkBtn}>★ Favorite</button>
+          <button disabled={bulkBusy} onClick={() => void runBulk((id) => setArchitectureLifecycle(id, 'archived'))} style={bulkBtn}>
+            {bulkBusy && !bulkDeleting ? '…' : 'Archive'}
+          </button>
+          <button disabled={bulkBusy} onClick={() => { setBulkError(undefined); setBulkDeleting(true); }} style={{ ...bulkBtn, background: '#dc2626', borderColor: '#dc2626' }}>Delete…</button>
+          <button disabled={bulkBusy} onClick={clearSelection} aria-label="Clear selection" style={{ ...bulkBtn, background: 'transparent', borderColor: 'transparent' }}>✕</button>
+        </div>
+      ) : null}
 
       {dialog?.kind === 'rename' ? (
         <TextPromptDialog
@@ -260,6 +322,15 @@ export function ArchitectureHub() {
           error={dialogError}
           onCancel={() => setDialog(null)}
           onConfirm={() => void runDialog(() => deleteArchitecture(dialog.arch.id).then(() => undefined))}
+        />
+      ) : null}
+      {bulkDeleting ? (
+        <ConfirmBulkDeleteDialog
+          count={sel.count}
+          busy={bulkBusy}
+          error={bulkError}
+          onCancel={() => { setBulkDeleting(false); setBulkError(undefined); }}
+          onConfirm={() => void runBulk((id) => deleteArchitecture(id).then(() => undefined))}
         />
       ) : null}
     </main>

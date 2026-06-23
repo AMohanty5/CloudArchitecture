@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveMetrics, filterSortArchitectures, pushRecent, scoreFromReport, toggleInSet } from './useArchHub';
+import { deriveMetrics, filterSortArchitectures, pruneSelection, pushRecent, scoreFromReport, selectionStats, toggleInSet } from './useArchHub';
 import type { ArchitectureSummary } from './queries';
 
 const a = (over: Partial<ArchitectureSummary> & { id: string; name: string }): ArchitectureSummary => ({
@@ -69,5 +69,26 @@ describe('prefs reducers', () => {
     expect(pushRecent(['b', 'c'], 'a')).toEqual(['a', 'b', 'c']);
     expect(pushRecent(['b', 'a', 'c'], 'a')).toEqual(['a', 'b', 'c']);
     expect(pushRecent(['1', '2', '3'], '4', 3)).toEqual(['4', '1', '2']);
+  });
+});
+
+describe('bulk selection', () => {
+  it('selectionStats reports count + header-checkbox state for the visible set', () => {
+    const visible = ['1', '2', '3'];
+    expect(selectionStats(visible, new Set())).toEqual({ count: 0, allVisibleSelected: false, someVisibleSelected: false });
+    expect(selectionStats(visible, new Set(['1']))).toEqual({ count: 1, allVisibleSelected: false, someVisibleSelected: true });
+    expect(selectionStats(visible, new Set(['1', '2', '3']))).toEqual({ count: 3, allVisibleSelected: true, someVisibleSelected: false });
+  });
+  it('selectionStats counts off-screen selections but ignores them for header state', () => {
+    // '9' is selected but not in the filtered/visible set → still counted, header not "all".
+    expect(selectionStats(['1', '2'], new Set(['1', '2', '9']))).toEqual({ count: 3, allVisibleSelected: true, someVisibleSelected: false });
+  });
+  it('selectionStats treats an empty visible set as nothing selected', () => {
+    expect(selectionStats([], new Set(['1']))).toMatchObject({ allVisibleSelected: false, someVisibleSelected: false });
+  });
+  it('pruneSelection drops absent ids and preserves the ref when unchanged', () => {
+    const sel = new Set(['1', '2', '3']);
+    expect([...pruneSelection(sel, ['1', '3'])].sort()).toEqual(['1', '3']);
+    expect(pruneSelection(sel, ['1', '2', '3', '4'])).toBe(sel); // no removals → same ref (no re-render)
   });
 });

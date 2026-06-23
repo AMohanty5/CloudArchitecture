@@ -75,6 +75,37 @@ export function TextPromptDialog({
   );
 }
 
+/** Confirmation dialog for bulk Delete (echoes the count to prevent accidents). */
+export function ConfirmBulkDeleteDialog({
+  count,
+  busy,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  count: number;
+  busy: boolean;
+  error?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Modal title={`Delete ${count} architecture${count === 1 ? '' : 's'}?`} onClose={onCancel}>
+      <div style={{ fontSize: 13.5, color: '#334155', lineHeight: 1.5 }}>
+        This permanently deletes <strong>{count}</strong> selected architecture{count === 1 ? '' : 's'} and their entire
+        version history. This cannot be undone.
+      </div>
+      {error ? <div style={{ color: '#dc2626', fontSize: 12.5, marginTop: 6 }}>{error}</div> : null}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+        <button onClick={onCancel} style={btn(false)}>Cancel</button>
+        <button onClick={onConfirm} disabled={busy} style={{ ...btn(true, true), opacity: busy ? 0.6 : 1 }}>
+          {busy ? 'Deleting…' : `Delete ${count}`}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 /** Confirmation dialog for Delete (echoes the name to prevent accidents). */
 export function ConfirmDeleteDialog({
   name,

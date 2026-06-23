@@ -41,9 +41,11 @@ interface CardProps {
   onToggleFavorite: (id: string) => void;
   onOpen: (id: string) => void;
   onAction: (action: CardAction, arch: ArchitectureSummary) => void;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }
 
-export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, onAction }: CardProps) {
+export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, onAction, selected, onToggleSelect }: CardProps) {
   const navigate = useNavigate();
   const [ref, inView] = useInView<HTMLDivElement>();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -60,8 +62,19 @@ export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, o
   return (
     <div
       ref={ref}
-      style={{ position: 'relative', border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff', boxShadow: '0 1px 2px rgba(15,23,42,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+      style={{ position: 'relative', border: `1px solid ${selected ? '#2563eb' : '#e2e8f0'}`, borderRadius: 12, background: '#fff', boxShadow: selected ? '0 0 0 1px #2563eb, 0 1px 2px rgba(15,23,42,0.05)' : '0 1px 2px rgba(15,23,42,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
     >
+      {/* Select checkbox */}
+      <span style={{ position: 'absolute', top: 8, left: 8, zIndex: 2 }} onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleSelect(arch.id)}
+          aria-label={`Select ${arch.name}`}
+          style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#2563eb' }}
+        />
+      </span>
+
       {/* Thumbnail (reuses the server SVG renderer) */}
       <button
         onClick={open}
