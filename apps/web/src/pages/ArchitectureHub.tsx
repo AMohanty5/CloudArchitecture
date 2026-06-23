@@ -1,13 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { createArchitecture, createArchitectureFromTemplate, useArchitectures } from '../lib/queries';
+import { createArchitecture, createArchitectureFromTemplate, useArchitectures, useFolders } from '../lib/queries';
 import type { ArchitectureSummary } from '../lib/queries';
-import { deleteArchitecture, duplicateArchitecture, renameArchitecture, setArchitectureLifecycle, setArchitectureTags } from '../lib/archActions';
+import {
+  createFolder,
+  deleteArchitecture,
+  deleteFolder,
+  duplicateArchitecture,
+  renameArchitecture,
+  renameFolder,
+  setArchitectureFolder,
+  setArchitectureLifecycle,
+  setArchitectureTags,
+} from '../lib/archActions';
 import { TEMPLATES } from '../canvas/templates';
 import { AiConsole } from './AiConsole';
 import { ArchitectureCard, type CardAction } from './ArchitectureCard';
-import { ConfirmBulkDeleteDialog, ConfirmDeleteDialog, TagsEditDialog, TextPromptDialog } from './ArchDialogs';
+import { ConfirmBulkDeleteDialog, ConfirmDeleteDialog, MoveToFolderDialog, TagsEditDialog, TextPromptDialog } from './ArchDialogs';
 import {
   deriveMetrics,
   deriveTags,
@@ -34,6 +44,7 @@ type Dialog =
   | { kind: 'duplicate'; arch: ArchitectureSummary }
   | { kind: 'delete'; arch: ArchitectureSummary }
   | { kind: 'tags'; arch: ArchitectureSummary }
+  | { kind: 'move'; arch: ArchitectureSummary }
   | null;
 
 const selectStyle: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', color: '#334155' };
@@ -41,6 +52,7 @@ const bulkBtn: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, bor
 
 export function ArchitectureHub() {
   const { data, isLoading, isError } = useArchitectures();
+  const { data: folderData } = useFolders();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { favorites, toggleFavorite, addFavorites, recents, recordOpen } = useArchPrefs();
@@ -49,16 +61,23 @@ export function ArchitectureHub() {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [seeding, setSeeding] = useState<string | null>(null);
-  const [filter, setFilter] = useState<HubFilter>({ query: '', status: 'all', favoritesOnly: false, tag: '' });
+  const [filter, setFilter] = useState<HubFilter>({ query: '', status: 'all', favoritesOnly: false, tag: '', folder: 'all' });
   const [sort, setSort] = useState<SortKey>('modified-desc');
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [folderPrompt, setFolderPrompt] = useState<{ mode: 'new' } | { mode: 'rename'; id: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState<string | undefined>(undefined);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkMoving, setBulkMoving] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | undefined>(undefined);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['architectures'] });
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['architectures'] }),
+      queryClient.invalidateQueries({ queryKey: ['folders'] }),
+    ]);
+  };
 
   const handleAction = (action: CardAction, arch: ArchitectureSummary): void => {
     setDialogError(undefined);
@@ -83,6 +102,20 @@ export function ArchitectureHub() {
       await fn();
       await refresh();
       setDialog(null);
+    } catch (e) {
+      setDialogError(e instanceof Error ? e.message : 'Action failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runFolderDialog = async (fn: () => Promise<void>): Promise<void> => {
+    setBusy(true);
+    setDialogError(undefined);
+    try {
+      await fn();
+      await refresh();
+      setFolderPrompt(null);
     } catch (e) {
       setDialogError(e instanceof Error ? e.message : 'Action failed');
     } finally {
@@ -151,8 +184,25 @@ export function ArchitectureHub() {
     }
   };
 
-  const filtering = filter.query !== '' || filter.status !== 'all' || filter.favoritesOnly || filter.tag !== '';
+  const filtering = filter.query !== '' || filter.status !== 'all' || filter.favoritesOnly || filter.tag !== '' || filter.folder !== 'all';
   const toggleTag = (tag: string) => setFilter((f) => ({ ...f, tag: f.tag === tag ? '' : tag }));
+  const folders = folderData ?? [];
+  const activeFolder = folders.find((f) => f.id === filter.folder) ?? null;
+  const unfiledCount = useMemo(() => all.filter((a) => a.folderId == null).length, [all]);
+
+  const runFolderOp = (fn: () => Promise<unknown>): void => {
+    void (async () => {
+      try {
+        await fn();
+        await refresh();
+      } catch {
+        /* surfaced on next load */
+      }
+    })();
+  };
+
+  const moveSelected = (folderId: string | null): Promise<void> =>
+    runBulk((id) => setArchitectureFolder(id, folderId), () => setBulkMoving(false));
 
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', padding: '1.75rem 2rem', maxWidth: 1180, margin: '0 auto' }}>
@@ -214,6 +264,24 @@ export function ArchitectureHub() {
           </div>
         </>
       ) : null}
+
+      {/* Folder rail */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: '#94a3b8', fontWeight: 700, marginRight: 2 }}>Folders</span>
+        <FolderChip label="All" count={all.length} active={filter.folder === 'all'} onClick={() => setFilter((f) => ({ ...f, folder: 'all' }))} />
+        <FolderChip label="📂 Unfiled" count={unfiledCount} active={filter.folder === 'unfiled'} onClick={() => setFilter((f) => ({ ...f, folder: 'unfiled' }))} />
+        {folders.map((f) => (
+          <FolderChip key={f.id} label={`📁 ${f.name}`} count={f.count} active={filter.folder === f.id} onClick={() => setFilter((p) => ({ ...p, folder: f.id }))} />
+        ))}
+        <button onClick={() => setFolderPrompt({ mode: 'new' })} style={{ fontSize: 12.5, padding: '3px 10px', borderRadius: 12, border: '1px dashed #cbd5e1', background: '#fff', color: '#2563eb', cursor: 'pointer' }}>+ New folder</button>
+        {activeFolder ? (
+          <>
+            <span style={{ color: '#cbd5e1' }}>·</span>
+            <button onClick={() => setFolderPrompt({ mode: 'rename', id: activeFolder.id, name: activeFolder.name })} style={folderLinkStyle}>Rename</button>
+            <button onClick={() => runFolderOp(() => deleteFolder(activeFolder.id).then(() => setFilter((f) => ({ ...f, folder: 'all' }))))} style={{ ...folderLinkStyle, color: '#dc2626' }}>Delete</button>
+          </>
+        ) : null}
+      </div>
 
       {/* Toolbar */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 14 }}>
@@ -303,8 +371,9 @@ export function ArchitectureHub() {
           {bulkError ? <span style={{ fontSize: 12.5, color: '#fca5a5' }}>{bulkError}</span> : null}
           <span style={{ flex: 1 }} />
           <button disabled={bulkBusy} onClick={() => { addFavorites([...selected]); clearSelection(); }} style={bulkBtn}>★ Favorite</button>
+          <button disabled={bulkBusy} onClick={() => { setBulkError(undefined); setBulkMoving(true); }} style={bulkBtn}>Move to…</button>
           <button disabled={bulkBusy} onClick={() => void runBulk((id) => setArchitectureLifecycle(id, 'archived'))} style={bulkBtn}>
-            {bulkBusy && !bulkDeleting ? '…' : 'Archive'}
+            {bulkBusy && !bulkDeleting && !bulkMoving ? '…' : 'Archive'}
           </button>
           <button disabled={bulkBusy} onClick={() => { setBulkError(undefined); setBulkDeleting(true); }} style={{ ...bulkBtn, background: '#dc2626', borderColor: '#dc2626' }}>Delete…</button>
           <button disabled={bulkBusy} onClick={clearSelection} aria-label="Clear selection" style={{ ...bulkBtn, background: 'transparent', borderColor: 'transparent' }}>✕</button>
@@ -362,6 +431,61 @@ export function ArchitectureHub() {
           onConfirm={(raw) => void runDialog(() => setArchitectureTags(dialog.arch.id, parseTags(raw)).then(() => undefined))}
         />
       ) : null}
+      {dialog?.kind === 'move' ? (
+        <MoveToFolderDialog
+          title={`Move "${dialog.arch.name}"`}
+          folders={folders}
+          currentFolderId={dialog.arch.folderId}
+          busy={busy}
+          error={dialogError}
+          onCancel={() => setDialog(null)}
+          onMove={(folderId) => void runDialog(() => setArchitectureFolder(dialog.arch.id, folderId).then(() => undefined))}
+          onCreateAndMove={(name) =>
+            void runDialog(async () => {
+              const res = await createFolder(name);
+              if (res?.id) await setArchitectureFolder(dialog.arch.id, res.id);
+            })
+          }
+        />
+      ) : null}
+      {bulkMoving ? (
+        <MoveToFolderDialog
+          title={`Move ${sel.count} architecture${sel.count === 1 ? '' : 's'}`}
+          folders={folders}
+          busy={bulkBusy}
+          error={bulkError}
+          onCancel={() => { setBulkMoving(false); setBulkError(undefined); }}
+          onMove={(folderId) => void moveSelected(folderId)}
+          onCreateAndMove={(name) =>
+            void (async () => {
+              const res = await createFolder(name);
+              await refresh();
+              if (res?.id) await moveSelected(res.id);
+            })()
+          }
+        />
+      ) : null}
+      {folderPrompt ? (
+        <TextPromptDialog
+          title={folderPrompt.mode === 'new' ? 'New folder' : 'Rename folder'}
+          label="Folder name"
+          initial={folderPrompt.mode === 'rename' ? folderPrompt.name : ''}
+          confirmLabel={folderPrompt.mode === 'new' ? 'Create' : 'Rename'}
+          busy={busy}
+          error={dialogError}
+          onCancel={() => { setFolderPrompt(null); setDialogError(undefined); }}
+          onConfirm={(name) =>
+            void runFolderDialog(async () => {
+              if (folderPrompt.mode === 'new') {
+                const res = await createFolder(name);
+                if (res?.id) setFilter((f) => ({ ...f, folder: res.id }));
+              } else {
+                await renameFolder(folderPrompt.id, name);
+              }
+            })
+          }
+        />
+      ) : null}
       {bulkDeleting ? (
         <ConfirmBulkDeleteDialog
           count={sel.count}
@@ -372,6 +496,20 @@ export function ArchitectureHub() {
         />
       ) : null}
     </main>
+  );
+}
+
+const folderLinkStyle: React.CSSProperties = { fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '0 2px' };
+
+function FolderChip({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      style={{ fontSize: 12.5, padding: '3px 10px', borderRadius: 12, border: '1px solid', borderColor: active ? '#2563eb' : '#e2e8f0', background: active ? '#eff6ff' : '#fff', color: active ? '#2563eb' : '#475569', cursor: 'pointer' }}
+    >
+      {label} <span style={{ color: active ? '#60a5fa' : '#cbd5e1' }}>{count}</span>
+    </button>
   );
 }
 

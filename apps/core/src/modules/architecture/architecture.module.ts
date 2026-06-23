@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { ArchitectureController } from './architecture.controller';
 import { ArchitectureService } from './architecture.service';
 import { ArchitectureRepository } from './architecture.repository';
+import { FolderController } from './folder.controller';
+import { FolderService } from './folder.service';
+import { FolderRepository } from './folder.repository';
 
 /**
  * Architecture Service — the system of record for CAML commits, branches, and
@@ -9,8 +12,8 @@ import { ArchitectureRepository } from './architecture.repository';
  * history + diff (Day 9). Other modules depend on this only via `./api`.
  */
 @Module({
-  controllers: [ArchitectureController],
-  providers: [ArchitectureService, ArchitectureRepository],
+  controllers: [ArchitectureController, FolderController],
+  providers: [ArchitectureService, ArchitectureRepository, FolderService, FolderRepository],
   exports: [ArchitectureService], // the AI composer commits generated models through the write path (doc 12 invariant 3)
 })
 export class ArchitectureModule {}

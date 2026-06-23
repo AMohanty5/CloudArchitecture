@@ -9,8 +9,27 @@ export interface ArchitectureSummary {
   defaultBranch: string;
   lifecycle: string;
   tags: string[];
+  folderId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FolderSummary {
+  id: string;
+  name: string;
+  count: number;
+  createdAt: string;
+}
+
+export function useFolders(): UseQueryResult<FolderSummary[]> {
+  return useQuery({
+    queryKey: ['folders'],
+    queryFn: async (): Promise<FolderSummary[]> => {
+      const { data, error } = await client.GET('/folders', {});
+      if (error) throw new Error('failed to load folders');
+      return (data ?? []) as FolderSummary[];
+    },
+  });
 }
 
 /** Create a new architecture (default `main` branch + empty initial commit). */

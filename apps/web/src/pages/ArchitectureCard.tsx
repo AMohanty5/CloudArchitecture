@@ -33,7 +33,7 @@ function ScoreChip({ id, branch, inView }: { id: string; branch: string; inView:
   );
 }
 
-export type CardAction = 'rename' | 'duplicate' | 'archive' | 'delete' | 'tags';
+export type CardAction = 'rename' | 'duplicate' | 'archive' | 'delete' | 'tags' | 'move';
 
 interface CardProps {
   arch: ArchitectureSummary;
@@ -164,6 +164,7 @@ export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, o
                   </button>
                   <button onClick={() => { onAction('rename', arch); setMenuOpen(false); }} style={menuItemStyle}>Rename</button>
                   <button onClick={() => { onAction('tags', arch); setMenuOpen(false); }} style={menuItemStyle}>Edit tags…</button>
+                  <button onClick={() => { onAction('move', arch); setMenuOpen(false); }} style={menuItemStyle}>Move to folder…</button>
                   <button onClick={() => { onAction('duplicate', arch); setMenuOpen(false); }} style={menuItemStyle}>Duplicate</button>
                   {arch.lifecycle !== 'archived' ? (
                     <button onClick={() => { onAction('archive', arch); setMenuOpen(false); }} style={menuItemStyle}>Archive</button>

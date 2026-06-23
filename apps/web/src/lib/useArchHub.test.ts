@@ -7,19 +7,20 @@ const a = (over: Partial<ArchitectureSummary> & { id: string; name: string }): A
   defaultBranch: 'main',
   lifecycle: 'draft',
   tags: [],
+  folderId: null,
   createdAt: '2026-06-20T00:00:00.000Z',
   updatedAt: '2026-06-20T00:00:00.000Z',
   ...over,
 });
 
 const items: ArchitectureSummary[] = [
-  a({ id: '1', name: 'Multi-AZ HA', lifecycle: 'approved', createdAt: '2026-06-22T00:00:00Z', updatedAt: '2026-06-23T12:00:00Z', description: 'ALB + RDS', tags: ['prod', 'web'] }),
+  a({ id: '1', name: 'Multi-AZ HA', lifecycle: 'approved', createdAt: '2026-06-22T00:00:00Z', updatedAt: '2026-06-23T12:00:00Z', description: 'ALB + RDS', tags: ['prod', 'web'], folderId: 'fA' }),
   a({ id: '2', name: 'test2', lifecycle: 'draft', createdAt: '2026-06-23T00:00:00Z', updatedAt: '2026-06-23T01:00:00Z' }),
-  a({ id: '3', name: 'Bedrock RAG', lifecycle: 'draft', createdAt: '2026-06-21T00:00:00Z', updatedAt: '2026-06-22T00:00:00Z', description: 'Kendra + Bedrock', tags: ['ml', 'prod'] }),
+  a({ id: '3', name: 'Bedrock RAG', lifecycle: 'draft', createdAt: '2026-06-21T00:00:00Z', updatedAt: '2026-06-22T00:00:00Z', description: 'Kendra + Bedrock', tags: ['ml', 'prod'], folderId: 'fA' }),
 ];
 
 describe('filterSortArchitectures', () => {
-  const base = { query: '', status: 'all', favoritesOnly: false, tag: '' };
+  const base = { query: '', status: 'all', favoritesOnly: false, tag: '', folder: 'all' };
   it('sorts newest-first by created date', () => {
     expect(filterSortArchitectures(items, base, 'created-desc', new Set()).map((x) => x.id)).toEqual(['2', '1', '3']);
   });
@@ -45,6 +46,11 @@ describe('filterSortArchitectures', () => {
   });
   it('search also matches tags', () => {
     expect(filterSortArchitectures(items, { ...base, query: 'web' }, 'name-asc', new Set()).map((x) => x.id)).toEqual(['1']);
+  });
+  it('filters by folder, and "unfiled" matches only architectures with no folder', () => {
+    expect(filterSortArchitectures(items, { ...base, folder: 'fA' }, 'name-asc', new Set()).map((x) => x.id).sort()).toEqual(['1', '3']);
+    expect(filterSortArchitectures(items, { ...base, folder: 'unfiled' }, 'name-asc', new Set()).map((x) => x.id)).toEqual(['2']);
+    expect(filterSortArchitectures(items, { ...base, folder: 'all' }, 'name-asc', new Set())).toHaveLength(3);
   });
 });
 

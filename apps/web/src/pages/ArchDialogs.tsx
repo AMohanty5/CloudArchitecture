@@ -115,6 +115,63 @@ export function TagsEditDialog({
   );
 }
 
+/** Folder picker — move one or many architectures into an existing folder, unfile, or create+move. */
+export function MoveToFolderDialog({
+  title,
+  folders,
+  currentFolderId,
+  busy,
+  error,
+  onMove,
+  onCreateAndMove,
+  onCancel,
+}: {
+  title: string;
+  folders: { id: string; name: string }[];
+  currentFolderId?: string | null;
+  busy: boolean;
+  error?: string;
+  onMove: (folderId: string | null) => void;
+  onCreateAndMove: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [newName, setNewName] = useState('');
+  const row = (label: string, active: boolean, onClick: () => void): React.ReactNode => (
+    <button
+      onClick={() => !busy && onClick()}
+      disabled={busy}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: '1px solid', borderColor: active ? '#2563eb' : '#e2e8f0', background: active ? '#eff6ff' : '#fff', color: '#334155', fontSize: 13.5, cursor: busy ? 'default' : 'pointer', marginBottom: 6 }}
+    >
+      <span>{label}</span>
+      {active ? <span style={{ color: '#2563eb', fontSize: 12 }}>current</span> : null}
+    </button>
+  );
+  return (
+    <Modal title={title} onClose={onCancel}>
+      <div style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 4 }}>
+        {row('📂 Unfiled', currentFolderId === null, () => onMove(null))}
+        {folders.map((f) => row(`📁 ${f.name}`, f.id === currentFolderId, () => onMove(f.id)))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 8, borderTop: '1px solid #eef2f7', paddingTop: 12 }}>
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && newName.trim() && !busy && onCreateAndMove(newName.trim())}
+          placeholder="New folder name…"
+          style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13.5, boxSizing: 'border-box' }}
+        />
+        <button onClick={() => newName.trim() && !busy && onCreateAndMove(newName.trim())} disabled={!newName.trim() || busy} style={{ ...btn(true), opacity: !newName.trim() || busy ? 0.6 : 1 }}>
+          Create + move
+        </button>
+      </div>
+      {error ? <div style={{ color: '#dc2626', fontSize: 12.5, marginTop: 8 }}>{error}</div> : null}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+        <button onClick={onCancel} style={btn(false)}>Cancel</button>
+      </div>
+    </Modal>
+  );
+}
+
 /** Confirmation dialog for bulk Delete (echoes the count to prevent accidents). */
 export function ConfirmBulkDeleteDialog({
   count,

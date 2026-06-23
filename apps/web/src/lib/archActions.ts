@@ -33,6 +33,18 @@ export const setArchitectureLifecycle = (id: string, lifecycle: string): Promise
 export const setArchitectureTags = (id: string, tags: string[]): Promise<unknown> =>
   request(`/architectures/${id}`, 'PATCH', { tags });
 
+export const setArchitectureFolder = (id: string, folderId: string | null): Promise<unknown> =>
+  request(`/architectures/${id}`, 'PATCH', { folderId });
+
+// ---- Folders (P2) ----
+export const createFolder = (name: string): Promise<{ id: string } | null> =>
+  request<{ id: string }>(`/folders`, 'POST', { name });
+
+export const renameFolder = (id: string, name: string): Promise<unknown> =>
+  request(`/folders/${id}`, 'PATCH', { name });
+
+export const deleteFolder = (id: string): Promise<unknown> => request(`/folders/${id}`, 'DELETE');
+
 export const duplicateArchitecture = (id: string, name: string): Promise<{ id: string } | null> =>
   request<{ id: string }>(`/architectures/${id}/duplicate`, 'POST', { name });
 

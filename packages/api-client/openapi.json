@@ -519,6 +519,96 @@
         ]
       }
     },
+    "/folders": {
+      "get": {
+        "operationId": "FolderController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List folders with their architecture counts, alphabetical."
+          }
+        },
+        "tags": [
+          "folders"
+        ]
+      },
+      "post": {
+        "operationId": "FolderController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create a folder. 409 on a duplicate name."
+          }
+        },
+        "tags": [
+          "folders"
+        ]
+      }
+    },
+    "/folders/{id}": {
+      "patch": {
+        "operationId": "FolderController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFolderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rename a folder. 404 if absent, 409 on a duplicate name."
+          }
+        },
+        "tags": [
+          "folders"
+        ]
+      },
+      "delete": {
+        "operationId": "FolderController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete a folder; its architectures are unfiled (folder_id -> NULL)."
+          }
+        },
+        "tags": [
+          "folders"
+        ]
+      }
+    },
     "/catalog/services": {
       "get": {
         "operationId": "CatalogController_search",
@@ -796,6 +886,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "folderId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Move into a folder by id, or null to unfile. 404 if the folder is unknown."
           }
         }
       },
@@ -841,6 +936,30 @@
         "required": [
           "expectedParent",
           "message"
+        ]
+      },
+      "CreateFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Folder name (unique per workspace)."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateFolderDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "New folder name."
+          }
+        },
+        "required": [
+          "name"
         ]
       },
       "GenerateDto": {

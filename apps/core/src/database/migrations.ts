@@ -122,4 +122,26 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS architectures_tags_idx ON architectures USING GIN (tags);
     `,
   },
+  {
+    id: '0005_folders',
+    sql: /* sql */ `
+      -- Folders for the Architecture Hub. Flat (no nesting); an architecture lives in at
+      -- most one folder. Deleting a folder unfiles its architectures (folder_id -> NULL).
+      CREATE TABLE IF NOT EXISTS folders (
+        id           UUID PRIMARY KEY,
+        tenant_id    UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        workspace_id UUID NOT NULL,
+        name         TEXT NOT NULL,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (workspace_id, name)
+      );
+      ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY tenant_isolation ON folders
+        USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+      ALTER TABLE architectures ADD COLUMN IF NOT EXISTS folder_id UUID
+        REFERENCES folders(id) ON DELETE SET NULL;
+      CREATE INDEX IF NOT EXISTS architectures_folder_idx ON architectures (folder_id);
+    `,
+  },
 ];

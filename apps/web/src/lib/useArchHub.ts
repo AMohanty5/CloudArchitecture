@@ -61,6 +61,7 @@ export interface HubFilter {
   status: string; // 'all' | a lifecycle value
   favoritesOnly: boolean;
   tag: string; // '' = no tag facet selected
+  folder: string; // 'all' | 'unfiled' | a folder id
 }
 
 export function filterSortArchitectures(
@@ -75,6 +76,8 @@ export function filterSortArchitectures(
     if (filter.status !== 'all' && a.lifecycle !== filter.status) return false;
     if (filter.favoritesOnly && !favorites.has(a.id)) return false;
     if (filter.tag && !tags.includes(filter.tag)) return false;
+    if (filter.folder === 'unfiled' && a.folderId != null) return false;
+    if (filter.folder !== 'all' && filter.folder !== 'unfiled' && a.folderId !== filter.folder) return false;
     if (q && !`${a.name} ${a.description ?? ''} ${tags.join(' ')}`.toLowerCase().includes(q)) return false;
     return true;
   });

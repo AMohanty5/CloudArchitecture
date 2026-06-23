@@ -244,6 +244,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FolderController_list"];
+        put?: never;
+        post: operations["FolderController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/folders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["FolderController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["FolderController_rename"];
+        trace?: never;
+    };
     "/catalog/services": {
         parameters: {
             query?: never;
@@ -410,6 +442,8 @@ export interface components {
             lifecycle?: string;
             /** @description Free-form tags (normalized: trimmed, lowercased, deduped, max 12). */
             tags?: string[];
+            /** @description Move into a folder by id, or null to unfile. 404 if the folder is unknown. */
+            folderId?: string | null;
         };
         DuplicateArchitectureDto: {
             /** @description Name for the duplicated architecture. */
@@ -426,6 +460,14 @@ export interface components {
             patch?: string[];
             /** @description Layout sidecar — positions/sizes, excluded from the content hash. */
             layout?: Record<string, never>;
+        };
+        CreateFolderDto: {
+            /** @description Folder name (unique per workspace). */
+            name: string;
+        };
+        UpdateFolderDto: {
+            /** @description New folder name. */
+            name: string;
         };
         GenerateDto: {
             /** @description Natural-language description of the architecture to generate. */
@@ -808,6 +850,90 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Immutable commit by hash (content-addressed, cache forever). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FolderController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List folders with their architecture counts, alphabetical. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FolderController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFolderDto"];
+            };
+        };
+        responses: {
+            /** @description Create a folder. 409 on a duplicate name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FolderController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delete a folder; its architectures are unfiled (folder_id -> NULL). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FolderController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFolderDto"];
+            };
+        };
+        responses: {
+            /** @description Rename a folder. 404 if absent, 409 on a duplicate name. */
             200: {
                 headers: {
                     [name: string]: unknown;

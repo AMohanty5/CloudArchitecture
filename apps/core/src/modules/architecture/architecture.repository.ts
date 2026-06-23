@@ -107,7 +107,7 @@ export class ArchitectureRepository {
 
   async listArchitectures(): Promise<ArchitectureRow[]> {
     const res = await this.pool.query<ArchitectureRow>(
-      `SELECT id, name, description, default_branch, lifecycle, tags, created_at, updated_at
+      `SELECT id, name, description, default_branch, lifecycle, tags, folder_id, created_at, updated_at
        FROM architectures ORDER BY updated_at DESC`,
     );
     return res.rows;
@@ -125,7 +125,7 @@ export class ArchitectureRepository {
    */
   async updateArchitecture(
     id: string,
-    fields: { name?: string; description?: string | null; lifecycle?: string; tags?: string[] },
+    fields: { name?: string; description?: string | null; lifecycle?: string; tags?: string[]; folderId?: string | null },
   ): Promise<ArchitectureRow | null> {
     const sets: string[] = [];
     const params: unknown[] = [];
@@ -133,10 +133,11 @@ export class ArchitectureRepository {
     if (fields.description !== undefined) sets.push(`description = $${params.push(fields.description)}`);
     if (fields.lifecycle !== undefined) sets.push(`lifecycle = $${params.push(fields.lifecycle)}`);
     if (fields.tags !== undefined) sets.push(`tags = $${params.push(fields.tags)}`);
+    if (fields.folderId !== undefined) sets.push(`folder_id = $${params.push(fields.folderId)}`);
     sets.push('updated_at = now()');
     const res = await this.pool.query<ArchitectureRow>(
       `UPDATE architectures SET ${sets.join(', ')} WHERE id = $${params.push(id)}
-       RETURNING id, name, description, default_branch, lifecycle, tags, created_at, updated_at`,
+       RETURNING id, name, description, default_branch, lifecycle, tags, folder_id, created_at, updated_at`,
       params,
     );
     return res.rows[0] ?? null;
@@ -210,6 +211,7 @@ export interface ArchitectureRow {
   default_branch: string;
   lifecycle: string;
   tags: string[];
+  folder_id: string | null;
   created_at: Date;
   updated_at: Date;
 }

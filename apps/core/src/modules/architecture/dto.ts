@@ -27,6 +27,19 @@ export class UpdateArchitectureDto {
 
   @ApiPropertyOptional({ type: [String], description: 'Free-form tags (normalized: trimmed, lowercased, deduped, max 12).' })
   tags?: string[];
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Move into a folder by id, or null to unfile. 404 if the folder is unknown.' })
+  folderId?: string | null;
+}
+
+export class CreateFolderDto {
+  @ApiProperty({ description: 'Folder name (unique per workspace).' })
+  name!: string;
+}
+
+export class UpdateFolderDto {
+  @ApiProperty({ description: 'New folder name.' })
+  name!: string;
 }
 
 export class DuplicateArchitectureDto {
