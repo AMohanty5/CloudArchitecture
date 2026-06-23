@@ -24,6 +24,9 @@ export class UpdateArchitectureDto {
 
   @ApiPropertyOptional({ description: 'Lifecycle status: draft | in_review | approved | published | archived | template.' })
   lifecycle?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Free-form tags (normalized: trimmed, lowercased, deduped, max 12).' })
+  tags?: string[];
 }
 
 export class DuplicateArchitectureDto {

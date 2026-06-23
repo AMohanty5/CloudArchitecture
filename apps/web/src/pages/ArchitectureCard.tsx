@@ -33,7 +33,7 @@ function ScoreChip({ id, branch, inView }: { id: string; branch: string; inView:
   );
 }
 
-export type CardAction = 'rename' | 'duplicate' | 'archive' | 'delete';
+export type CardAction = 'rename' | 'duplicate' | 'archive' | 'delete' | 'tags';
 
 interface CardProps {
   arch: ArchitectureSummary;
@@ -43,9 +43,11 @@ interface CardProps {
   onAction: (action: CardAction, arch: ArchitectureSummary) => void;
   selected: boolean;
   onToggleSelect: (id: string) => void;
+  activeTag: string;
+  onTagClick: (tag: string) => void;
 }
 
-export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, onAction, selected, onToggleSelect }: CardProps) {
+export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, onAction, selected, onToggleSelect, activeTag, onTagClick }: CardProps) {
   const navigate = useNavigate();
   const [ref, inView] = useInView<HTMLDivElement>();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -115,6 +117,24 @@ export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, o
           <div style={{ fontSize: 12.5, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{arch.description}</div>
         ) : null}
 
+        {arch.tags && arch.tags.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {arch.tags.map((tag) => {
+              const on = tag === activeTag;
+              return (
+                <button
+                  key={tag}
+                  onClick={() => onTagClick(tag)}
+                  title={on ? 'Clear tag filter' : `Filter by #${tag}`}
+                  style={{ fontSize: 10.5, padding: '1px 7px', borderRadius: 10, border: '1px solid', borderColor: on ? '#2563eb' : '#e2e8f0', background: on ? '#eff6ff' : '#f8fafc', color: on ? '#2563eb' : '#64748b', cursor: 'pointer', lineHeight: 1.5 }}
+                >
+                  #{tag}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 6 }}>
           <button onClick={open} style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Open
@@ -143,6 +163,7 @@ export function ArchitectureCard({ arch, isFavorite, onToggleFavorite, onOpen, o
                     {isFavorite ? '★ Unfavorite' : '☆ Favorite'}
                   </button>
                   <button onClick={() => { onAction('rename', arch); setMenuOpen(false); }} style={menuItemStyle}>Rename</button>
+                  <button onClick={() => { onAction('tags', arch); setMenuOpen(false); }} style={menuItemStyle}>Edit tags…</button>
                   <button onClick={() => { onAction('duplicate', arch); setMenuOpen(false); }} style={menuItemStyle}>Duplicate</button>
                   {arch.lifecycle !== 'archived' ? (
                     <button onClick={() => { onAction('archive', arch); setMenuOpen(false); }} style={menuItemStyle}>Archive</button>

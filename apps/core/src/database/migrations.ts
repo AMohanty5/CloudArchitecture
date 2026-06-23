@@ -113,4 +113,13 @@ export const migrations: Migration[] = [
         ON architectures (workspace_id, updated_at DESC);
     `,
   },
+  {
+    id: '0004_architecture_tags',
+    sql: /* sql */ `
+      -- Free-form tags for the Architecture Hub (organize + filter/search by tag). Stored
+      -- normalized (trimmed, deduped, lowercased) by the service; GIN index for tag lookups.
+      ALTER TABLE architectures ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+      CREATE INDEX IF NOT EXISTS architectures_tags_idx ON architectures USING GIN (tags);
+    `,
+  },
 ];

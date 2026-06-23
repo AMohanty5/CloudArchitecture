@@ -75,6 +75,46 @@ export function TextPromptDialog({
   );
 }
 
+/** Tag editor — comma/newline-separated; the page parses + normalizes on confirm. */
+export function TagsEditDialog({
+  archName,
+  initial,
+  busy,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  archName: string;
+  initial: string[];
+  busy: boolean;
+  error?: string;
+  onConfirm: (raw: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial.join(', '));
+  return (
+    <Modal title={`Tags · ${archName}`} onClose={onCancel}>
+      <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 4 }}>Comma-separated tags</label>
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && !busy && onConfirm(value)}
+        placeholder="prod, web app, multi-az"
+        style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+      />
+      <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 6 }}>Lowercased, de-duped, max 12 tags. Leave empty to clear.</div>
+      {error ? <div style={{ color: '#dc2626', fontSize: 12.5, marginTop: 6 }}>{error}</div> : null}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+        <button onClick={onCancel} style={btn(false)}>Cancel</button>
+        <button onClick={() => !busy && onConfirm(value)} disabled={busy} style={{ ...btn(true), opacity: busy ? 0.6 : 1 }}>
+          {busy ? '…' : 'Save tags'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 /** Confirmation dialog for bulk Delete (echoes the count to prevent accidents). */
 export function ConfirmBulkDeleteDialog({
   count,

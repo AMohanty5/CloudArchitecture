@@ -8,6 +8,7 @@ export interface ArchitectureSummary {
   description: string | null;
   defaultBranch: string;
   lifecycle: string;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }

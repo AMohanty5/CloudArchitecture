@@ -408,6 +408,8 @@ export interface components {
             description?: string;
             /** @description Lifecycle status: draft | in_review | approved | published | archived | template. */
             lifecycle?: string;
+            /** @description Free-form tags (normalized: trimmed, lowercased, deduped, max 12). */
+            tags?: string[];
         };
         DuplicateArchitectureDto: {
             /** @description Name for the duplicated architecture. */

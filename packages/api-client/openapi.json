@@ -789,6 +789,13 @@
           "lifecycle": {
             "type": "string",
             "description": "Lifecycle status: draft | in_review | approved | published | archived | template."
+          },
+          "tags": {
+            "description": "Free-form tags (normalized: trimmed, lowercased, deduped, max 12).",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

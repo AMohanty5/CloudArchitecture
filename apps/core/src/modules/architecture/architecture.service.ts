@@ -16,6 +16,7 @@ import { validateModel, knowledgeByService } from '../validation/api';
 import type { ValidationReport } from '../validation/api';
 import { ArchitectureRepository } from './architecture.repository';
 import { computeStats } from './stats';
+import { normalizeTags } from './tags';
 import type { CommitDto, CreateArchitectureDto } from './dto';
 
 const byteLength = (model: CamlDocument): number => Buffer.byteLength(JSON.stringify(model));
@@ -32,7 +33,7 @@ export class ArchitectureService {
   ) {}
 
   async listArchitectures(): Promise<
-    Array<{ id: string; name: string; description: string | null; defaultBranch: string; lifecycle: string; createdAt: Date }>
+    Array<{ id: string; name: string; description: string | null; defaultBranch: string; lifecycle: string; tags: string[]; createdAt: Date }>
   > {
     const rows = await this.repo.listArchitectures();
     return rows.map((r) => ({
@@ -41,6 +42,7 @@ export class ArchitectureService {
       description: r.description,
       defaultBranch: r.default_branch,
       lifecycle: r.lifecycle,
+      tags: r.tags ?? [],
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));
@@ -86,18 +88,24 @@ export class ArchitectureService {
     return { id, defaultBranch: branch, head: hash };
   }
 
-  /** Patch metadata (rename / description / lifecycle). 404 if absent, 409 on a duplicate name. */
+  /** Patch metadata (rename / description / lifecycle / tags). 404 if absent, 409 on a duplicate name. */
   async update(
     id: string,
-    fields: { name?: string; description?: string; lifecycle?: string },
-  ): Promise<{ id: string; name: string; lifecycle: string }> {
-    if (fields.name === undefined && fields.description === undefined && fields.lifecycle === undefined) {
+    fields: { name?: string; description?: string; lifecycle?: string; tags?: string[] },
+  ): Promise<{ id: string; name: string; lifecycle: string; tags: string[] }> {
+    if (
+      fields.name === undefined &&
+      fields.description === undefined &&
+      fields.lifecycle === undefined &&
+      fields.tags === undefined
+    ) {
       throw new BadRequestException('no updatable fields provided');
     }
+    const patch = fields.tags === undefined ? fields : { ...fields, tags: normalizeTags(fields.tags) };
     try {
-      const row = await this.repo.updateArchitecture(id, fields);
+      const row = await this.repo.updateArchitecture(id, patch);
       if (!row) throw new NotFoundException(`architecture ${id} not found`);
-      return { id: row.id, name: row.name, lifecycle: row.lifecycle };
+      return { id: row.id, name: row.name, lifecycle: row.lifecycle, tags: row.tags ?? [] };
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === '23505') {
         throw new ConflictException(`an architecture named "${fields.name}" already exists`);

@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { createArchitecture, createArchitectureFromTemplate, useArchitectures } from '../lib/queries';
 import type { ArchitectureSummary } from '../lib/queries';
-import { deleteArchitecture, duplicateArchitecture, renameArchitecture, setArchitectureLifecycle } from '../lib/archActions';
+import { deleteArchitecture, duplicateArchitecture, renameArchitecture, setArchitectureLifecycle, setArchitectureTags } from '../lib/archActions';
 import { TEMPLATES } from '../canvas/templates';
 import { AiConsole } from './AiConsole';
 import { ArchitectureCard, type CardAction } from './ArchitectureCard';
-import { ConfirmBulkDeleteDialog, ConfirmDeleteDialog, TextPromptDialog } from './ArchDialogs';
+import { ConfirmBulkDeleteDialog, ConfirmDeleteDialog, TagsEditDialog, TextPromptDialog } from './ArchDialogs';
 import {
   deriveMetrics,
+  deriveTags,
   filterSortArchitectures,
   lifecycleMeta,
+  parseTags,
   selectionStats,
   useArchPrefs,
   useSelection,
@@ -31,6 +33,7 @@ type Dialog =
   | { kind: 'rename'; arch: ArchitectureSummary }
   | { kind: 'duplicate'; arch: ArchitectureSummary }
   | { kind: 'delete'; arch: ArchitectureSummary }
+  | { kind: 'tags'; arch: ArchitectureSummary }
   | null;
 
 const selectStyle: React.CSSProperties = { padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', color: '#334155' };
@@ -46,7 +49,7 @@ export function ArchitectureHub() {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [seeding, setSeeding] = useState<string | null>(null);
-  const [filter, setFilter] = useState<HubFilter>({ query: '', status: 'all', favoritesOnly: false });
+  const [filter, setFilter] = useState<HubFilter>({ query: '', status: 'all', favoritesOnly: false, tag: '' });
   const [sort, setSort] = useState<SortKey>('modified-desc');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [busy, setBusy] = useState(false);
@@ -92,6 +95,7 @@ export function ArchitectureHub() {
   const visible = useMemo(() => filterSortArchitectures(all, filter, sort, favorites), [all, filter, sort, favorites]);
   const recentItems = useMemo(() => recents.map((id) => all.find((a) => a.id === id)).filter((a): a is NonNullable<typeof a> => Boolean(a)).slice(0, 6), [recents, all]);
   const statuses = useMemo(() => Object.keys(metrics.byStatus).sort(), [metrics]);
+  const tagFacets = useMemo(() => deriveTags(all), [all]);
   const visibleIds = useMemo(() => visible.map((a) => a.id), [visible]);
   const sel = useMemo(() => selectionStats(visibleIds, selected), [visibleIds, selected]);
 
@@ -147,7 +151,8 @@ export function ArchitectureHub() {
     }
   };
 
-  const filtering = filter.query !== '' || filter.status !== 'all' || filter.favoritesOnly;
+  const filtering = filter.query !== '' || filter.status !== 'all' || filter.favoritesOnly || filter.tag !== '';
+  const toggleTag = (tag: string) => setFilter((f) => ({ ...f, tag: f.tag === tag ? '' : tag }));
 
   return (
     <main style={{ fontFamily: 'system-ui, sans-serif', padding: '1.75rem 2rem', maxWidth: 1180, margin: '0 auto' }}>
@@ -237,6 +242,29 @@ export function ArchitectureHub() {
         </button>
       </div>
 
+      {/* Tag facets */}
+      {tagFacets.length > 0 ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 14 }}>
+          <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: '#94a3b8', fontWeight: 700 }}>Tags</span>
+          {tagFacets.map(({ tag, count }) => {
+            const on = filter.tag === tag;
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                aria-pressed={on}
+                style={{ fontSize: 12, padding: '3px 9px', borderRadius: 12, border: '1px solid', borderColor: on ? '#2563eb' : '#e2e8f0', background: on ? '#eff6ff' : '#fff', color: on ? '#2563eb' : '#475569', cursor: 'pointer' }}
+              >
+                #{tag} <span style={{ color: on ? '#60a5fa' : '#cbd5e1' }}>{count}</span>
+              </button>
+            );
+          })}
+          {filter.tag ? (
+            <button onClick={() => setFilter((f) => ({ ...f, tag: '' }))} style={{ fontSize: 12, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer' }}>clear</button>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Grid / states */}
       {isLoading ? <p style={{ color: '#64748b' }}>Loading…</p> : null}
       {isError ? <p style={{ color: '#dc2626' }}>Failed to load architectures.</p> : null}
@@ -262,7 +290,7 @@ export function ArchitectureHub() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
             {visible.map((a) => (
-              <ArchitectureCard key={a.id} arch={a} isFavorite={favorites.has(a.id)} onToggleFavorite={toggleFavorite} onOpen={recordOpen} onAction={handleAction} selected={selected.has(a.id)} onToggleSelect={toggleSelect} />
+              <ArchitectureCard key={a.id} arch={a} isFavorite={favorites.has(a.id)} onToggleFavorite={toggleFavorite} onOpen={recordOpen} onAction={handleAction} selected={selected.has(a.id)} onToggleSelect={toggleSelect} activeTag={filter.tag} onTagClick={toggleTag} />
             ))}
           </div>
         </>
@@ -322,6 +350,16 @@ export function ArchitectureHub() {
           error={dialogError}
           onCancel={() => setDialog(null)}
           onConfirm={() => void runDialog(() => deleteArchitecture(dialog.arch.id).then(() => undefined))}
+        />
+      ) : null}
+      {dialog?.kind === 'tags' ? (
+        <TagsEditDialog
+          archName={dialog.arch.name}
+          initial={dialog.arch.tags ?? []}
+          busy={busy}
+          error={dialogError}
+          onCancel={() => setDialog(null)}
+          onConfirm={(raw) => void runDialog(() => setArchitectureTags(dialog.arch.id, parseTags(raw)).then(() => undefined))}
         />
       ) : null}
       {bulkDeleting ? (

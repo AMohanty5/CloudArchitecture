@@ -30,6 +30,9 @@ export const renameArchitecture = (id: string, name: string): Promise<unknown> =
 export const setArchitectureLifecycle = (id: string, lifecycle: string): Promise<unknown> =>
   request(`/architectures/${id}`, 'PATCH', { lifecycle });
 
+export const setArchitectureTags = (id: string, tags: string[]): Promise<unknown> =>
+  request(`/architectures/${id}`, 'PATCH', { tags });
+
 export const duplicateArchitecture = (id: string, name: string): Promise<{ id: string } | null> =>
   request<{ id: string }>(`/architectures/${id}/duplicate`, 'POST', { name });
 

@@ -60,6 +60,7 @@ export interface HubFilter {
   query: string;
   status: string; // 'all' | a lifecycle value
   favoritesOnly: boolean;
+  tag: string; // '' = no tag facet selected
 }
 
 export function filterSortArchitectures(
@@ -70,9 +71,11 @@ export function filterSortArchitectures(
 ): ArchitectureSummary[] {
   const q = filter.query.trim().toLowerCase();
   const matched = items.filter((a) => {
+    const tags = a.tags ?? [];
     if (filter.status !== 'all' && a.lifecycle !== filter.status) return false;
     if (filter.favoritesOnly && !favorites.has(a.id)) return false;
-    if (q && !`${a.name} ${a.description ?? ''}`.toLowerCase().includes(q)) return false;
+    if (filter.tag && !tags.includes(filter.tag)) return false;
+    if (q && !`${a.name} ${a.description ?? ''} ${tags.join(' ')}`.toLowerCase().includes(q)) return false;
     return true;
   });
   const byName = (a: ArchitectureSummary, b: ArchitectureSummary) => a.name.localeCompare(b.name);
@@ -101,6 +104,33 @@ export function deriveMetrics(items: ArchitectureSummary[]): { total: number; by
   const byStatus: Record<string, number> = {};
   for (const a of items) byStatus[a.lifecycle] = (byStatus[a.lifecycle] ?? 0) + 1;
   return { total: items.length, byStatus };
+}
+
+// ---- Tags (P2) ----
+export const MAX_TAGS = 12;
+export const MAX_TAG_LEN = 32;
+
+/** Distinct tags across the list with usage counts, most-used first then alphabetical. Pure. */
+export function deriveTags(items: ArchitectureSummary[]): { tag: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const a of items) for (const t of a.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+}
+
+/** Parse a comma/newline-separated tag string into normalized tags (mirrors the server's normalizeTags). Pure. */
+export function parseTags(input: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of input.split(/[,\n]/)) {
+    const tag = raw.trim().toLowerCase().slice(0, MAX_TAG_LEN);
+    if (!tag || seen.has(tag)) continue;
+    seen.add(tag);
+    out.push(tag);
+    if (out.length >= MAX_TAGS) break;
+  }
+  return out;
 }
 
 // ---- Favorites + recents (localStorage; pure reducers are unit-tested) ----
