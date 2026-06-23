@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { apiBase } from '../lib/client';
+import { relativeTime, usePromptHistory } from '../lib/useArchHub';
 
 /**
  * AI generation console (blueprint doc 07 / Day 30). Posts a prompt to /ai/generate, then
@@ -46,12 +47,15 @@ export function AiConsole() {
   const [prompt, setPrompt] = useState('A highly available 3-tier e-commerce platform on AWS');
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogLine[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const sourceRef = useRef<EventSource | null>(null);
+  const { prompts, record, clear } = usePromptHistory();
 
   const append = useCallback((line: LogLine) => setLog((prev) => [...prev, line]), []);
 
   const onGenerate = useCallback(async () => {
     if (running || !prompt.trim()) return;
+    record(prompt);
     setLog([]);
     setRunning(true);
     sourceRef.current?.close();
@@ -97,14 +101,44 @@ export function AiConsole() {
       append({ text: '✗ failed to start generation', tone: 'error' });
       setRunning(false);
     }
-  }, [prompt, running, append]);
+  }, [prompt, running, append, record]);
 
   return (
     <section style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 24, background: '#fafafa' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <strong style={{ fontSize: 14 }}>✨ Generate with AI</strong>
         <span style={{ fontSize: 11, color: '#94a3b8' }}>preview · pipeline stubbed</span>
+        <span style={{ flex: 1 }} />
+        {prompts.length > 0 ? (
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            aria-expanded={showHistory}
+            style={{ fontSize: 12, padding: '3px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: showHistory ? '#f1f5f9' : '#fff', color: '#475569', cursor: 'pointer' }}
+          >
+            🕘 History ({prompts.length})
+          </button>
+        ) : null}
       </div>
+
+      {showHistory && prompts.length > 0 ? (
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: 6, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 6px 6px' }}>
+            <span style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.4, color: '#94a3b8', fontWeight: 700 }}>Recent prompts</span>
+            <button onClick={() => { clear(); setShowHistory(false); }} style={{ fontSize: 11.5, background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer' }}>Clear</button>
+          </div>
+          {prompts.map((e) => (
+            <button
+              key={e.prompt}
+              onClick={() => { setPrompt(e.prompt); setShowHistory(false); }}
+              title={`Use this prompt · ${relativeTime(e.at)}`}
+              style={{ display: 'flex', width: '100%', gap: 8, alignItems: 'baseline', textAlign: 'left', padding: '6px 8px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontSize: 12.5 }}
+            >
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.prompt}</span>
+              <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>{relativeTime(e.at)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div style={{ display: 'flex', gap: 8 }}>
         <input
           value={prompt}

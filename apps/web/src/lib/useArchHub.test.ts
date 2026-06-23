@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveMetrics, deriveTags, filterSortArchitectures, parseTags, pruneSelection, pushRecent, scoreFromReport, selectionStats, toggleInSet } from './useArchHub';
+import { deriveMetrics, deriveTags, filterSortArchitectures, parseTags, pruneSelection, pushPrompt, pushRecent, scoreFromReport, selectionStats, toggleInSet } from './useArchHub';
 import type { ArchitectureSummary } from './queries';
 
 const a = (over: Partial<ArchitectureSummary> & { id: string; name: string }): ArchitectureSummary => ({
@@ -101,6 +101,22 @@ describe('prefs reducers', () => {
     expect(pushRecent(['b', 'c'], 'a')).toEqual(['a', 'b', 'c']);
     expect(pushRecent(['b', 'a', 'c'], 'a')).toEqual(['a', 'b', 'c']);
     expect(pushRecent(['1', '2', '3'], '4', 3)).toEqual(['4', '1', '2']);
+  });
+});
+
+describe('pushPrompt', () => {
+  const t = '2026-06-24T00:00:00.000Z';
+  it('prepends a trimmed prompt and updates its timestamp', () => {
+    expect(pushPrompt([], '  build a VPC ', t)).toEqual([{ prompt: 'build a VPC', at: t }]);
+  });
+  it('de-dupes case-insensitively, moving the prompt to the front with a fresh time', () => {
+    const list = [{ prompt: 'web app', at: '2026-06-20T00:00:00Z' }, { prompt: 'data lake', at: '2026-06-21T00:00:00Z' }];
+    expect(pushPrompt(list, 'Web App', t)).toEqual([{ prompt: 'Web App', at: t }, { prompt: 'data lake', at: '2026-06-21T00:00:00Z' }]);
+  });
+  it('ignores a blank prompt and caps the list', () => {
+    expect(pushPrompt([{ prompt: 'x', at: t }], '   ', t)).toEqual([{ prompt: 'x', at: t }]);
+    const long = Array.from({ length: 4 }, (_, i) => ({ prompt: `p${i}`, at: t }));
+    expect(pushPrompt(long, 'new', t, 3).map((e) => e.prompt)).toEqual(['new', 'p0', 'p1']);
   });
 });
 

@@ -187,6 +187,39 @@ export function pushRecent(list: readonly string[], id: string, cap = RECENT_CAP
   return [id, ...list.filter((x) => x !== id)].slice(0, cap);
 }
 
+// ---- AI prompt history (P2; localStorage, mirrors favorites/recents) ----
+const PROMPT_KEY = 'cac:ai:prompts';
+const PROMPT_CAP = 12;
+
+export interface PromptEntry {
+  prompt: string;
+  at: string; // ISO timestamp of the most recent use
+}
+
+/** LRU of distinct prompts (case-insensitive dedupe, newest first, capped). Pure. */
+export function pushPrompt(list: readonly PromptEntry[], prompt: string, at: string, cap = PROMPT_CAP): PromptEntry[] {
+  const trimmed = prompt.trim();
+  if (!trimmed) return [...list];
+  const rest = list.filter((e) => e.prompt.toLowerCase() !== trimmed.toLowerCase());
+  return [{ prompt: trimmed, at }, ...rest].slice(0, cap);
+}
+
+export function usePromptHistory() {
+  const [prompts, setPrompts] = useState<PromptEntry[]>(() => readJson<PromptEntry[]>(PROMPT_KEY, []));
+  const record = useCallback((prompt: string) => {
+    setPrompts((prev) => {
+      const next = pushPrompt(prev, prompt, new Date().toISOString());
+      localStorage.setItem(PROMPT_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  const clear = useCallback(() => {
+    localStorage.removeItem(PROMPT_KEY);
+    setPrompts([]);
+  }, []);
+  return { prompts, record, clear };
+}
+
 function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
