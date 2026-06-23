@@ -43,8 +43,7 @@ function Chip({ glyph, label }: { glyph: string; label: string }): React.JSX.Ele
   );
 }
 
-/** Compact architecture-block geometry — kept in sync with the projector's NODE_W / NODE_H. */
-const NODE_W = NODE.width;
+/** Compact architecture-block geometry — kept in sync with the projector's NODE_H. */
 const NODE_H = NODE.height;
 
 /** Below this zoom the node renders as a low-detail chip (perf at scale, doc 06). */

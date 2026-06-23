@@ -1,5 +1,5 @@
 import type { CamlDocument, Component, Group } from '@cac/caml';
-import { categoryOf, serviceIconSvg } from '../catalog/icons';
+import { categoryOf, serviceIconSvg } from '../catalog/api';
 
 /**
  * Server-side SVG serializer (blueprint doc 06 derivation layer): a CAML model →
